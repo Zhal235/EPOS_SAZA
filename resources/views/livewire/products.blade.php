@@ -1,4 +1,9 @@
 <div>
+    <!-- Debug Test Component -->
+    <div class="mb-6">
+        <livewire:test-component />
+    </div>
+
     <!-- Statistics Cards -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -80,6 +85,14 @@
                 </div>
 
                 <div class="flex space-x-3">
+                    <!-- Manual Debug Buttons -->
+                    <button onclick="alert('Basic JS works!')" class="px-3 py-2 bg-red-600 text-white rounded text-sm">
+                        JS Test
+                    </button>
+                    <button onclick="console.log('Testing Livewire...'); @this.call('testClick')" class="px-3 py-2 bg-purple-600 text-white rounded text-sm">
+                        @this Test
+                    </button>
+                    
                     <button wire:click="testClick" class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors">
                         <i class="fas fa-bug mr-2"></i>Test
                     </button>
