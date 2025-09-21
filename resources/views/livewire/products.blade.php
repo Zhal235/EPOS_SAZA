@@ -80,6 +80,9 @@
                 </div>
 
                 <div class="flex space-x-3">
+                    <button wire:click="testClick" class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors">
+                        <i class="fas fa-bug mr-2"></i>Test
+                    </button>
                     <button wire:click="openImportModal" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                         <i class="fas fa-upload mr-2"></i>Import
                     </button>

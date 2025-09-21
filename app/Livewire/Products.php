@@ -92,8 +92,16 @@ class Products extends Component
     // Modal Methods
     public function openAddModal()
     {
+        logger('Add Modal Triggered');
         $this->resetForm();
         $this->showAddModal = true;
+        logger('Add Modal State: ' . ($this->showAddModal ? 'true' : 'false'));
+    }
+
+    public function testClick()
+    {
+        logger('Test click working!');
+        session()->flash('message', 'Test button clicked! Livewire is working.');
     }
 
     public function closeAddModal()
