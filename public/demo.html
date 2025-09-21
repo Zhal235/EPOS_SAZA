@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EPOS SAZA - Login Demo</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        .feature {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .feature-icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+            display: block;
+        }
+        .credentials {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+        .btn {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+            margin: 10px;
+        }
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        .status {
+            background: rgba(76, 175, 80, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+            margin: 20px 0;
+        }
+    </style>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🏪 EPOS SAZA</div>
+            <h1>Modern Point of Sale System</h1>
+            <p>Halaman login modern telah berhasil dibuat!</p>
+        </div>
+
+        <div class="status">
+            <h3><i class="fas fa-check-circle"></i> Status: Ready for Testing!</h3>
+            <p>Server Laravel sedang berjalan di <strong>http://127.0.0.1:8000</strong></p>
+        </div>
+
+        <div class="credentials">
+            <h3><i class="fas fa-key"></i> Demo Login Credentials:</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <h4>👑 Admin Account</h4>
+                    <p><strong>Email:</strong> admin@epos.com<br>
+                       <strong>Password:</strong> password123</p>
+                </div>
+                <div>
+                    <h4>💰 Kasir Account</h4>
+                    <p><strong>Email:</strong> kasir@epos.com<br>
+                       <strong>Password:</strong> password123</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="features">
+            <div class="feature">
+                <span class="feature-icon">🎨</span>
+                <h3>Modern Design</h3>
+                <p>Glassmorphism effect dengan gradient background yang menarik</p>
+            </div>
+            <div class="feature">
+                <span class="feature-icon">🔐</span>
+                <h3>Secure Authentication</h3>
+                <p>Laravel Breeze + Livewire untuk keamanan terbaik</p>
+            </div>
+            <div class="feature">
+                <span class="feature-icon">📱</span>
+                <h3>Responsive</h3>
+                <p>Optimized untuk desktop, tablet, dan mobile</p>
+            </div>
+            <div class="feature">
+                <span class="feature-icon">⚡</span>
+                <h3>Fast & Interactive</h3>
+                <p>Livewire untuk interaksi real-time tanpa refresh</p>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="http://127.0.0.1:8000/login" class="btn">
+                <i class="fas fa-sign-in-alt"></i> Open Login Page
+            </a>
+            <a href="http://127.0.0.1:8000" class="btn">
+                <i class="fas fa-home"></i> Go to Homepage
+            </a>
+        </div>
+
+        <div style="margin-top: 30px; text-align: center; opacity: 0.8;">
+            <h3>🚀 Quick Start Guide:</h3>
+            <ol style="text-align: left; max-width: 500px; margin: 0 auto;">
+                <li>Klik "Open Login Page" di atas</li>
+                <li>Gunakan salah satu kredensial demo</li>
+                <li>Nikmati dashboard EPOS yang modern!</li>
+            </ol>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.2);">
+            <p><strong>Tech Stack:</strong> Laravel 12 • Livewire • Tailwind CSS • Font Awesome</p>
+            <p>&copy; 2025 EPOS SAZA. Built with ❤️</p>
+        </div>
+    </div>
+</body>
+</html>
