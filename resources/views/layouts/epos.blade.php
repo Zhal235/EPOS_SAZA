@@ -16,10 +16,12 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
         @livewireStyles
         
-        <!-- Alpine.js -->
-        <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-        
         <style>
+            html, body {
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
             .sidebar {
                 transition: all 0.3s ease;
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -107,7 +109,7 @@
             </div>
 
             <!-- Main Content -->
-            <div class="flex-1 flex flex-col overflow-hidden" 
+            <div class="flex-1 flex flex-col min-h-screen overflow-hidden" 
                  :class="sidebarOpen ? 'ml-70' : 'ml-20'" style="margin-left: 280px;" 
                  :style="sidebarOpen ? 'margin-left: 280px' : 'margin-left: 80px'">
                 
@@ -214,33 +216,34 @@
                 </header>
 
                 <!-- Page Content -->
-                <main class="flex-1 overflow-auto p-6">
+                <main class="flex-1 overflow-auto p-6 pb-20">
                     {{ $slot }}
                 </main>
-
-                <!-- Status Bar -->
-                <footer class="bg-white border-t border-gray-200 px-6 py-3">
-                    <div class="flex items-center justify-between text-sm text-gray-500">
-                        <div class="flex items-center space-x-4">
-                            <div class="flex items-center">
-                                <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                                <span>System Online</span>
-                            </div>
-                            <div class="flex items-center">
-                                <i class="fas fa-database mr-2"></i>
-                                <span>Database Connected</span>
-                            </div>
-                        </div>
-                        <div class="flex items-center space-x-4">
-                            <span>Last Sync: {{ now()->format('H:i:s') }}</span>
-                            <span>Store: SAZA Main Branch</span>
-                        </div>
-                    </div>
-                </footer>
             </div>
         </div>
 
+        <!-- Status Bar - Fixed at bottom -->
+        <footer class="bg-white border-t border-gray-200 px-6 py-3 fixed bottom-0 left-0 right-0 z-50">
+            <div class="flex items-center justify-between text-sm text-gray-500">
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center">
+                        <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                        <span>System Online</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-database mr-2"></i>
+                        <span>Database Connected</span>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span>Last Sync: {{ now()->format('H:i:s') }}</span>
+                    <span>Store: SAZA Main Branch</span>
+                </div>
+            </div>
+        </footer>
+
         <!-- Global Scripts -->
+        @livewireScripts
         <script>
             // Auto-update time
             setInterval(() => {
@@ -257,7 +260,12 @@
                     window.location.href = '#';
                 }
             });
+            
+            // Debug Livewire
+            console.log('Livewire loaded:', typeof Livewire !== 'undefined');
+            if (typeof Livewire !== 'undefined') {
+                console.log('Livewire version:', Livewire.version || 'unknown');
+            }
         </script>
-        @livewireScripts
     </body>
 </html>
