@@ -13,6 +13,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', Dashboard::class)->name('dashboard');
     Route::get('pos', PosTerminal::class)->name('pos');
     Route::get('products', Products::class)->name('products');
+    Route::get('categories', \App\Livewire\Categories::class)->name('categories');
     
     // Download template route
     Route::get('products/download-template', function() {

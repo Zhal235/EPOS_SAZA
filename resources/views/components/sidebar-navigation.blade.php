@@ -46,20 +46,15 @@
         
         <a href="{{ route('products') }}" class="menu-item flex items-center px-4 py-3 text-white rounded-lg {{ request()->routeIs('products') ? 'active' : '' }}">
             <i class="fas fa-box w-5 text-center"></i>
-            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Products</span>
+            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Products & Stock</span>
             @if(isset($lowStockCount) && $lowStockCount > 0)
                 <span x-show="sidebarOpen" class="ml-auto bg-red-500 text-white text-xs px-2 py-1 rounded-full">{{ $lowStockCount }}</span>
             @endif
         </a>
-
-        <a href="#" class="menu-item flex items-center px-4 py-3 text-white rounded-lg">
-            <i class="fas fa-warehouse w-5 text-center"></i>
-            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Stock Management</span>
-        </a>
         
-        <a href="#" class="menu-item flex items-center px-4 py-3 text-white rounded-lg">
+        <a href="{{ route('categories') }}" class="menu-item flex items-center px-4 py-3 text-white rounded-lg {{ request()->routeIs('categories') ? 'active' : '' }}">
             <i class="fas fa-tags w-5 text-center"></i>
-            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Categories</span>
+            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Categories & Suppliers</span>
         </a>
     </div>
     @endif
