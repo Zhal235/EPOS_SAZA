@@ -20,10 +20,21 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'phone',
         'password',
         'role',
         'is_active',
         'last_login_at',
+        'customer_type',
+        'class',
+        'nis',
+        'nip',
+        'subject',
+        'experience',
+        'rfid_number',
+        'balance',
+        'spending_limit',
+        'last_topup_at',
     ];
 
     /**
@@ -48,7 +59,34 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_active' => 'boolean',
             'last_login_at' => 'datetime',
+            'balance' => 'decimal:2',
+            'spending_limit' => 'decimal:2',
+            'last_topup_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Valid roles for users
+     */
+    public static function getValidRoles(): array
+    {
+        return ['admin', 'manager', 'cashier', 'customer'];
+    }
+
+    /**
+     * Valid customer types
+     */
+    public static function getValidCustomerTypes(): array
+    {
+        return ['regular', 'santri', 'guru', 'umum'];
+    }
+
+    /**
+     * Check if user can login (customers cannot login)
+     */
+    public function canLogin(): bool
+    {
+        return $this->role !== 'customer' && $this->is_active;
     }
 
     /**
@@ -81,5 +119,129 @@ class User extends Authenticatable
     public function canAccessAdmin(): bool
     {
         return in_array($this->role, ['admin', 'manager']);
+    }
+
+    /**
+     * Check if user is guru
+     */
+    public function isGuru(): bool
+    {
+        return $this->customer_type === 'guru';
+    }
+
+    /**
+     * Check if user is santri
+     */
+    public function isSantri(): bool
+    {
+        return $this->customer_type === 'santri';
+    }
+
+    /**
+     * Check if user is customer (santri/guru)
+     */
+    public function isCustomer(): bool
+    {
+        return $this->role === 'customer';
+    }
+
+    /**
+     * Get formatted balance
+     */
+    public function getFormattedBalanceAttribute(): string
+    {
+        return 'Rp ' . number_format($this->balance, 0, ',', '.');
+    }
+
+    /**
+     * Get formatted spending limit
+     */
+    public function getFormattedSpendingLimitAttribute(): string
+    {
+        return 'Rp ' . number_format($this->spending_limit, 0, ',', '.');
+    }
+
+    /**
+     * Check if santri can afford the amount
+     */
+    public function canAfford(float $amount): bool
+    {
+        return $this->balance >= $amount;
+    }
+
+    /**
+     * Check if amount is within spending limit
+     */
+    public function isWithinSpendingLimit(float $amount): bool
+    {
+        if ($this->spending_limit <= 0) {
+            return true; // No limit set
+        }
+        return $amount <= $this->spending_limit;
+    }
+
+    /**
+     * Deduct balance for santri
+     */
+    public function deductBalance(float $amount): bool
+    {
+        if (!$this->canAfford($amount)) {
+            return false;
+        }
+
+        $this->balance -= $amount;
+        return $this->save();
+    }
+
+    /**
+     * Add balance for santri (top up)
+     */
+    public function addBalance(float $amount): bool
+    {
+        $this->balance += $amount;
+        $this->last_topup_at = now();
+        return $this->save();
+    }
+
+    /**
+     * Scope for guru only
+     */
+    public function scopeGuru($query)
+    {
+        return $query->where('customer_type', 'guru');
+    }
+
+    /**
+     * Scope for santri only
+     */
+    public function scopeSantri($query)
+    {
+        return $query->where('customer_type', 'santri');
+    }
+
+    /**
+     * Scope for regular customers only
+     */
+    public function scopeRegularCustomers($query)
+    {
+        return $query->where('customer_type', 'regular');
+    }
+
+    /**
+     * Find santri by RFID number
+     */
+    public static function findByRfid(string $rfidNumber)
+    {
+        return static::where('rfid_number', $rfidNumber)
+                    ->where('customer_type', 'santri')
+                    ->first();
+    }
+
+    /**
+     * Get user's transactions
+     */
+    public function transactions()
+    {
+        return $this->hasMany(Transaction::class, 'user_id');
     }
 }

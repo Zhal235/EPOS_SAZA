@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Livewire\PosTerminal;
 use App\Livewire\Products;
 use App\Livewire\Dashboard;
+use App\Livewire\TransactionHistory;
 
 // Public routes
 Route::view('/', 'welcome')->name('home');
@@ -14,6 +15,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('pos', PosTerminal::class)->name('pos');
     Route::get('products', Products::class)->name('products');
     Route::get('categories', \App\Livewire\Categories::class)->name('categories');
+    Route::get('transactions', TransactionHistory::class)->name('transactions');
+    
+    // Customer routes
+    Route::get('customers', \App\Livewire\Customers::class)->name('customers');
     
     // Download template route
     Route::get('products/download-template', function() {

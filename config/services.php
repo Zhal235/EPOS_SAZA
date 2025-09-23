@@ -35,4 +35,17 @@ return [
         ],
     ],
 
+    'simpels' => [
+        'api_url' => env('SIMPELS_API_URL', 'http://localhost:8000/api'),
+        'timeout' => env('SIMPELS_API_TIMEOUT', 30),
+        'api_key' => env('SIMPELS_API_KEY'),
+        'endpoints' => [
+            'santri_all' => '/epos/santri/all',
+            'guru_all' => '/epos/guru/all',
+            'santri_rfid' => '/epos/santri/rfid',
+            'guru_rfid' => '/epos/guru/rfid',
+            'limit_summary' => '/epos/limit/summary',
+        ],
+    ],
+
 ];

@@ -125,6 +125,8 @@
                                             <i class="fas fa-shopping-cart mr-2"></i>
                                         @elseif(str_contains($header, 'Products'))
                                             <i class="fas fa-box mr-2"></i>
+                                        @elseif(str_contains($header, 'Transaction'))
+                                            <i class="fas fa-receipt mr-2"></i>
                                         @elseif(str_contains($header, 'Dashboard'))
                                             <i class="fas fa-tachometer-alt mr-2"></i>
                                         @else
@@ -244,28 +246,71 @@
 
         <!-- Global Scripts -->
         @livewireScripts
+        
+        <!-- SIMPels API Integration Scripts -->
+        <script src="/js/config/api.js"></script>
+        <script src="/js/utils/api.js"></script>
+        <script src="/js/modules/transaction-logger.js"></script>
+        <script src="/js/modules/customer-scanner.js"></script>
+        <script src="/js/modules/transaction-processor.js"></script>
+        <script src="/js/modules/refund-processor.js"></script>
+        <script src="/js/integration/pos-integration.js"></script>
+        
+        <!-- User metadata for API integration -->
+        <meta name="user-name" content="{{ auth()->user()->name }}">
+        <meta name="user-id" content="{{ auth()->user()->id }}">
+        
+        <!-- Add refund button to header actions -->
         <script>
-            // Auto-update time
-            setInterval(() => {
-                document.querySelectorAll('[data-time]').forEach(el => {
-                    el.textContent = new Date().toLocaleTimeString();
-                });
-            }, 1000);
-            
-            // Keyboard shortcuts
-            document.addEventListener('keydown', (e) => {
-                if (e.ctrlKey && e.shiftKey && e.key === 'P') {
-                    e.preventDefault();
-                    // Open POS Terminal
-                    window.location.href = '#';
-                }
-            });
-            
-            // Debug Livewire
-            console.log('Livewire loaded:', typeof Livewire !== 'undefined');
-            if (typeof Livewire !== 'undefined') {
-                console.log('Livewire version:', Livewire.version || 'unknown');
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add refund button to header
+            const headerActions = document.querySelector('.flex.items-center.space-x-4');
+            if (headerActions) {
+                const refundBtn = document.createElement('button');
+                refundBtn.innerHTML = '<i class="fas fa-undo mr-2"></i>Refund';
+                refundBtn.className = 'px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors';
+                refundBtn.onclick = () => refundProcessor.processRefundFromDialog();
+                headerActions.appendChild(refundBtn);
+                
+                // Add log viewer button (for admin)
+                @if(auth()->user()->isAdmin())
+                const logBtn = document.createElement('button');
+                logBtn.innerHTML = '<i class="fas fa-list mr-2"></i>Logs';
+                logBtn.className = 'px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors';
+                logBtn.onclick = () => transactionLogger.showLogViewer();
+                headerActions.appendChild(logBtn);
+                @endif
             }
+            
+            // Log system startup
+            transactionLogger.logSystem('ePOS system started', {
+                user: '{{ auth()->user()->name }}',
+                role: '{{ auth()->user()->role }}',
+                timestamp: new Date().toISOString()
+            });
+        });
+        
+        // Auto-update time
+        setInterval(() => {
+            document.querySelectorAll('[data-time]').forEach(el => {
+                el.textContent = new Date().toLocaleTimeString();
+            });
+        }, 1000);
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.shiftKey && e.key === 'P') {
+                e.preventDefault();
+                // Open POS Terminal
+                window.location.href = '#';
+            }
+        });
+        
+        // Debug Livewire
+        console.log('Livewire loaded:', typeof Livewire !== 'undefined');
+        if (typeof Livewire !== 'undefined') {
+            console.log('Livewire version:', Livewire.version || 'unknown');
+        }
         </script>
     </body>
 </html>

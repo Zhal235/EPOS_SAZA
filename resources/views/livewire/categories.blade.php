@@ -419,6 +419,218 @@
     </div>
     @endif
 
+    <!-- Edit Category Modal -->
+    @if($showEditCategoryModal && $selectedCategory)
+    <div class="fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 transition-opacity" aria-hidden="true">
+                <div class="absolute inset-0 bg-gray-500 opacity-75" wire:click="closeEditCategoryModal"></div>
+            </div>
+
+            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <div class="p-6">
+                    <h2 class="text-lg font-medium text-gray-900 mb-4">
+                        <i class="fas fa-edit mr-2 text-purple-600"></i>Edit Category
+                    </h2>
+                    
+                    <form wire:submit="updateCategory" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Category Name *</label>
+                            <input wire:model="categoryForm.name" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="Enter category name" required>
+                            @error('categoryForm.name') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                            <textarea wire:model="categoryForm.description" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="Enter category description"></textarea>
+                            @error('categoryForm.description') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Icon</label>
+                            <input wire:model="categoryForm.icon" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="e.g., fas fa-tag" required>
+                            @error('categoryForm.icon') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                            <p class="text-xs text-gray-500 mt-1">Use FontAwesome classes like: fas fa-tag, fas fa-laptop, fas fa-coffee</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Color</label>
+                            <div class="flex space-x-2">
+                                <input wire:model="categoryForm.color" type="color" class="w-16 h-10 border border-gray-300 rounded-lg">
+                                <input wire:model="categoryForm.color" type="text" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="#6366F1">
+                            </div>
+                            @error('categoryForm.color') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div class="flex items-center">
+                            <input wire:model="categoryForm.is_active" type="checkbox" id="edit_category_is_active" class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+                            <label for="edit_category_is_active" class="ml-2 block text-sm text-gray-900">Active Category</label>
+                        </div>
+                        
+                        <div class="flex justify-end space-x-3 pt-4">
+                            <button type="button" wire:click="closeEditCategoryModal" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
+                                Cancel
+                            </button>
+                            <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                                <i class="fas fa-save mr-2"></i>Update Category
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <!-- Delete Category Modal -->
+    @if($showDeleteCategoryModal && $categoryToDelete)
+    <div class="fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 transition-opacity" aria-hidden="true">
+                <div class="absolute inset-0 bg-gray-500 opacity-75" wire:click="closeDeleteCategoryModal"></div>
+            </div>
+
+            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <div class="p-6">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mr-4">
+                            <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-medium text-gray-900">Delete Category</h2>
+                            <p class="text-sm text-gray-500">This action cannot be undone</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <p class="text-gray-700">Are you sure you want to delete the category:</p>
+                        <p class="font-semibold text-gray-900 mt-1">{{ $categoryToDelete->name }}</p>
+                        @if($categoryToDelete->products()->count() > 0)
+                            <p class="text-sm text-red-600 mt-2">⚠️ This category has {{ $categoryToDelete->products()->count() }} products. Please reassign them first.</p>
+                        @endif
+                    </div>
+                    
+                    <div class="flex justify-end space-x-3">
+                        <button wire:click="closeDeleteCategoryModal" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
+                            Cancel
+                        </button>
+                        <button wire:click="deleteCategory" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                            <i class="fas fa-trash mr-2"></i>Delete Category
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <!-- Edit Supplier Modal -->
+    @if($showEditSupplierModal && $selectedSupplier)
+    <div class="fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 transition-opacity" aria-hidden="true">
+                <div class="absolute inset-0 bg-gray-500 opacity-75" wire:click="closeEditSupplierModal"></div>
+            </div>
+
+            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <div class="p-6">
+                    <h2 class="text-lg font-medium text-gray-900 mb-4">
+                        <i class="fas fa-edit mr-2 text-blue-600"></i>Edit Supplier
+                    </h2>
+                    
+                    <form wire:submit="updateSupplier" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Supplier Name *</label>
+                            <input wire:model="supplierForm.name" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter supplier name" required>
+                            @error('supplierForm.name') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Contact Person *</label>
+                            <input wire:model="supplierForm.contact_person" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter contact person name" required>
+                            @error('supplierForm.contact_person') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+                            <input wire:model="supplierForm.phone" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter phone number" required>
+                            @error('supplierForm.phone') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            <input wire:model="supplierForm.email" type="email" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter email address">
+                            @error('supplierForm.email') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                            <textarea wire:model="supplierForm.address" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter supplier address"></textarea>
+                            @error('supplierForm.address') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div class="flex items-center">
+                            <input wire:model="supplierForm.is_active" type="checkbox" id="edit_supplier_is_active" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                            <label for="edit_supplier_is_active" class="ml-2 block text-sm text-gray-900">Active Supplier</label>
+                        </div>
+                        
+                        <div class="flex justify-end space-x-3 pt-4">
+                            <button type="button" wire:click="closeEditSupplierModal" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
+                                Cancel
+                            </button>
+                            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                                <i class="fas fa-save mr-2"></i>Update Supplier
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <!-- Delete Supplier Modal -->
+    @if($showDeleteSupplierModal && $supplierToDelete)
+    <div class="fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 transition-opacity" aria-hidden="true">
+                <div class="absolute inset-0 bg-gray-500 opacity-75" wire:click="closeDeleteSupplierModal"></div>
+            </div>
+
+            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <div class="p-6">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mr-4">
+                            <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-medium text-gray-900">Delete Supplier</h2>
+                            <p class="text-sm text-gray-500">This action cannot be undone</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <p class="text-gray-700">Are you sure you want to delete the supplier:</p>
+                        <p class="font-semibold text-gray-900 mt-1">{{ $supplierToDelete->name }}</p>
+                        @if($supplierToDelete->products()->count() > 0)
+                            <p class="text-sm text-red-600 mt-2">⚠️ This supplier has {{ $supplierToDelete->products()->count() }} products. Please reassign them first.</p>
+                        @endif
+                    </div>
+                    
+                    <div class="flex justify-end space-x-3">
+                        <button wire:click="closeDeleteSupplierModal" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
+                            Cancel
+                        </button>
+                        <button wire:click="deleteSupplier" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                            <i class="fas fa-trash mr-2"></i>Delete Supplier
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
     <!-- Flash Messages -->
     @if (session()->has('message'))
         <div x-data="{ show: true }" x-init="setTimeout(() => show = false, 3000)" x-show="show" 

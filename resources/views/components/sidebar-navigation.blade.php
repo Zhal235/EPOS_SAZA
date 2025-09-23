@@ -24,17 +24,10 @@
             </span>
         </a>
 
-        <a href="#" class="menu-item flex items-center px-4 py-3 text-white rounded-lg">
+        <a href="{{ route('transactions') }}" class="menu-item flex items-center px-4 py-3 text-white rounded-lg {{ request()->routeIs('transactions') ? 'active' : '' }}">
             <i class="fas fa-receipt w-5 text-center"></i>
-            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Transactions</span>
+            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Transaction History</span>
         </a>
-        
-        @if($user->canAccessAdmin())
-        <a href="#" class="menu-item flex items-center px-4 py-3 text-white rounded-lg">
-            <i class="fas fa-undo w-5 text-center"></i>
-            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Returns</span>
-        </a>
-        @endif
     </div>
 
     <!-- Inventory Section - Admin & Manager only -->
@@ -103,7 +96,7 @@
         </a>
         @endif
 
-        <a href="#" class="menu-item flex items-center px-4 py-3 text-white rounded-lg">
+        <a href="{{ route('customers') }}" class="menu-item flex items-center px-4 py-3 text-white rounded-lg {{ request()->routeIs('customers') ? 'active' : '' }}">
             <i class="fas fa-user-friends w-5 text-center"></i>
             <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Customers</span>
         </a>
