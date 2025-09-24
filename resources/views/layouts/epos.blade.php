@@ -16,6 +16,9 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
         @livewireStyles
         
+        <!-- EPOS Notification System Styles -->
+        <link rel="stylesheet" href="/css/notifications.css">
+        
         <style>
             html, body {
                 height: 100%;
@@ -246,6 +249,9 @@
 
         <!-- Global Scripts -->
         @livewireScripts
+        
+        <!-- EPOS Notification System (Load first) -->
+        <script src="/js/modules/notification-system.js"></script>
         
         <!-- SIMPels API Integration Scripts -->
         <script src="/js/config/api.js"></script>

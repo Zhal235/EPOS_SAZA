@@ -473,12 +473,27 @@
                 console.log('Payment data:', { selectedSantri, cart, total });
                 
                 if (!selectedSantri) {
-                    alert('Silakan scan RFID terlebih dahulu!');
+                    window.notificationSystem.error(
+                        '❌ RFID Required',
+                        'Silakan scan RFID santri terlebih dahulu!',
+                        {
+                            actions: [
+                                {
+                                    text: 'Scan RFID',
+                                    class: 'primary',
+                                    callback: () => window.customerScanner?.showManualRfidInput()
+                                }
+                            ]
+                        }
+                    );
                     return;
                 }
                 
                 if (!cart || cart.length === 0) {
-                    alert('Keranjang belanja kosong!');
+                    window.notificationSystem.warning(
+                        '⚠️ Empty Cart',
+                        'Keranjang belanja kosong! Tambahkan produk terlebih dahulu.'
+                    );
                     return;
                 }
                 
@@ -489,9 +504,46 @@
                 
             } catch (error) {
                 console.error('RFID Payment error:', error);
-                alert('Pembayaran gagal: ' + error.message);
+                window.notificationSystem.error(
+                    '❌ Payment Error',
+                    'Terjadi kesalahan saat memproses pembayaran: ' + error.message
+                );
             }
         };
+        
+        // Listen for Livewire events to show notifications
+        document.addEventListener('livewire:init', () => {
+            // Success notification from backend
+            Livewire.on('showRfidSuccess', (data) => {
+                console.log('RFID Success event:', data);
+                window.notificationSystem.rfidSuccess(
+                    data.customerName,
+                    data.amount,
+                    data.newBalance,
+                    data.transactionRef
+                );
+            });
+            
+            // Error notification from backend
+            Livewire.on('showRfidError', (data) => {
+                console.log('RFID Error event:', data);
+                window.notificationSystem.rfidError(
+                    data.errorMessage,
+                    data.customerName,
+                    data.amount
+                );
+            });
+            
+            // General notification handler
+            Livewire.on('showNotification', (data) => {
+                console.log('General notification:', data);
+                window.notificationSystem[data.type](
+                    data.title,
+                    data.message,
+                    data.options || {}
+                );
+            });
+        });
         
         // Manual RFID scan function for testing
         window.testRfidScan = function(rfidTag) {

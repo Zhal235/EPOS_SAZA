@@ -276,9 +276,27 @@ class PosTerminal extends Component
     public function confirmRfidPayment()
     {
         if (!$this->selectedSantri) {
-            session()->flash('error', 'Tidak ada santri yang dipilih!');
+            // Use JavaScript notification for better UX
+            $this->dispatch('showNotification', [
+                'type' => 'error',
+                'title' => '❌ RFID Error',
+                'message' => 'Silakan scan RFID santri terlebih dahulu!',
+                'options' => [
+                    'actions' => [
+                        ['text' => 'Scan RFID', 'callback' => 'window.customerScanner?.showManualRfidInput()']
+                    ]
+                ]
+            ]);
             return false;
         }
+
+        // Show processing notification
+        $this->dispatch('showNotification', [
+            'type' => 'info',
+            'title' => '📱 Processing Payment...',
+            'message' => 'Memproses pembayaran RFID melalui SIMPels API',
+            'options' => ['duration' => 0, 'showProgress' => false]
+        ]);
 
         try {
             DB::beginTransaction();
@@ -287,7 +305,7 @@ class PosTerminal extends Component
             foreach ($this->cart as $item) {
                 $product = Product::find($item['id']);
                 if (!$product || $product->stock_quantity < $item['quantity']) {
-                    throw new \Exception("Insufficient stock for {$item['name']}!");
+                    throw new \Exception("Stock tidak mencukupi untuk {$item['name']}! Stock tersedia: {$product->stock_quantity}");
                 }
             }
 
@@ -335,18 +353,45 @@ class PosTerminal extends Component
             DB::commit();
 
             $transactionNumber = $transaction->transaction_number;
+            
+            // Get santri current balance (will be updated by API)
+            $currentBalance = is_object($this->selectedSantri) ? 
+                ($this->selectedSantri->saldo ?? 0) : 
+                ($this->selectedSantri['saldo'] ?? 0);
+            
+            $newBalance = $currentBalance - $this->total;
 
-            // Clear cart and close modal
+            // Clear cart and close modal first
             $this->clearCart();
             $this->closeRfidModal();
             
-            session()->flash('message', "Pembayaran RFID berhasil! Transaksi #{$transactionNumber}. Pembayaran akan diproses melalui sistem SIMPels.");
+            // Show detailed success notification
+            $this->dispatch('showRfidSuccess', [
+                'customerName' => $santriName,
+                'amount' => $this->total,
+                'newBalance' => $newBalance,
+                'transactionRef' => $transactionNumber,
+                'itemCount' => count($this->cart)
+            ]);
 
             return true;
 
         } catch (\Exception $e) {
             DB::rollBack();
-            session()->flash('error', 'Payment processing failed: ' . $e->getMessage());
+            
+            // Show detailed error notification
+            $this->dispatch('showRfidError', [
+                'errorMessage' => $e->getMessage(),
+                'customerName' => $santriName ?? 'Unknown',
+                'amount' => $this->total ?? 0,
+                'suggestions' => [
+                    'Periksa koneksi internet',
+                    'Pastikan saldo santri mencukupi', 
+                    'Coba scan ulang RFID',
+                    'Gunakan pembayaran tunai sebagai alternatif'
+                ]
+            ]);
+            
             return false;
         }
     }
@@ -420,14 +465,61 @@ class PosTerminal extends Component
             $itemCount = $this->totalItems;
             $transactionNumber = $transaction->transaction_number;
 
-            // Clear cart and show success
+            // Clear cart
             $this->clearCart();
             
-            session()->flash('message', "Payment processed successfully! Transaction #{$transactionNumber} - Rp " . number_format($totalAmount, 0, ',', '.') . " ({$itemCount} items sold)");
+            // Show success notification for cash payments
+            $this->dispatch('showNotification', [
+                'type' => 'success',
+                'title' => '✅ Payment Successful!',
+                'message' => "Transaction #{$transactionNumber} completed successfully",
+                'options' => [
+                    'details' => [
+                        'Customer' => $customerName,
+                        'Payment Method' => strtoupper($this->paymentMethod),
+                        'Total Amount' => 'Rp ' . number_format($totalAmount, 0, ',', '.'),
+                        'Items Sold' => $itemCount . ' items',
+                        'Transaction ID' => $transactionNumber
+                    ],
+                    'actions' => [
+                        [
+                            'text' => 'Print Receipt',
+                            'class' => 'primary',
+                            'callback' => "window.printReceipt('{$transactionNumber}')"
+                        ],
+                        [
+                            'text' => 'New Transaction',
+                            'callback' => 'window.location.reload()'
+                        ]
+                    ],
+                    'duration' => 8000,
+                    'sound' => true
+                ]
+            ]);
 
         } catch (\Exception $e) {
             DB::rollBack();
-            session()->flash('error', 'Payment processing failed: ' . $e->getMessage());
+            
+            $this->dispatch('showNotification', [
+                'type' => 'error',
+                'title' => '❌ Payment Failed',
+                'message' => $e->getMessage(),
+                'options' => [
+                    'details' => [
+                        'Error Time' => now()->format('H:i:s'),
+                        'Payment Method' => strtoupper($this->paymentMethod ?? 'Unknown'),
+                        'Total Amount' => 'Rp ' . number_format($this->total, 0, ',', '.')
+                    ],
+                    'actions' => [
+                        [
+                            'text' => 'Try Again',
+                            'class' => 'primary',
+                            'callback' => 'console.log("Retrying payment...")'
+                        ]
+                    ],
+                    'duration' => 10000
+                ]
+            ]);
         }
     }
 
