@@ -468,57 +468,20 @@ class PosTerminal extends Component
             // Clear cart
             $this->clearCart();
             
-            // Show success notification for cash payments
-            $this->dispatch('showNotification', [
-                'type' => 'success',
-                'title' => '✅ Payment Successful!',
-                'message' => "Transaction #{$transactionNumber} completed successfully",
-                'options' => [
-                    'details' => [
-                        'Customer' => $customerName,
-                        'Payment Method' => strtoupper($this->paymentMethod),
-                        'Total Amount' => 'Rp ' . number_format($totalAmount, 0, ',', '.'),
-                        'Items Sold' => $itemCount . ' items',
-                        'Transaction ID' => $transactionNumber
-                    ],
-                    'actions' => [
-                        [
-                            'text' => 'Print Receipt',
-                            'class' => 'primary',
-                            'callback' => "window.printReceipt('{$transactionNumber}')"
-                        ],
-                        [
-                            'text' => 'New Transaction',
-                            'callback' => 'window.location.reload()'
-                        ]
-                    ],
-                    'duration' => 8000,
-                    'sound' => true
-                ]
+            // Show simple success notification for cash payments
+            \Log::info('Dispatching success notification for cash payment');
+            
+            $this->dispatch('showSuccessModal', [
+                'title' => '✅ Pembayaran Berhasil!',
+                'message' => "Transaksi #{$transactionNumber} telah berhasil diproses.\n\nTotal: Rp " . number_format($totalAmount, 0, ',', '.') . "\nMetode: " . strtoupper($this->paymentMethod) . "\nItems: {$itemCount} produk"
             ]);
 
         } catch (\Exception $e) {
             DB::rollBack();
             
-            $this->dispatch('showNotification', [
-                'type' => 'error',
-                'title' => '❌ Payment Failed',
-                'message' => $e->getMessage(),
-                'options' => [
-                    'details' => [
-                        'Error Time' => now()->format('H:i:s'),
-                        'Payment Method' => strtoupper($this->paymentMethod ?? 'Unknown'),
-                        'Total Amount' => 'Rp ' . number_format($this->total, 0, ',', '.')
-                    ],
-                    'actions' => [
-                        [
-                            'text' => 'Try Again',
-                            'class' => 'primary',
-                            'callback' => 'console.log("Retrying payment...")'
-                        ]
-                    ],
-                    'duration' => 10000
-                ]
+            $this->dispatch('showErrorModal', [
+                'title' => '❌ Pembayaran Gagal',
+                'message' => "Terjadi kesalahan saat memproses pembayaran:\n\n" . $e->getMessage() . "\n\nSilakan coba lagi atau hubungi administrator."
             ]);
         }
     }

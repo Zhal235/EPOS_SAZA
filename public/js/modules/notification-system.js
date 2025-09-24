@@ -13,16 +13,46 @@ class EPOSNotificationSystem {
     init() {
         this.createContainer();
         this.loadSounds();
+        this.setupKeyboardHandlers();
         console.log('EPOS Notification System initialized');
     }
     
+    setupKeyboardHandlers() {
+        // Close notifications with ESC key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.notifications.length > 0) {
+                this.removeAll();
+            }
+        });
+    }
+    
     createContainer() {
-        // Remove existing container if any
+        // Remove existing containers if any
         const existing = document.querySelector('.notification-container');
         if (existing) {
             existing.remove();
         }
         
+        const existingOverlay = document.querySelector('.notification-overlay');
+        if (existingOverlay) {
+            existingOverlay.remove();
+        }
+        
+        // Create overlay for modal effect
+        this.overlay = document.createElement('div');
+        this.overlay.className = 'notification-overlay';
+        
+        // Close notifications when clicking on overlay (outside popup)
+        this.overlay.addEventListener('click', (e) => {
+            // Only close if clicking directly on overlay, not on notification content
+            if (e.target === this.overlay) {
+                this.removeAll();
+            }
+        });
+        
+        document.body.appendChild(this.overlay);
+        
+        // Create notification container
         this.container = document.createElement('div');
         this.container.className = 'notification-container';
         document.body.appendChild(this.container);
@@ -55,6 +85,39 @@ class EPOSNotificationSystem {
     
     info(title, message, options = {}) {
         return this.show('info', title, message, options);
+    }
+    
+    // Simple modal-style notifications
+    showSuccessModal(title, message) {
+        this.removeAll(); // Clear existing notifications
+        return this.success(title, message, {
+            duration: 4000, // Auto-dismiss after 4 seconds
+            sound: true,
+            showProgress: true, // Show countdown progress bar
+            actions: [
+                {
+                    text: 'OK',
+                    class: 'primary',
+                    callback: () => this.removeAll()
+                }
+            ]
+        });
+    }
+    
+    showErrorModal(title, message) {
+        this.removeAll(); // Clear existing notifications
+        return this.error(title, message, {
+            duration: 6000, // Auto-dismiss after 6 seconds (longer for errors)
+            sound: true,
+            showProgress: true, // Show countdown progress bar
+            actions: [
+                {
+                    text: 'OK',
+                    class: 'primary',
+                    callback: () => this.removeAll()
+                }
+            ]
+        });
     }
     
     // RFID specific notifications
@@ -134,6 +197,11 @@ class EPOSNotificationSystem {
     
     // Main show method
     show(type, title, message, options = {}) {
+        // Validate inputs to prevent undefined errors
+        if (!type) type = 'info';
+        if (!title) title = 'Notification';
+        if (!message) message = '';
+        
         const notification = this.createNotification(type, title, message, options);
         
         // Remove oldest notification if we have too many
@@ -143,6 +211,11 @@ class EPOSNotificationSystem {
         
         this.notifications.push(notification);
         this.container.appendChild(notification.element);
+        
+        // Show overlay for modal effect
+        if (this.overlay) {
+            this.overlay.classList.add('show');
+        }
         
         // Trigger animation
         setTimeout(() => {
@@ -191,10 +264,10 @@ class EPOSNotificationSystem {
                     ${this.getIcon(type)}
                 </div>
                 <div class="notification-content">
-                    <div class="notification-title">${title}</div>
-                    <div class="notification-message">${message}</div>
+                    <div class="notification-title">${title || 'Notification'}</div>
+                    <div class="notification-message">${message || ''}</div>
                 </div>
-                <button class="notification-close" onclick="window.notificationSystem.remove(${JSON.stringify(notification).replace(/"/g, '&quot;')})">
+                <button class="notification-close" onclick="window.notificationSystem.removeById('${notification.id}')">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                     </svg>
@@ -226,15 +299,28 @@ class EPOSNotificationSystem {
         // Add action buttons if provided
         if (options.actions && options.actions.length > 0) {
             html += '<div class="notification-actions">';
-            options.actions.forEach(action => {
+            
+            // Add auto-close info if duration is set
+            if (options.duration && options.duration > 0) {
+                const seconds = Math.round(options.duration / 1000);
+                html += `<span class="notification-auto-close">Auto-close dalam ${seconds} detik</span>`;
+            }
+            
+            // Add action buttons
+            html += '<div style="display: flex; gap: 8px;">';
+            options.actions.forEach((action, index) => {
+                const actionId = `action_${notification.id}_${index}`;
+                // Store action callback globally to avoid serialization issues
+                window[actionId] = action.callback;
+                
                 html += `
                     <button class="notification-btn ${action.class || ''}" 
-                            onclick="(${action.callback.toString()})(); window.notificationSystem.remove(${JSON.stringify(notification).replace(/"/g, '&quot;')})">
-                        ${action.text}
+                            onclick="if(window['${actionId}']) window['${actionId}'](); window.notificationSystem.removeById('${notification.id}')">
+                        ${action.text || 'Action'}
                     </button>
                 `;
             });
-            html += '</div>';
+            html += '</div></div>';
         }
         
         element.innerHTML = html;
@@ -281,7 +367,19 @@ class EPOSNotificationSystem {
             if (index > -1) {
                 this.notifications.splice(index, 1);
             }
+            
+            // Hide overlay if no more notifications
+            if (this.notifications.length === 0 && this.overlay) {
+                this.overlay.classList.remove('show');
+            }
         }, 300);
+    }
+    
+    removeById(id) {
+        const notification = this.notifications.find(n => n.id == id);
+        if (notification) {
+            this.remove(notification);
+        }
     }
     
     removeAll() {

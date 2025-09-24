@@ -1,17 +1,35 @@
 <div>
-    <!-- Success/Error Messages -->
+    <!-- Session Messages Handler - Convert to Notifications -->
     @if (session()->has('message'))
-        <div x-data="{ show: true }" x-init="setTimeout(() => show = false, 3000)" x-show="show" 
-             class="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50">
-            {{ session('message') }}
-        </div>
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                if (window.notificationSystem) {
+                    window.notificationSystem.success(
+                        '✅ Success',
+                        '{{ session('message') }}',
+                        { duration: 5000 }
+                    );
+                }
+            }, 500);
+        });
+        </script>
     @endif
 
     @if (session()->has('error'))
-        <div x-data="{ show: true }" x-init="setTimeout(() => show = false, 3000)" x-show="show" 
-             class="fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50">
-            {{ session('error') }}
-        </div>
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                if (window.notificationSystem) {
+                    window.notificationSystem.error(
+                        '❌ Error',
+                        '{{ session('error') }}',
+                        { duration: 8000 }
+                    );
+                }
+            }, 500);
+        });
+        </script>
     @endif
 
     <!-- API Integration Scripts loaded in layout -->
@@ -511,11 +529,20 @@
             }
         };
         
-        // Listen for Livewire events to show notifications
-        document.addEventListener('livewire:init', () => {
+        // Setup Livewire event listeners with multiple initialization approaches
+        function setupLivewireEvents() {
+            console.log('Setting up Livewire event listeners...');
+            
+            // Check if notificationSystem is available
+            if (!window.notificationSystem) {
+                console.warn('Notification system not ready, retrying...');
+                setTimeout(setupLivewireEvents, 1000);
+                return;
+            }
+            
             // Success notification from backend
             Livewire.on('showRfidSuccess', (data) => {
-                console.log('RFID Success event:', data);
+                console.log('RFID Success event received:', data);
                 window.notificationSystem.rfidSuccess(
                     data.customerName,
                     data.amount,
@@ -526,7 +553,7 @@
             
             // Error notification from backend
             Livewire.on('showRfidError', (data) => {
-                console.log('RFID Error event:', data);
+                console.log('RFID Error event received:', data);
                 window.notificationSystem.rfidError(
                     data.errorMessage,
                     data.customerName,
@@ -534,16 +561,61 @@
                 );
             });
             
-            // General notification handler
-            Livewire.on('showNotification', (data) => {
-                console.log('General notification:', data);
-                window.notificationSystem[data.type](
-                    data.title,
-                    data.message,
-                    data.options || {}
-                );
+            // Success modal handler
+            Livewire.on('showSuccessModal', (data) => {
+                console.log('Success modal event received:', data);
+                if (window.notificationSystem) {
+                    window.notificationSystem.showSuccessModal(
+                        data.title || '✅ Success',
+                        data.message || 'Operation completed successfully'
+                    );
+                }
             });
-        });
+            
+            // Error modal handler
+            Livewire.on('showErrorModal', (data) => {
+                console.log('Error modal event received:', data);
+                if (window.notificationSystem) {
+                    window.notificationSystem.showErrorModal(
+                        data.title || '❌ Error',
+                        data.message || 'An error occurred'
+                    );
+                }
+            });
+            
+            // General notification handler (fallback)
+            Livewire.on('showNotification', (data) => {
+                console.log('General notification event received:', data);
+                
+                if (window.notificationSystem && window.notificationSystem[data.type]) {
+                    window.notificationSystem[data.type](
+                        data.title,
+                        data.message,
+                        data.options || {}
+                    );
+                } else {
+                    console.error('Notification system method not found:', data.type);
+                    // Fallback to basic alert
+                    alert(data.title + ': ' + data.message);
+                }
+            });
+            
+            console.log('Livewire event listeners setup complete');
+        }
+        
+        // Try multiple initialization approaches
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupLivewireEvents);
+        } else {
+            setupLivewireEvents();
+        }
+        
+        // Also try with Livewire hooks
+        document.addEventListener('livewire:init', setupLivewireEvents);
+        document.addEventListener('livewire:load', setupLivewireEvents);
+        
+        // Fallback - setup after a delay
+        setTimeout(setupLivewireEvents, 2000);
         
         // Manual RFID scan function for testing
         window.testRfidScan = function(rfidTag) {
