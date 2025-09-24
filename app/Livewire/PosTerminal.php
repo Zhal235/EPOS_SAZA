@@ -277,7 +277,7 @@ class PosTerminal extends Component
     {
         if (!$this->selectedSantri) {
             session()->flash('error', 'Tidak ada santri yang dipilih!');
-            return;
+            return false;
         }
 
         try {
@@ -291,16 +291,20 @@ class PosTerminal extends Component
                 }
             }
 
-            // Deduct santri balance
-            if (!$this->selectedSantri->deductBalance($this->total)) {
-                throw new \Exception('Failed to deduct balance!');
-            }
+            // Get santri data (convert object properties if needed)
+            $santriName = is_object($this->selectedSantri) ? 
+                ($this->selectedSantri->nama_santri ?? $this->selectedSantri->name) : 
+                $this->selectedSantri['nama_santri'];
+            
+            $santriClass = is_object($this->selectedSantri) ? 
+                ($this->selectedSantri->kelas ?? $this->selectedSantri->class) : 
+                $this->selectedSantri['kelas'];
 
-            // Create transaction
+            // Create transaction first (local database)
             $transaction = Transaction::create([
                 'user_id' => Auth::id() ?? 1,
-                'customer_name' => $this->selectedSantri->name,
-                'customer_phone' => $this->selectedSantri->class, // Store class in phone field for santri
+                'customer_name' => $santriName,
+                'customer_phone' => $santriClass ?? '', // Store class in phone field for santri
                 'subtotal' => $this->subtotal,
                 'tax_amount' => 0,
                 'discount_amount' => $this->discount,
@@ -331,17 +335,19 @@ class PosTerminal extends Component
             DB::commit();
 
             $transactionNumber = $transaction->transaction_number;
-            $remainingBalance = $this->selectedSantri->formatted_balance;
 
             // Clear cart and close modal
             $this->clearCart();
             $this->closeRfidModal();
             
-            session()->flash('message', "Pembayaran RFID berhasil! Transaksi #{$transactionNumber}. Sisa saldo: {$remainingBalance}");
+            session()->flash('message', "Pembayaran RFID berhasil! Transaksi #{$transactionNumber}. Pembayaran akan diproses melalui sistem SIMPels.");
+
+            return true;
 
         } catch (\Exception $e) {
             DB::rollBack();
             session()->flash('error', 'Payment processing failed: ' . $e->getMessage());
+            return false;
         }
     }
 

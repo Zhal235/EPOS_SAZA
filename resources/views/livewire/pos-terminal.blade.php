@@ -304,12 +304,18 @@
                                 <h4 class="text-base font-medium text-gray-900 mb-2">Tap RFID Card</h4>
                                 <p class="text-gray-600 mb-4 text-sm">Silakan tempelkan kartu RFID santri ke reader</p>
                                 
-                                <!-- Test Button for Development -->
-                                <div class="border-t pt-3 mt-3">
-                                    <p class="text-xs text-gray-500 mb-2">Testing Mode:</p>
-                                    <button wire:click="simulateRfidScan" class="px-3 py-2 bg-yellow-500 text-white rounded-lg text-xs hover:bg-yellow-600">
-                                        Simulate RFID Scan
-                                    </button>
+                                <!-- RFID Input Field -->
+                                <div class="mt-4">
+                                    <input 
+                                        type="text" 
+                                        id="rfid-input"
+                                        placeholder="Scan RFID atau ketik manual"
+                                        class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        autocomplete="off"
+                                    >
+                                    <p class="text-xs text-gray-500 mt-2">
+                                        Tempelkan kartu RFID atau tekan Ctrl+R untuk input manual
+                                    </p>
                                 </div>
                             </div>
                         @elseif($selectedSantri)
@@ -349,8 +355,8 @@
                                     <button wire:click="closeRfidModal" class="flex-1 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm">
                                         Cancel
                                     </button>
-                                    <button wire:click="confirmRfidPayment" class="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
-                                        <i class="fas fa-check mr-1"></i>Confirm
+                                    <button onclick="processRfidPayment()" class="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
+                                        <i class="fas fa-check mr-1"></i>Confirm Payment
                                     </button>
                                 </div>
                             </div>
@@ -360,3 +366,90 @@
             </div>
         @endif
     </div>
+
+    <!-- RFID Integration Script -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Auto-focus RFID input when modal opens
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'childList') {
+                    const rfidInput = document.getElementById('rfid-input');
+                    if (rfidInput && rfidInput.offsetParent !== null) {
+                        setTimeout(() => rfidInput.focus(), 100);
+                    }
+                }
+            });
+        });
+        
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+        
+        // Override customerScanner to integrate with Livewire RFID payment
+        if (window.customerScanner) {
+            const originalDisplayCustomerInfo = window.customerScanner.displayCustomerInfo;
+            
+            window.customerScanner.displayCustomerInfo = function(customer) {
+                originalDisplayCustomerInfo.call(this, customer);
+                
+                // If RFID modal is open, set customer data in Livewire
+                const showRfidModal = @this.get('showRfidModal');
+                if (showRfidModal && customer) {
+                    @this.set('selectedSantri', {
+                        id: customer.id,
+                        nama_santri: customer.nama_santri,
+                        name: customer.nama_santri,
+                        kelas: customer.kelas,
+                        class: customer.kelas,
+                        saldo: customer.saldo,
+                        rfid_tag: customer.rfid_tag
+                    });
+                }
+            };
+        }
+        
+        // Global function for RFID payment processing
+        window.processRfidPayment = async function() {
+            const selectedSantri = @this.get('selectedSantri');
+            const cart = @this.get('cart');
+            const total = @this.get('total');
+            
+            if (!selectedSantri) {
+                alert('Silakan scan RFID terlebih dahulu!');
+                return;
+            }
+            
+            if (!cart || cart.length === 0) {
+                alert('Keranjang belanja kosong!');
+                return;
+            }
+            
+            try {
+                // Use transaction processor if available
+                if (window.transactionProcessor) {
+                    const result = await window.transactionProcessor.processPayment(
+                        selectedSantri, 
+                        cart, 
+                        total, 
+                        'rfid'
+                    );
+                    
+                    if (result && result.success) {
+                        // Process payment in Livewire backend
+                        await @this.call('processRfidPayment', selectedSantri);
+                    }
+                } else {
+                    // Fallback to Livewire method
+                    await @this.call('confirmRfidPayment');
+                }
+            } catch (error) {
+                console.error('RFID Payment error:', error);
+                alert('Pembayaran gagal: ' + error.message);
+            }
+        };
+    });
+    </script>
+
+</div>
