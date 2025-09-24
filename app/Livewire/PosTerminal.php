@@ -150,6 +150,19 @@ class PosTerminal extends Component
         }
     }
 
+    public function openRfidModal()
+    {
+        $this->showRfidModal = true;
+        $this->rfidScanning = true;
+    }
+
+    public function closeRfidModal()
+    {
+        $this->showRfidModal = false;
+        $this->rfidScanning = false;
+        $this->selectedSantri = null;
+    }
+
     public function getSubtotalProperty()
     {
         return collect($this->cart)->sum('total');
