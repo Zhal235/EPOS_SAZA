@@ -83,7 +83,7 @@ function setupCheckoutOverride() {
             } else {
                 // Fallback to Livewire component
                 if (window.Livewire) {
-                    Livewire.find(getComponentId()).call('processCheckout');
+                    Livewire.find(getComponentId()).call('processPayment');
                 }
             }
         }
@@ -91,101 +91,56 @@ function setupCheckoutOverride() {
 }
 
 /**
- * Handle RFID checkout process
+ * Handle RFID checkout process - Integrated with Livewire
  */
 async function handleRFIDCheckout() {
     try {
-        // Check if customer is selected
-        if (!customerScanner.currentCustomer) {
+        // Check if customer is selected via customerScanner
+        if (!window.customerScanner || !window.customerScanner.currentCustomer) {
             showNotification('Silakan scan RFID santri terlebih dahulu', 'error');
             return;
         }
         
-        // Get cart items from existing system
-        const cart = getCurrentCart();
+        // Get Livewire component instance
+        const componentId = getComponentId();
+        if (!componentId) {
+            showNotification('Error: Component tidak ditemukan', 'error');
+            return;
+        }
+        
+        const livewireComponent = window.Livewire.find(componentId);
+        
+        // Get cart from Livewire component
+        const cart = livewireComponent.get('cart');
         if (!cart || cart.length === 0) {
             showNotification('Keranjang belanja kosong', 'error');
             return;
         }
         
-        // Calculate total
-        const total = calculateCartTotal(cart);
-        
-        // Show confirmation
-        const confirmed = await showCheckoutConfirmation(customerScanner.currentCustomer, cart, total);
-        if (!confirmed) {
-            return;
-        }
-        
-        // Process RFID payment (PRODUCTION MODE)
+        // Process RFID payment via Livewire (PRODUCTION MODE)
         showLoading('Memproses pembayaran RFID melalui SIMPels...');
         
-        const result = await transactionProcessor.processPayment(
-            customerScanner.currentCustomer,
-            cart,
-            total,
-            'rfid'
-        );
+        // Set payment method to RFID
+        livewireComponent.set('paymentMethod', 'rfid');
         
-        if (result.success) {
-            showNotification(`✅ Pembayaran RFID berhasil! Saldo tersisa: ${formatCurrency(result.newBalance)}`, 'success');
-            
-            // Log successful transaction
-            transactionLogger.log({
-                level: 'info',
-                category: 'payment',
-                message: `RFID Payment Success - ${customerScanner.currentCustomer.nama_santri}`,
-                data: {
-                    customer: customerScanner.currentCustomer.nama_santri,
-                    total: total,
-                    newBalance: result.newBalance,
-                    transactionRef: result.transactionRef
-                }
-            });
-            
-            // Clear cart and reset UI
-            clearCart();
-            customerScanner.clearCustomer();
-            
-            // Print receipt if needed
-            printReceipt(result.transactionRef, cart, total, customerScanner.currentCustomer);
-            
-            // Refresh page or update UI as needed
-            setTimeout(() => {
-                window.location.reload();
-            }, 2000);
+        // Set customer data in Livewire
+        livewireComponent.set('selectedSantri', window.customerScanner.currentCustomer);
+        
+        // Process payment via Livewire
+        const result = await livewireComponent.call('processPayment');
+        
+        hideLoading();
+        
+        if (result) {
+            showNotification(`✅ Pembayaran RFID berhasil!`, 'success');
         } else {
-            showNotification('❌ Pembayaran RFID gagal: ' + result.message, 'error');
-            
-            // Log failed transaction
-            transactionLogger.log({
-                level: 'error',
-                category: 'payment',
-                message: `RFID Payment Failed - ${customerScanner.currentCustomer?.nama_santri || 'Unknown'}`,
-                data: {
-                    error: result.message,
-                    customer: customerScanner.currentCustomer?.nama_santri,
-                    total: total
-                }
-            });
+            showNotification('❌ Pembayaran RFID gagal', 'error');
         }
         
     } catch (error) {
         console.error('RFID Checkout Error:', error);
-        showNotification('❌ Error pembayaran RFID: ' + error.message, 'error');
-        
-        // Log critical error
-        transactionLogger.log({
-            level: 'error',
-            category: 'payment',
-            message: 'RFID Payment Critical Error',
-            data: {
-                error: error.message,
-                stack: error.stack
-            }
-        });
-    } finally {
         hideLoading();
+        showNotification('❌ Error pembayaran RFID: ' + error.message, 'error');
     }
 }
 

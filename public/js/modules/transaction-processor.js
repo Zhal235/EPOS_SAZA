@@ -444,8 +444,6 @@ class TransactionProcessor {
     }
 }
 
-}
-
 // Create global instance only if not exists
 if (!window.transactionProcessor) {
     window.transactionProcessor = new TransactionProcessor();
