@@ -54,12 +54,16 @@ function setupEventListeners() {
  * Override checkout process to support RFID payments
  */
 function setupCheckoutOverride() {
-    // Find existing checkout button
-    const checkoutBtn = document.getElementById('checkout-btn');
+    // Find existing checkout button using Livewire wire:click selector
+    const checkoutBtn = document.querySelector('button[wire\\:click="processPayment"]');
     if (!checkoutBtn) {
-        console.warn('Checkout button not found');
+        console.warn('Process Payment button not found, retrying...');
+        // Retry after DOM is fully loaded
+        setTimeout(setupCheckoutOverride, 2000);
         return;
     }
+    
+    console.log('Process Payment button found, setting up RFID integration...');
     
     // Store original click handler
     const originalHandler = checkoutBtn.onclick;

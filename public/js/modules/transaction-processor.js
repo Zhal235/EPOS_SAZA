@@ -455,3 +455,5 @@ if (!window.transactionProcessor) {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = TransactionProcessor;
 }
+
+} // End of conditional class definition

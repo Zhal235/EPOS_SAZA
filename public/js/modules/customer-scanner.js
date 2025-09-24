@@ -364,8 +364,6 @@ class CustomerScanner {
     }
 }
 
-}
-
 // Create global instance only if not exists
 if (!window.customerScanner) {
     window.customerScanner = new CustomerScanner();
@@ -375,3 +373,5 @@ if (!window.customerScanner) {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = CustomerScanner;
 }
+
+} // End of conditional class definition

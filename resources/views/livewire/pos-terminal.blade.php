@@ -369,14 +369,39 @@
 
     <!-- RFID Integration Script -->
     <script>
+    // Wait for all scripts to load
     document.addEventListener('DOMContentLoaded', function() {
+        console.log('POS Terminal RFID Integration initializing...');
+        
+        // Initialize RFID integration after a short delay to ensure all modules are loaded
+        setTimeout(initializeRfidIntegration, 1000);
+    });
+    
+    function initializeRfidIntegration() {
+        console.log('Initializing RFID integration...');
+        
         // Auto-focus RFID input when modal opens
+        setupRfidInputFocus();
+        
+        // Setup customerScanner integration
+        setupCustomerScannerIntegration();
+        
+        // Setup global functions
+        setupGlobalRfidFunctions();
+        
+        console.log('RFID integration initialized successfully');
+    }
+    
+    function setupRfidInputFocus() {
         const observer = new MutationObserver(function(mutations) {
             mutations.forEach(function(mutation) {
                 if (mutation.type === 'childList') {
                     const rfidInput = document.getElementById('rfid-input');
                     if (rfidInput && rfidInput.offsetParent !== null) {
-                        setTimeout(() => rfidInput.focus(), 100);
+                        setTimeout(() => {
+                            rfidInput.focus();
+                            console.log('RFID input focused');
+                        }, 100);
                     }
                 }
             });
@@ -386,70 +411,98 @@
             childList: true,
             subtree: true
         });
-        
-        // Override customerScanner to integrate with Livewire RFID payment
+    }
+    
+    function setupCustomerScannerIntegration() {
+        // Check if customerScanner is available
         if (window.customerScanner) {
+            console.log('CustomerScanner found, setting up integration...');
+            
             const originalDisplayCustomerInfo = window.customerScanner.displayCustomerInfo;
             
             window.customerScanner.displayCustomerInfo = function(customer) {
+                console.log('Customer found:', customer);
+                
+                // Call original method
                 originalDisplayCustomerInfo.call(this, customer);
                 
                 // If RFID modal is open, set customer data in Livewire
-                const showRfidModal = @this.get('showRfidModal');
-                if (showRfidModal && customer) {
-                    @this.set('selectedSantri', {
-                        id: customer.id,
-                        nama_santri: customer.nama_santri,
-                        name: customer.nama_santri,
-                        kelas: customer.kelas,
-                        class: customer.kelas,
-                        saldo: customer.saldo,
-                        rfid_tag: customer.rfid_tag
-                    });
+                try {
+                    const showRfidModal = @this.get('showRfidModal');
+                    if (showRfidModal && customer) {
+                        console.log('Setting customer data in Livewire...');
+                        
+                        @this.set('selectedSantri', {
+                            id: customer.id,
+                            nama_santri: customer.nama_santri,
+                            name: customer.nama_santri,
+                            kelas: customer.kelas,
+                            class: customer.kelas,
+                            saldo: customer.saldo,
+                            rfid_tag: customer.rfid_tag
+                        });
+                        
+                        console.log('Customer data set successfully');
+                        
+                        // Show success notification
+                        if (window.customerScanner.showSuccess) {
+                            window.customerScanner.showSuccess(`Santri ditemukan: ${customer.nama_santri} - ${customer.kelas}`);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error setting customer data:', error);
                 }
             };
+        } else {
+            console.warn('CustomerScanner not found, retrying...');
+            // Retry after 2 seconds
+            setTimeout(setupCustomerScannerIntegration, 2000);
         }
-        
+    }
+    
+    function setupGlobalRfidFunctions() {
         // Global function for RFID payment processing
         window.processRfidPayment = async function() {
-            const selectedSantri = @this.get('selectedSantri');
-            const cart = @this.get('cart');
-            const total = @this.get('total');
-            
-            if (!selectedSantri) {
-                alert('Silakan scan RFID terlebih dahulu!');
-                return;
-            }
-            
-            if (!cart || cart.length === 0) {
-                alert('Keranjang belanja kosong!');
-                return;
-            }
+            console.log('Processing RFID payment...');
             
             try {
-                // Use transaction processor if available
-                if (window.transactionProcessor) {
-                    const result = await window.transactionProcessor.processPayment(
-                        selectedSantri, 
-                        cart, 
-                        total, 
-                        'rfid'
-                    );
-                    
-                    if (result && result.success) {
-                        // Process payment in Livewire backend
-                        await @this.call('processRfidPayment', selectedSantri);
-                    }
-                } else {
-                    // Fallback to Livewire method
-                    await @this.call('confirmRfidPayment');
+                const selectedSantri = @this.get('selectedSantri');
+                const cart = @this.get('cart');
+                const total = @this.get('total');
+                
+                console.log('Payment data:', { selectedSantri, cart, total });
+                
+                if (!selectedSantri) {
+                    alert('Silakan scan RFID terlebih dahulu!');
+                    return;
                 }
+                
+                if (!cart || cart.length === 0) {
+                    alert('Keranjang belanja kosong!');
+                    return;
+                }
+                
+                // Process payment in Livewire backend directly
+                console.log('Calling Livewire confirmRfidPayment...');
+                const result = await @this.call('confirmRfidPayment');
+                console.log('Payment result:', result);
+                
             } catch (error) {
                 console.error('RFID Payment error:', error);
                 alert('Pembayaran gagal: ' + error.message);
             }
         };
-    });
+        
+        // Manual RFID scan function for testing
+        window.testRfidScan = function(rfidTag) {
+            if (window.customerScanner && rfidTag) {
+                console.log('Testing RFID scan:', rfidTag);
+                window.customerScanner.scanRFID(rfidTag);
+            } else {
+                console.error('CustomerScanner not available or RFID tag not provided');
+            }
+        };
+    }
     </script>
 
 </div>
