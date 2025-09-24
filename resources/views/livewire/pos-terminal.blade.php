@@ -14,11 +14,7 @@
         </div>
     @endif
 
-    <!-- API Integration Scripts -->
-    <script src="/js/config/api.js"></script>
-    <script src="/js/utils/api.js"></script>
-    <script src="/js/modules/customer-scanner.js"></script>
-    <script src="/js/modules/transaction-processor.js"></script>
+    <!-- API Integration Scripts loaded in layout -->
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
             <!-- Products Grid -->

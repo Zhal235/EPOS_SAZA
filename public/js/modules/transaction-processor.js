@@ -1,4 +1,5 @@
 // Transaction Processor for SIMPels Integration
+if (typeof TransactionProcessor === 'undefined') {
 class TransactionProcessor {
     constructor() {
         this.currentTransaction = null;
@@ -443,8 +444,12 @@ class TransactionProcessor {
     }
 }
 
-// Create global instance
-window.transactionProcessor = new TransactionProcessor();
+}
+
+// Create global instance only if not exists
+if (!window.transactionProcessor) {
+    window.transactionProcessor = new TransactionProcessor();
+}
 
 // Export for module use
 if (typeof module !== 'undefined' && module.exports) {

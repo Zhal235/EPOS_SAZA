@@ -1,4 +1,5 @@
 // Customer Scanner Module for RFID Integration
+if (typeof CustomerScanner === 'undefined') {
 class CustomerScanner {
     constructor() {
         this.currentCustomer = null;
@@ -363,8 +364,12 @@ class CustomerScanner {
     }
 }
 
-// Create global instance
-window.customerScanner = new CustomerScanner();
+}
+
+// Create global instance only if not exists
+if (!window.customerScanner) {
+    window.customerScanner = new CustomerScanner();
+}
 
 // Export for module use
 if (typeof module !== 'undefined' && module.exports) {
