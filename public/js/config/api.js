@@ -7,7 +7,7 @@ const API_CONFIG = {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
     },
-    debug: true // Set to false in production
+    debug: false // Production mode - RFID payment aktif
 };
 
 // Available API endpoints

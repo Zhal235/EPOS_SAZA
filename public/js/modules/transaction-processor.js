@@ -50,6 +50,8 @@ class TransactionProcessor {
     async validateTransaction(customer, cart, totalAmount) {
         const errors = [];
         
+        // Real RFID Payment Mode - Production validation
+        
         try {
             // Validate customer
             if (!customer) {

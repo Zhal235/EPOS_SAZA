@@ -121,8 +121,8 @@
                             <div class="flex items-center">
                                 <i class="fas fa-id-card text-blue-600 mr-3"></i>
                                 <div>
-                                    <h4 class="text-sm font-medium text-blue-900">RFID Payment Mode</h4>
-                                    <p class="text-sm text-blue-700">Customer akan dipilih saat proses pembayaran dengan tap RFID card</p>
+                                    <h4 class="text-sm font-medium text-blue-900">🔴 RFID Payment AKTIF</h4>
+                                    <p class="text-sm text-blue-700">Sistem pembayaran RFID terintegrasi dengan SIMPels siap digunakan</p>
                                 </div>
                             </div>
                         </div>

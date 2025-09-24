@@ -1,6 +1,8 @@
 // Main integration script for SIMPels API with existing ePOS UI
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('SIMPels API Integration loaded');
+    console.log('🔴 SIMPels API Integration loaded - PRODUCTION MODE');
+    console.log('✅ RFID Payment System: AKTIF');
+    console.log('🔗 API Endpoint:', API_CONFIG.baseURL);
     
     // Initialize API integration
     initializeAPIIntegration();
@@ -8,8 +10,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Setup event listeners
     setupEventListeners();
     
-    // Test API connection
-    testAPIConnection();
+    // Only test API connection on POS terminal page
+    if (window.location.pathname === '/pos') {
+        testAPIConnection();
+    }
 });
 
 /**
@@ -109,8 +113,8 @@ async function handleRFIDCheckout() {
             return;
         }
         
-        // Process payment
-        showLoading('Memproses pembayaran...');
+        // Process RFID payment (PRODUCTION MODE)
+        showLoading('Memproses pembayaran RFID melalui SIMPels...');
         
         const result = await transactionProcessor.processPayment(
             customerScanner.currentCustomer,
@@ -120,7 +124,20 @@ async function handleRFIDCheckout() {
         );
         
         if (result.success) {
-            showNotification(`Pembayaran berhasil! Saldo tersisa: ${formatCurrency(result.newBalance)}`, 'success');
+            showNotification(`✅ Pembayaran RFID berhasil! Saldo tersisa: ${formatCurrency(result.newBalance)}`, 'success');
+            
+            // Log successful transaction
+            transactionLogger.log({
+                level: 'info',
+                category: 'payment',
+                message: `RFID Payment Success - ${customerScanner.currentCustomer.nama_santri}`,
+                data: {
+                    customer: customerScanner.currentCustomer.nama_santri,
+                    total: total,
+                    newBalance: result.newBalance,
+                    transactionRef: result.transactionRef
+                }
+            });
             
             // Clear cart and reset UI
             clearCart();
@@ -133,10 +150,36 @@ async function handleRFIDCheckout() {
             setTimeout(() => {
                 window.location.reload();
             }, 2000);
+        } else {
+            showNotification('❌ Pembayaran RFID gagal: ' + result.message, 'error');
+            
+            // Log failed transaction
+            transactionLogger.log({
+                level: 'error',
+                category: 'payment',
+                message: `RFID Payment Failed - ${customerScanner.currentCustomer?.nama_santri || 'Unknown'}`,
+                data: {
+                    error: result.message,
+                    customer: customerScanner.currentCustomer?.nama_santri,
+                    total: total
+                }
+            });
         }
         
     } catch (error) {
-        showNotification('Pembayaran gagal: ' + error.message, 'error');
+        console.error('RFID Checkout Error:', error);
+        showNotification('❌ Error pembayaran RFID: ' + error.message, 'error');
+        
+        // Log critical error
+        transactionLogger.log({
+            level: 'error',
+            category: 'payment',
+            message: 'RFID Payment Critical Error',
+            data: {
+                error: error.message,
+                stack: error.stack
+            }
+        });
     } finally {
         hideLoading();
     }
@@ -363,16 +406,16 @@ function printReceipt(transactionRef, cart, total, customer) {
  */
 async function testAPIConnection() {
     try {
-        showLoading('Testing API connection...');
+        showLoading('Testing SIMPels API connection...');
         const result = await simpelsAPI.testConnection();
         
         if (result.success) {
-            showNotification('API connection successful', 'success');
+            showNotification('SIMPels API connection successful', 'success');
         } else {
-            showNotification('API connection failed: ' + result.message, 'error');
+            showNotification('SIMPels API connection failed: ' + result.message, 'error');
         }
     } catch (error) {
-        showNotification('API connection error: ' + error.message, 'error');
+        showNotification('SIMPels API connection error: ' + error.message, 'error');
     } finally {
         hideLoading();
     }

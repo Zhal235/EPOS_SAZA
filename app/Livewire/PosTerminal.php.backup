@@ -14,7 +14,32 @@ use Illuminate\Support\Facades\DB;
 
 class PosTerminal extends Component
 {
-    use WithPagination;
+    use WithPag        } catch (\Exception $e) {
+            DB::rollBack();
+            session()->flash('error', 'Payment processing failed: ' . $e->getMessage());
+        }
+    }
+
+    public function openRfidModal()
+    {
+        $this->showRfidModal = true;
+        $this->rfidScanning = true;
+    }
+
+    public function closeRfidModal()
+    {
+        $this->showRfidModal = false;
+        $this->rfidScanning = false;
+        $this->selectedSantri = null;
+    }
+
+    public function confirmRfidPayment()
+    {
+        // This method will be overridden by JavaScript integration
+        // The actual RFID payment processing is handled by pos-integration.js
+        $this->closeRfidModal();
+        session()->flash('message', 'RFID payment akan diproses melalui JavaScript integration');
+    }on;
 
     public $search = '';
     public $selectedCategory = '';
@@ -217,7 +242,20 @@ class PosTerminal extends Component
         }
     }
 
+    // RFID Methods
+    public function openRfidModal()
+    {
+        $this->showRfidModal = true;
+        $this->rfidScanning = true;
+        $this->selectedSantri = null;
+    }
 
+    public function closeRfidModal()
+    {
+        $this->showRfidModal = false;
+        $this->rfidScanning = false;
+        $this->selectedSantri = null;
+    }
 
     public function simulateRfidScan($rfidNumber = null)
     {
