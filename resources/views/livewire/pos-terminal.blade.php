@@ -816,8 +816,20 @@
                 return;
             }
             
+            // Debounce tracking for notifications
+            let lastSuccessTime = 0;
+            let lastErrorTime = 0;
+            const NOTIFICATION_DEBOUNCE = 1000; // 1 second debounce
+            
             // Success notification from backend
             Livewire.on('showRfidSuccess', (event) => {
+                const now = Date.now();
+                if (now - lastSuccessTime < NOTIFICATION_DEBOUNCE) {
+                    console.log('Success notification debounced');
+                    return;
+                }
+                lastSuccessTime = now;
+                
                 console.log('RFID Success event received:', event);
                 // Livewire v3 wraps data in array
                 const data = Array.isArray(event) ? event[0] : event;
@@ -833,6 +845,13 @@
             
             // Error notification from backend
             Livewire.on('showRfidError', (event) => {
+                const now = Date.now();
+                if (now - lastErrorTime < NOTIFICATION_DEBOUNCE) {
+                    console.log('Error notification debounced');
+                    return;
+                }
+                lastErrorTime = now;
+                
                 console.log('RFID Error event received:', event);
                 // Livewire v3 wraps data in array
                 const data = Array.isArray(event) ? event[0] : event;
