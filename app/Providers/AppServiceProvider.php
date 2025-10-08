@@ -11,7 +11,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Register SimpelsApiService as singleton
+        $this->app->singleton(\App\Services\SimpelsApiService::class, function ($app) {
+            return new \App\Services\SimpelsApiService();
+        });
     }
 
     /**

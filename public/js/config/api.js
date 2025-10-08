@@ -1,13 +1,14 @@
 // API Configuration for SIMPels Integration
 const API_CONFIG = {
-    baseURL: 'http://localhost:8000/api/epos',
+    baseURL: window.SIMPELS_API_URL || 'http://localhost:8000/api/epos',
     timeout: 30000,
     retries: 3,
     headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        'Authorization': window.SIMPELS_API_KEY ? `Bearer ${window.SIMPELS_API_KEY}` : null
     },
-    debug: false // Production mode - RFID payment aktif
+    debug: false // Production mode - RFID payment aktif, no fallback to dummy data
 };
 
 // Available API endpoints

@@ -131,7 +131,7 @@ function syncDataFromSimpels()
                     'nis' => $santriData['nis'],
                     'class' => $santriData['kelas'] ?? null,
                     'rfid_number' => $santriData['rfid_tag'] ?? null,
-                    'balance' => $santriData['saldo'] ?? 0,
+                    'balance' => $santriData['saldo'], // No fallback - must have actual balance from API
                     'spending_limit' => $santriData['limit_harian'] ?? 50000,
                     'is_active' => ($santriData['status'] ?? 'aktif') === 'aktif',
                 ];

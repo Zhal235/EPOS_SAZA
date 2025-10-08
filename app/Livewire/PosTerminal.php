@@ -7,10 +7,12 @@ use App\Models\Category;
 use App\Models\Transaction;
 use App\Models\TransactionItem;
 use App\Models\User;
+use App\Services\SimpelsApiService;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class PosTerminal extends Component
 {
@@ -29,6 +31,27 @@ class PosTerminal extends Component
     public $showRfidModal = false;
     public $selectedSantri = null;
     public $rfidScanning = false;
+    public $santriBalance = 0;
+    public $dailySpendingLimit = 0;
+    public $remainingLimit = 0;
+    
+    // Development mode tracking
+    public $devModeNotified = false;
+    
+    // Last RFID scan timestamp for debouncing
+    private $lastRfidScan = 0;
+    
+    protected $simpelsApi;
+
+    /**
+     * Constructor injection alternative
+     */
+    public function boot()
+    {
+        if (!$this->simpelsApi) {
+            $this->initializeSimpelsApi();
+        }
+    }
 
     protected $updatesQueryString = [
         'search' => ['except' => ''],
@@ -39,6 +62,39 @@ class PosTerminal extends Component
     {
         $this->cart = [];
         $this->selectedSantri = null;
+        $this->initializeSimpelsApi();
+    }
+    
+    /**
+     * Initialize SimpelsApi service with error handling
+     */
+    protected function initializeSimpelsApi()
+    {
+        try {
+            $this->simpelsApi = app(SimpelsApiService::class);
+            Log::info('SimpelsApiService initialized successfully');
+        } catch (\Exception $e) {
+            Log::error('Failed to initialize SimpelsApiService: ' . $e->getMessage());
+            $this->simpelsApi = null;
+        }
+    }
+    
+    /**
+     * Get SimpelsApi service with lazy loading
+     */
+    protected function getSimpelsApi()
+    {
+        if (!$this->simpelsApi) {
+            $this->initializeSimpelsApi();
+        }
+        
+        if (!$this->simpelsApi) {
+            // Log warning but don't fail completely - allow fallback mode
+            Log::warning('SIMPels API service unavailable, using fallback mode');
+            throw new \Exception('SIMPels API service tidak tersedia. Mode development akan digunakan.');
+        }
+        
+        return $this->simpelsApi;
     }
 
     public function updatingSearch()
@@ -62,12 +118,22 @@ class PosTerminal extends Component
         $product = Product::find($productId);
         
         if (!$product || $product->stock_quantity <= 0) {
-            session()->flash('error', 'Product is out of stock!');
+            $this->dispatch('showNotification', [
+                'type' => 'error',
+                'title' => '❌ Out of Stock',
+                'message' => 'Product is out of stock!',
+                'options' => ['duration' => 3000]
+            ]);
             return;
         }
 
         if (!$product->is_active) {
-            session()->flash('error', 'Product is not available!');
+            $this->dispatch('showNotification', [
+                'type' => 'error',
+                'title' => '❌ Unavailable',
+                'message' => 'Product is not available!',
+                'options' => ['duration' => 3000]
+            ]);
             return;
         }
 
@@ -76,7 +142,12 @@ class PosTerminal extends Component
         if ($existingItem) {
             // Check if we can add more
             if ($existingItem['quantity'] >= $product->stock_quantity) {
-                session()->flash('error', 'Not enough stock available!');
+                $this->dispatch('showNotification', [
+                    'type' => 'warning',
+                    'title' => '⚠️ Stock Limit',
+                    'message' => 'Not enough stock available!',
+                    'options' => ['duration' => 3000]
+                ]);
                 return;
             }
             
@@ -101,8 +172,13 @@ class PosTerminal extends Component
             ];
         }
 
-        // Show success message
-        session()->flash('message', "{$product->name} added to cart!");
+        // Show quick success notification
+        $this->dispatch('showNotification', [
+            'type' => 'success',
+            'title' => '✅ Added to Cart',
+            'message' => "{$product->name} added successfully!",
+            'options' => ['duration' => 2000, 'sound' => false]
+        ]);
     }
 
     public function updateQuantity($productId, $quantity)
@@ -114,7 +190,12 @@ class PosTerminal extends Component
 
         $product = Product::find($productId);
         if ($quantity > $product->stock_quantity) {
-            session()->flash('error', 'Not enough stock available!');
+            $this->dispatch('showNotification', [
+                'type' => 'warning',
+                'title' => '⚠️ Stock Limit',
+                'message' => 'Not enough stock available!',
+                'options' => ['duration' => 3000]
+            ]);
             return;
         }
 
@@ -135,6 +216,15 @@ class PosTerminal extends Component
     public function clearCart()
     {
         $this->cart = [];
+        
+        // Clear RFID related states after successful transaction
+        $this->resetRfidState();
+        
+        // Reset payment method to default
+        $this->paymentMethod = 'cash';
+        $this->customer = 'walk-in';
+        
+        Log::info('Cart and RFID states cleared after successful transaction');
     }
 
     public function selectPaymentMethod($method)
@@ -158,9 +248,208 @@ class PosTerminal extends Component
 
     public function closeRfidModal()
     {
+        $this->resetRfidState();
+        Log::info('RFID modal closed manually');
+    }
+    
+    /**
+     * Force close modal (for emergency situations)
+     */
+    public function forceCloseRfidModal()
+    {
+        $this->closeRfidModal();
+        
+        $this->dispatch('showNotification', [
+            'type' => 'info',
+            'title' => '🔄 Modal Reset',
+            'message' => 'Modal RFID telah direset.',
+            'options' => ['duration' => 2000]
+        ]);
+        
+        Log::warning('RFID Modal force closed');
+    }
+    
+    /**
+     * Handle RFID scan from frontend
+     */
+    public function handleRfidScan($rfidTag)
+    {
+        // Sanitize RFID input from scanner
+        $rfidTag = $this->sanitizeRfidInput($rfidTag);
+        
+        if (empty($rfidTag)) {
+            $this->dispatch('showNotification', [
+                'type' => 'error',
+                'title' => '❌ Invalid RFID',
+                'message' => 'RFID tag tidak valid atau kosong!',
+                'options' => ['duration' => 3000]
+            ]);
+            return;
+        }
+        
+        // Skip RFID scan if santri is already selected (post-payment scenario)
+        if ($this->selectedSantri) {
+            Log::info('Santri already selected, skipping RFID scan', ['rfid' => $rfidTag, 'selected_santri' => $this->selectedSantri['nama_santri'] ?? 'Unknown']);
+            return;
+        }
+        
+        // Skip RFID scan if not in RFID modal mode
+        if (!$this->showRfidModal) {
+            Log::info('RFID modal not active, skipping scan', ['rfid' => $rfidTag]);
+            return;
+        }
+        
+        // Reset rfidScanning flag if it's been stuck for too long
+        if ($this->rfidScanning) {
+            Log::warning('RFID scan flag stuck - resetting', ['rfid' => $rfidTag]);
+            $this->rfidScanning = false;
+        }
+        
+        Log::info('Processing RFID scan from frontend', ['rfid' => $rfidTag]);
+        $this->processRfidScan($rfidTag);
+    }
+    
+    /**
+     * Sanitize RFID input from scanner
+     * Handles various scanner output formats and removes unwanted characters
+     */
+    private function sanitizeRfidInput($input)
+    {
+        if (empty($input)) {
+            return '';
+        }
+        
+        $original = $input;
+        
+        // Remove whitespace, newlines, carriage returns, tabs
+        $input = trim($input);
+        $input = preg_replace('/[\r\n\t\s]+/', '', $input);
+        
+        // Remove common RFID scanner prefix/suffix characters
+        $input = str_replace(['\r', '\n', '\t', '^', '$', '?', '*'], '', $input);
+        
+        // Remove non-numeric characters (RFID should be numeric)
+        $input = preg_replace('/[^0-9]/', '', $input);
+        
+        // Log sanitization if changes were made
+        if ($original !== $input) {
+            Log::info('RFID input sanitized', [
+                'original' => $original,
+                'sanitized' => $input,
+                'original_length' => strlen($original),
+                'sanitized_length' => strlen($input),
+                'original_hex' => bin2hex($original),
+            ]);
+        }
+        
+        return $input;
+    }
+    
+    /**
+     * Simple test method for debugging Livewire connection
+     */
+    public function testLivewireConnection()
+    {
+        Log::info('Livewire test method called successfully');
+        
+        $this->dispatch('showNotification', [
+            'type' => 'success',
+            'title' => '✅ Livewire Test',
+            'message' => 'Livewire connection working! Time: ' . now()->format('H:i:s'),
+            'options' => ['duration' => 3000]
+        ]);
+        
+        return 'success';
+    }
+
+    /**
+     * Reset complete RFID state (for debugging)
+     */
+    public function resetRfidState()
+    {
         $this->showRfidModal = false;
         $this->rfidScanning = false;
         $this->selectedSantri = null;
+        $this->santriBalance = 0;
+        $this->dailySpendingLimit = 0;
+        $this->remainingLimit = 0;
+        $this->lastRfidScan = 0;
+        
+        Log::info('RFID state completely reset');
+        
+        // Removed notification to reduce noise
+    }
+    
+    /**
+     * Check if we're in development mode (API not available)
+     */
+    protected function isApiAvailable()
+    {
+        try {
+            $this->getSimpelsApi()->testConnection();
+            return true;
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+    
+    /**
+     * Get API mode status
+     */
+    public function getApiStatus()
+    {
+        $isAvailable = $this->isApiAvailable();
+        $config = config('services.simpels');
+        
+        $this->dispatch('showNotification', [
+            'type' => $isAvailable ? 'success' : 'info',
+            'title' => $isAvailable ? '🟢 Production Mode' : '🟡 Development Mode',
+            'message' => $isAvailable ? 
+                "API Connected: {$config['api_url']}" : 
+                "API Unavailable. Using fallback data for testing.",
+            'options' => ['duration' => 5000]
+        ]);
+        
+        Log::info('API Status Check', [
+            'available' => $isAvailable,
+            'url' => $config['api_url']
+        ]);
+    }
+
+    /**
+     * Test SIMPels API connection (for debugging)
+     */
+    public function testSimpelsConnection()
+    {
+        try {
+            $api = $this->getSimpelsApi();
+            
+            // Test actual API connection
+            $healthStatus = $api->getHealthStatus();
+            
+            if ($healthStatus['status'] === 'healthy') {
+                Log::info('SIMPels API health check successful', $healthStatus);
+                
+                $this->dispatch('showNotification', [
+                    'type' => 'success',
+                    'title' => '✅ API Connection Success',
+                    'message' => "SIMPels API connected! Response time: {$healthStatus['response_time_ms']}ms",
+                    'options' => ['duration' => 5000]
+                ]);
+            } else {
+                throw new \Exception($healthStatus['error']);
+            }
+            
+        } catch (\Exception $e) {
+            Log::error('SIMPels API connection test failed: ' . $e->getMessage());
+            
+            $this->dispatch('showNotification', [
+                'type' => 'error',
+                'title' => '❌ API Connection Failed',
+                'message' => 'SIMPels API tidak dapat diakses: ' . $e->getMessage(),
+                'options' => ['duration' => 8000]
+            ]);
+        }
     }
 
     public function getSubtotalProperty()
@@ -181,7 +470,12 @@ class PosTerminal extends Component
     public function scanBarcode()
     {
         if (empty($this->barcodeInput)) {
-            session()->flash('error', 'Please enter a barcode!');
+            $this->dispatch('showNotification', [
+                'type' => 'warning',
+                'title' => '⚠️ Empty Barcode',
+                'message' => 'Please enter a barcode!',
+                'options' => ['duration' => 3000]
+            ]);
             return;
         }
 
@@ -190,7 +484,12 @@ class PosTerminal extends Component
                          ->first();
 
         if (!$product) {
-            session()->flash('error', 'Product not found!');
+            $this->dispatch('showNotification', [
+                'type' => 'error',
+                'title' => '❌ Not Found',
+                'message' => 'Product not found with barcode: ' . $this->barcodeInput,
+                'options' => ['duration' => 4000]
+            ]);
             $this->barcodeInput = '';
             return;
         }
@@ -202,7 +501,12 @@ class PosTerminal extends Component
     public function holdTransaction()
     {
         if (empty($this->cart)) {
-            session()->flash('error', 'Cart is empty!');
+            $this->dispatch('showNotification', [
+                'type' => 'warning',
+                'title' => '⚠️ Empty Cart',
+                'message' => 'Cart is empty! Add products first.',
+                'options' => ['duration' => 3000]
+            ]);
             return;
         }
 
@@ -215,18 +519,32 @@ class PosTerminal extends Component
             'total' => $this->total
         ];
 
+        $itemCount = count($this->cart);
         $this->clearCart();
-        session()->flash('message', "Transaction held as {$holdId}");
+        
+        $this->dispatch('showNotification', [
+            'type' => 'info',
+            'title' => '📋 Transaction Held',
+            'message' => "Transaction {$holdId} held with {$itemCount} items",
+            'options' => ['duration' => 4000]
+        ]);
     }
 
     public function loadHeldTransaction($holdId)
     {
         if (isset($this->holdTransactions[$holdId])) {
             $held = $this->holdTransactions[$holdId];
+            $itemCount = count($held['cart']);
             $this->cart = $held['cart'];
             $this->customer = $held['customer'];
             unset($this->holdTransactions[$holdId]);
-            session()->flash('message', 'Held transaction loaded!');
+            
+            $this->dispatch('showNotification', [
+                'type' => 'success',
+                'title' => '📥 Transaction Loaded',
+                'message' => "Loaded {$holdId} with {$itemCount} items",
+                'options' => ['duration' => 3000]
+            ]);
         }
     }
 
@@ -242,61 +560,157 @@ class PosTerminal extends Component
 
     public function processRfidScan($rfidNumber)
     {
+        $currentTime = time();
+        
+        // Prevent duplicate scans within 2 seconds
+        if ($this->rfidScanning || ($currentTime - $this->lastRfidScan) < 2) {
+            Log::warning('RFID scan debounced', ['rfid' => $rfidNumber, 'time_diff' => $currentTime - $this->lastRfidScan]);
+            return;
+        }
+        
+        $this->lastRfidScan = $currentTime;
         $this->rfidScanning = true;
         
-        // Find santri by RFID number
-        $santri = User::findByRfid($rfidNumber);
+        // Log original RFID for debugging
+        Log::info('RFID Scan Input', ['original_rfid' => $rfidNumber, 'length' => strlen($rfidNumber)]);
         
-        if (!$santri) {
-            session()->flash('error', 'RFID tidak terdaftar atau bukan santri!');
-            $this->rfidScanning = false;
-            return;
-        }
+        try {
+            // Get santri data from SIMPels API
+            Log::info('Requesting santri data from SIMPels API', ['rfid' => $rfidNumber]);
+            
+            try {
+                $apiResponse = $this->getSimpelsApi()->getSantriByRfid($rfidNumber);
+                
+                Log::info('SIMPels API response received', [
+                    'rfid' => $rfidNumber,
+                    'success' => $apiResponse['success'] ?? false,
+                    'has_data' => isset($apiResponse['data'])
+                ]);
+            } catch (\Exception $apiError) {
+                Log::error('SIMPels API error', [
+                    'rfid' => $rfidNumber,
+                    'error' => $apiError->getMessage()
+                ]);
+                
+                // Check if RFID not found vs API connection error
+                if (str_contains($apiError->getMessage(), '404') || str_contains($apiError->getMessage(), 'tidak ditemukan')) {
+                    throw new \Exception("RFID '{$rfidNumber}' tidak terdaftar atau tidak aktif!\n\nGunakan RFID yang valid seperti:\n• 2488698539\n• 2491081819\n• 2664790299");
+                } else {
+                    throw new \Exception('Koneksi ke SIMPels API gagal!\n\nPastikan:\n1. Server SIMPels berjalan di port 8000\n2. Database SIMPels terkoneksi\n3. Endpoint API dapat diakses');
+                }
+            }
+            
+            if (!$apiResponse || !isset($apiResponse['success']) || !$apiResponse['success']) {
+                throw new \Exception('RFID tidak terdaftar atau bukan santri!');
+            }
+            
+            $santriData = $apiResponse['data'];
+            
+            // Check if santri can afford the total
+            if ($santriData['saldo'] < $this->total) {
+                throw new \Exception(
+                    "Saldo tidak mencukupi! Saldo: Rp " . number_format($santriData['saldo'], 0, ',', '.') . 
+                    ", Total: Rp " . number_format($this->total, 0, ',', '.')
+                );
+            }
 
-        // Check if santri can afford the total
-        if (!$santri->canAfford($this->total)) {
-            session()->flash('error', "Saldo tidak mencukupi! Saldo: {$santri->formatted_balance}, Total: Rp " . number_format($this->total, 0, ',', '.'));
-            $this->rfidScanning = false;
-            return;
-        }
+            // Check spending limit if exists
+            if (isset($santriData['limit_harian']) && $santriData['limit_harian'] > 0) {
+                // Use correct field name from API response
+                $remainingLimit = $santriData['sisa_limit_hari_ini'] ?? $santriData['remaining_limit'] ?? $santriData['limit_harian'];
+                
+                Log::info('Limit checking', [
+                    'santri' => $santriData['nama_santri'],
+                    'total' => $this->total,
+                    'limit_harian' => $santriData['limit_harian'],
+                    'sisa_limit_hari_ini' => $santriData['sisa_limit_hari_ini'] ?? 'not_set',
+                    'remaining_limit' => $santriData['remaining_limit'] ?? 'not_set',
+                    'calculated_remaining' => $remainingLimit
+                ]);
+                
+                if ($this->total > $remainingLimit) {
+                    throw new \Exception(
+                        "Melebihi batas belanja harian! Sisa limit: Rp " . number_format($remainingLimit, 0, ',', '.') . 
+                        ", Total: Rp " . number_format($this->total, 0, ',', '.')
+                    );
+                }
+            }
 
-        // Check spending limit
-        if (!$santri->isWithinSpendingLimit($this->total)) {
-            session()->flash('error', "Melebihi batas belanja! Limit: {$santri->formatted_spending_limit}, Total: Rp " . number_format($this->total, 0, ',', '.'));
+            // RFID scan successful - set santri data
+            $this->selectedSantri = $santriData;
+            $this->santriBalance = $santriData['saldo'];
+            $this->dailySpendingLimit = $santriData['limit_harian'] ?? 0;
+            $this->remainingLimit = $santriData['sisa_limit_hari_ini'] ?? $santriData['remaining_limit'] ?? $santriData['limit_harian'] ?? 0;
             $this->rfidScanning = false;
-            return;
+            
+            Log::info('RFID Scan successful', ['santri' => $santriData['nama_santri'], 'rfid' => $rfidNumber]);
+            
+            // Dispatch success notification
+            $this->dispatch('showNotification', [
+                'type' => 'success',
+                'title' => '✅ Santri Ditemukan',
+                'message' => "Data santri {$santriData['nama_santri']} berhasil dimuat!",
+                'options' => ['duration' => 3000]
+            ]);
+            
+        } catch (\Exception $e) {
+            // Reset RFID state completely on error
+            $this->resetRfidState();
+            
+            // Show error notification
+            $this->dispatch('showNotification', [
+                'type' => 'error',
+                'title' => '❌ RFID Error',
+                'message' => $e->getMessage(),
+                'options' => ['duration' => 5000]
+            ]);
+            
+            Log::error('RFID Scan failed', ['rfid' => $rfidNumber, 'error' => $e->getMessage()]);
+            
+            // Dispatch event to close modal in frontend
+            $this->dispatch('rfidScanCompleted');
         }
-
-        // RFID scan successful
-        $this->selectedSantri = $santri;
-        $this->rfidScanning = false;
-        session()->flash('message', "Santri ditemukan: {$santri->name} - {$santri->class}");
     }
 
     public function confirmRfidPayment()
     {
+        Log::info('=== confirmRfidPayment START ===', [
+            'has_selected_santri' => !empty($this->selectedSantri),
+            'cart_count' => count($this->cart),
+            'total' => $this->total
+        ]);
+        
         if (!$this->selectedSantri) {
-            // Use JavaScript notification for better UX
+            Log::warning('No santri selected');
             $this->dispatch('showNotification', [
                 'type' => 'error',
                 'title' => '❌ RFID Error',
                 'message' => 'Silakan scan RFID santri terlebih dahulu!',
-                'options' => [
-                    'actions' => [
-                        ['text' => 'Scan RFID', 'callback' => 'window.customerScanner?.showManualRfidInput()']
-                    ]
-                ]
+                'options' => ['duration' => 5000]
             ]);
             return false;
         }
 
-        // Show processing notification
-        $this->dispatch('showNotification', [
-            'type' => 'info',
-            'title' => '📱 Processing Payment...',
-            'message' => 'Memproses pembayaran RFID melalui SIMPels API',
-            'options' => ['duration' => 0, 'showProgress' => false]
-        ]);
+        // Final validation
+        if ($this->santriBalance < $this->total) {
+            $this->dispatch('showNotification', [
+                'type' => 'error',
+                'title' => '❌ Saldo Tidak Mencukupi',
+                'message' => 'Saldo santri tidak mencukupi untuk transaksi ini!',
+                'options' => ['duration' => 5000]
+            ]);
+            return false;
+        }
+
+        if ($this->dailySpendingLimit > 0 && $this->remainingLimit < $this->total) {
+            $this->dispatch('showNotification', [
+                'type' => 'error',
+                'title' => '❌ Melebihi Limit Harian',
+                'message' => 'Transaksi melebihi batas limit belanja harian!',
+                'options' => ['duration' => 5000]
+            ]);
+            return false;
+        }
 
         try {
             DB::beginTransaction();
@@ -305,24 +719,28 @@ class PosTerminal extends Component
             foreach ($this->cart as $item) {
                 $product = Product::find($item['id']);
                 if (!$product || $product->stock_quantity < $item['quantity']) {
-                    throw new \Exception("Stock tidak mencukupi untuk {$item['name']}! Stock tersedia: {$product->stock_quantity}");
+                    throw new \Exception("Stock tidak mencukupi untuk {$item['name']}! Stock tersedia: " . ($product->stock_quantity ?? 0));
                 }
             }
 
-            // Get santri data (convert object properties if needed)
-            $santriName = is_object($this->selectedSantri) ? 
-                ($this->selectedSantri->nama_santri ?? $this->selectedSantri->name) : 
-                $this->selectedSantri['nama_santri'];
+            // Get santri data
+            $santriName = is_array($this->selectedSantri) ? 
+                ($this->selectedSantri['nama_santri'] ?? $this->selectedSantri['name'] ?? 'Unknown') : 
+                ($this->selectedSantri->nama_santri ?? $this->selectedSantri->name ?? 'Unknown');
             
-            $santriClass = is_object($this->selectedSantri) ? 
-                ($this->selectedSantri->kelas ?? $this->selectedSantri->class) : 
-                $this->selectedSantri['kelas'];
+            $santriClass = is_array($this->selectedSantri) ? 
+                ($this->selectedSantri['kelas'] ?? $this->selectedSantri['class'] ?? '') : 
+                ($this->selectedSantri->kelas ?? $this->selectedSantri->class ?? '');
 
-            // Create transaction first (local database)
+            $santriRfid = is_array($this->selectedSantri) ? 
+                ($this->selectedSantri['rfid_tag'] ?? '') : 
+                ($this->selectedSantri->rfid_tag ?? '');
+
+            // Create transaction in local database
             $transaction = Transaction::create([
                 'user_id' => Auth::id() ?? 1,
                 'customer_name' => $santriName,
-                'customer_phone' => $santriClass ?? '', // Store class in phone field for santri
+                'customer_phone' => $santriClass,
                 'subtotal' => $this->subtotal,
                 'tax_amount' => 0,
                 'discount_amount' => $this->discount,
@@ -330,10 +748,12 @@ class PosTerminal extends Component
                 'paid_amount' => $this->total,
                 'change_amount' => 0,
                 'payment_method' => 'rfid',
-                'status' => 'completed'
+                'status' => 'completed',
+                'notes' => "RFID Payment - Santri: {$santriName} - RFID: {$santriRfid}"
             ]);
 
             // Create transaction items and update stock
+            $itemsList = [];
             foreach ($this->cart as $item) {
                 $product = Product::find($item['id']);
                 
@@ -348,30 +768,109 @@ class PosTerminal extends Component
                 ]);
 
                 $product->updateStock($item['quantity'], 'subtract');
+                
+                $itemsList[] = [
+                    'product_id' => $product->id,
+                    'product_name' => $product->name,
+                    'quantity' => $item['quantity'],
+                    'price' => $item['price'],
+                    'subtotal' => $item['total']
+                ];
+            }
+
+            // Process payment through SIMPels API
+            try {
+                Log::info("SIMPels Payment Request", [
+                    'rfid' => $santriRfid,
+                    'santri_name' => $santriName,
+                    'amount' => $this->total,
+                    'transaction_id' => $transaction->transaction_number,
+                    'items' => $itemsList
+                ]);
+
+                // Call SIMPels API to process payment
+                Log::info('Processing payment through SIMPels API', [
+                    'rfid' => $santriRfid,
+                    'amount' => $this->total,
+                    'transaction_ref' => $transaction->transaction_number
+                ]);
+                
+                $santriId = is_array($this->selectedSantri) ? 
+                    ($this->selectedSantri['id'] ?? null) : 
+                    ($this->selectedSantri->id ?? null);
+                
+                if (!$santriId) {
+                    throw new \Exception('Santri ID tidak ditemukan dalam data RFID');
+                }
+
+                Log::info('Calling SIMPels processPayment', [
+                    'santri_id' => $santriId,
+                    'amount' => $this->total,
+                    'transaction_ref' => $transaction->transaction_number
+                ]);
+
+                $paymentResponse = $this->getSimpelsApi()->processPayment([
+                    'santri_id' => $santriId,
+                    'rfid_tag' => $santriRfid,
+                    'amount' => $this->total,
+                    'transaction_ref' => $transaction->transaction_number,
+                    'description' => "Transaksi EPOS #{$transaction->transaction_number} - " . count($itemsList) . " items",
+                    'items' => $itemsList
+                ]);
+                
+                Log::info('SIMPels processPayment response', [
+                    'response' => $paymentResponse
+                ]);
+
+                if (!$paymentResponse || !isset($paymentResponse['success']) || !$paymentResponse['success']) {
+                    throw new \Exception('Payment processing failed: ' . ($paymentResponse['message'] ?? 'Unknown error from SIMPels API'));
+                }
+
+                // Get updated balance from API response
+                $newBalance = $paymentResponse['data']['new_balance'] ?? ($this->santriBalance - $this->total);
+                $newRemainingLimit = $paymentResponse['data']['remaining_limit'] ?? ($this->remainingLimit - $this->total);
+
+                Log::info("SIMPels Payment Success", [
+                    'transaction_id' => $transaction->transaction_number,
+                    'new_balance' => $newBalance,
+                    'api_response' => $paymentResponse
+                ]);
+
+            } catch (\Exception $apiError) {
+                Log::error("SIMPels API Payment Error", [
+                    'error' => $apiError->getMessage(),
+                    'transaction_id' => $transaction->transaction_number,
+                    'rfid' => $santriRfid
+                ]);
+                
+                // For production: decide whether to rollback transaction or continue with local processing
+                // For now, we'll fail the transaction if API fails to maintain data consistency
+                throw new \Exception('Pembayaran gagal diproses melalui sistem SIMPels: ' . $apiError->getMessage() . '. Silakan coba lagi atau hubungi administrator.');
             }
 
             DB::commit();
 
+            $cartItemCount = count($this->cart);
             $transactionNumber = $transaction->transaction_number;
-            
-            // Get santri current balance (will be updated by API)
-            $currentBalance = is_object($this->selectedSantri) ? 
-                ($this->selectedSantri->saldo ?? 0) : 
-                ($this->selectedSantri['saldo'] ?? 0);
-            
-            $newBalance = $currentBalance - $this->total;
 
-            // Clear cart and close modal first
+            // Clear cart and close modal
             $this->clearCart();
             $this->closeRfidModal();
             
-            // Show detailed success notification
+            // Show success notification
             $this->dispatch('showRfidSuccess', [
                 'customerName' => $santriName,
                 'amount' => $this->total,
                 'newBalance' => $newBalance,
                 'transactionRef' => $transactionNumber,
-                'itemCount' => count($this->cart)
+                'itemCount' => $cartItemCount
+            ]);
+
+            Log::info("RFID Payment completed successfully", [
+                'transaction_number' => $transactionNumber,
+                'santri_name' => $santriName,
+                'amount' => $this->total,
+                'new_balance' => $newBalance
             ]);
 
             return true;
@@ -379,7 +878,13 @@ class PosTerminal extends Component
         } catch (\Exception $e) {
             DB::rollBack();
             
-            // Show detailed error notification
+            Log::error("RFID Payment failed", [
+                'error' => $e->getMessage(),
+                'santri_name' => $santriName ?? 'Unknown',
+                'amount' => $this->total,
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             $this->dispatch('showRfidError', [
                 'errorMessage' => $e->getMessage(),
                 'customerName' => $santriName ?? 'Unknown',

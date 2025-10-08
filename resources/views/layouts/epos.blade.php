@@ -156,6 +156,30 @@
 
                         <!-- Header Actions -->
                         <div class="flex items-center space-x-4">
+                            <!-- SIMPels API Connection Status -->
+                            <div class="relative group">
+                                <div id="api-connection-status" class="flex items-center space-x-2 px-3 py-2 rounded-lg transition-all cursor-pointer">
+                                    <div class="flex items-center space-x-2">
+                                        <div id="connection-indicator" class="w-3 h-3 rounded-full bg-gray-400 animate-pulse"></div>
+                                        <span id="connection-text" class="text-xs font-medium text-gray-600">Connecting...</span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Tooltip -->
+                                <div class="absolute right-0 top-full mt-2 w-64 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                                    <div class="p-3">
+                                        <div class="font-semibold mb-1">SIMPels API Status</div>
+                                        <div id="connection-details" class="text-gray-300">
+                                            Checking connection to SIMPels server...
+                                        </div>
+                                        <div class="text-gray-400 mt-2 text-xs">
+                                            Last checked: <span id="last-check-time">-</span>
+                                        </div>
+                                    </div>
+                                    <div class="absolute top-0 right-4 transform -translate-y-1 w-2 h-2 bg-gray-900 rotate-45"></div>
+                                </div>
+                            </div>
+
                             <!-- Search -->
                             <div class="relative">
                                 <input type="text" placeholder="Search products, customers..." 
@@ -252,15 +276,40 @@
         
         <!-- EPOS Notification System (Load first) -->
         <script src="/js/modules/notification-system.js"></script>
+        <script src="/js/modules/error-handler.js"></script>
+        
+        <!-- SIMPels API Configuration from Laravel -->
+        <script>
+            // Make Laravel config available to JavaScript
+            window.SIMPELS_API_URL = '{{ config('services.simpels.api_url') }}';
+            window.SIMPELS_API_KEY = '{{ config('services.simpels.api_key') }}';
+            window.SIMPELS_API_TIMEOUT = {{ config('services.simpels.timeout', 30) }};
+        </script>
         
         <!-- SIMPels API Integration Scripts -->
         <script src="/js/config/api.js"></script>
         <script src="/js/utils/api.js"></script>
+        <script src="/js/modules/connection-status.js"></script>
         <script src="/js/modules/transaction-logger.js"></script>
+        
+        @php
+            $isPosPage = request()->routeIs('pos') || 
+                        str_contains(request()->path(), 'pos') || 
+                        (isset($header) && str_contains(strtolower($header), 'pos'));
+        @endphp
+        
+        @if($isPosPage)
+        <!-- POS-specific scripts (only load on POS pages) -->
+        <script>console.log('🏪 Loading POS-specific scripts for:', '{{ $header ?? 'POS' }}');</script>
         <script src="/js/modules/customer-scanner.js"></script>
         <script src="/js/modules/transaction-processor.js"></script>
-        <script src="/js/modules/refund-processor.js"></script>
         <script src="/js/integration/pos-integration.js"></script>
+        @else
+        <script>console.log('📄 Non-POS page detected:', '{{ $header ?? 'Unknown' }}', '- Skipping POS scripts');</script>
+        @endif
+        
+        <!-- Global scripts -->
+        <script src="/js/modules/refund-processor.js"></script>
         
         <!-- User metadata for API integration -->
         <meta name="user-name" content="{{ auth()->user()->name }}">

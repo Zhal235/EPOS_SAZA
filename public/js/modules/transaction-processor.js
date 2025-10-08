@@ -73,7 +73,11 @@ class TransactionProcessor {
                 throw new Error(errors.join(', '));
             }
             
-            // Check customer balance
+            // Check customer balance - must be valid number from API, no fallback to 0
+            if (typeof customer.saldo !== 'number' || isNaN(customer.saldo)) {
+                throw new Error('Data saldo tidak valid dari API. Silakan refresh data customer.');
+            }
+            
             if (customer.saldo < totalAmount) {
                 throw new Error(`Saldo tidak mencukupi. Saldo: ${this.formatCurrency(customer.saldo)}, Dibutuhkan: ${this.formatCurrency(totalAmount)}`);
             }

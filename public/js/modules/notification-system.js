@@ -38,7 +38,7 @@ class EPOSNotificationSystem {
             existingOverlay.remove();
         }
         
-        // Create overlay for modal effect
+        // Create overlay for modal effect (only used for special notifications)
         this.overlay = document.createElement('div');
         this.overlay.className = 'notification-overlay';
         
@@ -46,7 +46,7 @@ class EPOSNotificationSystem {
         this.overlay.addEventListener('click', (e) => {
             // Only close if clicking directly on overlay, not on notification content
             if (e.target === this.overlay) {
-                this.removeAll();
+                this.removeModalNotifications();
             }
         });
         
@@ -87,37 +87,62 @@ class EPOSNotificationSystem {
         return this.show('info', title, message, options);
     }
     
-    // Simple modal-style notifications
+    // Simple modal-style notifications (clear previous first)
     showSuccessModal(title, message) {
-        this.removeAll(); // Clear existing notifications
+        this.removeAll(); // Clear all existing notifications
+        this.container.classList.add('modal-centered');
+        this.overlay.classList.add('show');
+        
         return this.success(title, message, {
-            duration: 4000, // Auto-dismiss after 4 seconds
+            duration: 5000, // Auto-dismiss after 5 seconds
             sound: true,
             showProgress: true, // Show countdown progress bar
+            modal: true,
             actions: [
                 {
                     text: 'OK',
                     class: 'primary',
-                    callback: () => this.removeAll()
+                    callback: () => this.hideModal()
                 }
             ]
         });
     }
     
     showErrorModal(title, message) {
-        this.removeAll(); // Clear existing notifications
+        this.removeAll(); // Clear all existing notifications
+        this.container.classList.add('modal-centered');
+        this.overlay.classList.add('show');
+        
         return this.error(title, message, {
-            duration: 6000, // Auto-dismiss after 6 seconds (longer for errors)
+            duration: 8000, // Auto-dismiss after 8 seconds (longer for errors)
             sound: true,
             showProgress: true, // Show countdown progress bar
+            modal: true,
             actions: [
                 {
                     text: 'OK',
                     class: 'primary',
-                    callback: () => this.removeAll()
+                    callback: () => this.hideModal()
                 }
             ]
         });
+    }
+    
+    // Hide modal overlay and reset container position
+    hideModal() {
+        this.container.classList.remove('modal-centered');
+        this.overlay.classList.remove('show');
+        this.removeAll();
+    }
+    
+    // Remove only modal notifications (those with overlay)
+    removeModalNotifications() {
+        const modalNotifications = this.notifications.filter(n => n.modal);
+        modalNotifications.forEach(n => this.remove(n));
+        
+        if (modalNotifications.length > 0) {
+            this.hideModal();
+        }
     }
     
     // RFID specific notifications
@@ -202,18 +227,26 @@ class EPOSNotificationSystem {
         if (!title) title = 'Notification';
         if (!message) message = '';
         
+        // If this is a session message, clear previous session messages first
+        if (options.sessionMessage) {
+            this.removeSessionMessages();
+        }
+        
         const notification = this.createNotification(type, title, message, options);
         
-        // Remove oldest notification if we have too many
+        // Remove oldest notification if we have too many (but keep modal notifications)
         if (this.notifications.length >= this.maxNotifications) {
-            this.remove(this.notifications[0]);
+            const regularNotifications = this.notifications.filter(n => !n.modal);
+            if (regularNotifications.length > 0) {
+                this.remove(regularNotifications[0]);
+            }
         }
         
         this.notifications.push(notification);
         this.container.appendChild(notification.element);
         
-        // Show overlay for modal effect
-        if (this.overlay) {
+        // Only show overlay for modal notifications
+        if (options.modal && this.overlay) {
             this.overlay.classList.add('show');
         }
         
@@ -248,7 +281,9 @@ class EPOSNotificationSystem {
             id: Date.now() + Math.random(),
             type,
             element: null,
-            timeout: null
+            timeout: null,
+            modal: options.modal || false,
+            sessionMessage: options.sessionMessage || false
         };
         
         const element = document.createElement('div');
@@ -386,6 +421,12 @@ class EPOSNotificationSystem {
         this.notifications.forEach(notification => {
             this.remove(notification);
         });
+    }
+    
+    // Remove only session message notifications
+    removeSessionMessages() {
+        const sessionNotifications = this.notifications.filter(n => n.sessionMessage);
+        sessionNotifications.forEach(n => this.remove(n));
     }
     
     playSound(type) {

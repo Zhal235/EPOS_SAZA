@@ -96,7 +96,17 @@ class CustomerScanner {
                 return false;
             }
         } catch (error) {
-            this.showError('Gagal memuat data santri: ' + error.message);
+            // Use error handler for intelligent error notification
+            if (window.errorHandler) {
+                const context = {
+                    operation: 'rfid_scan',
+                    rfid_tag: rfidTag,
+                    retryCallback: () => this.scanRFID(rfidTag)
+                };
+                window.errorHandler.handleAPIError(error, context);
+            } else {
+                this.showError('Gagal memuat data santri: ' + error.message);
+            }
             this.logScanError(rfidTag, error);
             return false;
         } finally {
@@ -276,7 +286,18 @@ class CustomerScanner {
                 return false;
             }
         } catch (error) {
-            this.showError('Error memperbarui data: ' + error.message);
+            // Use error handler for intelligent error notification
+            if (window.errorHandler) {
+                const context = {
+                    operation: 'balance_check',
+                    rfid_tag: this.currentCustomer.rfid_tag,
+                    customer_name: this.currentCustomer.nama_santri,
+                    retryCallback: () => this.refreshCustomerData()
+                };
+                window.errorHandler.handleAPIError(error, context);
+            } else {
+                this.showError('Error memperbarui data: ' + error.message);
+            }
             return false;
         } finally {
             this.hideLoading();

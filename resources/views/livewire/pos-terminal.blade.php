@@ -3,33 +3,49 @@
     @if (session()->has('message'))
         <script>
         document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(() => {
-                if (window.notificationSystem) {
+            // Only show if notification system is ready and we haven't shown this message yet
+            const messageId = 'session_message_{{ md5(session('message')) }}';
+            if (window.notificationSystem && !sessionStorage.getItem(messageId)) {
+                sessionStorage.setItem(messageId, 'shown');
+                setTimeout(() => {
                     window.notificationSystem.success(
                         '✅ Success',
-                        '{{ session('message') }}',
-                        { duration: 5000 }
+                        '{{ addslashes(session('message')) }}',
+                        { 
+                            duration: 4000, 
+                            sessionMessage: true,
+                            sound: true
+                        }
                     );
-                }
-            }, 500);
+                }, 100);
+            }
         });
         </script>
+        @php session()->forget('message') @endphp
     @endif
 
     @if (session()->has('error'))
         <script>
         document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(() => {
-                if (window.notificationSystem) {
+            // Only show if notification system is ready and we haven't shown this error yet
+            const errorId = 'session_error_{{ md5(session('error')) }}';
+            if (window.notificationSystem && !sessionStorage.getItem(errorId)) {
+                sessionStorage.setItem(errorId, 'shown');
+                setTimeout(() => {
                     window.notificationSystem.error(
                         '❌ Error',
-                        '{{ session('error') }}',
-                        { duration: 8000 }
+                        '{{ addslashes(session('error')) }}',
+                        { 
+                            duration: 6000, 
+                            sessionMessage: true,
+                            sound: true
+                        }
                     );
-                }
-            }, 500);
+                }, 100);
+            }
         });
         </script>
+        @php session()->forget('error') @endphp
     @endif
 
     <!-- API Integration Scripts loaded in layout -->
@@ -132,12 +148,20 @@
                     @else
                     <div class="mb-6">
                         <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                            <div class="flex items-center">
-                                <i class="fas fa-id-card text-blue-600 mr-3"></i>
-                                <div>
-                                    <h4 class="text-sm font-medium text-blue-900">🔴 RFID Payment AKTIF</h4>
-                                    <p class="text-sm text-blue-700">Sistem pembayaran RFID terintegrasi dengan SIMPels siap digunakan</p>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <i class="fas fa-id-card text-blue-600 mr-3"></i>
+                                    <div>
+                                        <h4 class="text-sm font-medium text-blue-900">🔴 RFID Payment AKTIF</h4>
+                                        <p class="text-sm text-blue-700">Sistem pembayaran RFID terintegrasi dengan SIMPels</p>
+                                    </div>
                                 </div>
+                                <button 
+                                    wire:click="getApiStatus" 
+                                    class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                                    title="Cek mode API">
+                                    📊 Mode
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -278,7 +302,7 @@
         <!-- RFID Modal -->
         @if($showRfidModal)
             <div class="fixed inset-0 overflow-y-auto h-full w-full z-50 flex items-center justify-center" wire:click="closeRfidModal">
-                <div class="relative mx-auto p-6 border w-80 max-w-sm shadow-xl rounded-lg bg-white" wire:click.stop>
+                <div class="relative mx-auto p-6 border w-80 max-w-sm shadow-xl rounded-lg bg-white" @click.stop>
                     <div class="mt-3">
                         <!-- Modal Header -->
                         <div class="flex items-center justify-between mb-4">
@@ -286,9 +310,16 @@
                                 <i class="fas fa-id-card text-blue-600 mr-2"></i>
                                 RFID Payment
                             </h3>
-                            <button wire:click="closeRfidModal" class="text-gray-400 hover:text-gray-600">
-                                <i class="fas fa-times text-sm"></i>
-                            </button>
+                            <div class="flex items-center space-x-2">
+                                <button wire:click="forceCloseRfidModal" 
+                                        class="text-orange-400 hover:text-orange-600 p-1 rounded" 
+                                        title="Force Close Modal">
+                                    <i class="fas fa-power-off text-sm"></i>
+                                </button>
+                                <button wire:click="closeRfidModal" class="text-gray-400 hover:text-gray-600">
+                                    <i class="fas fa-times text-sm"></i>
+                                </button>
+                            </div>
                         </div>
 
                         <!-- Order Summary in Modal -->
@@ -330,51 +361,171 @@
                                         placeholder="Scan RFID atau ketik manual"
                                         class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                         autocomplete="off"
+                                        onkeydown="handleRfidScannerInput(event)"
                                     >
                                     <p class="text-xs text-gray-500 mt-2">
-                                        Tempelkan kartu RFID atau tekan Ctrl+R untuk input manual
+                                        <span class="text-blue-600 font-semibold">Scan kartu RFID</span> atau ketik manual lalu tekan Enter
                                     </p>
+                                    <div class="mt-3 space-y-2">
+                                        <button 
+                                            onclick="triggerManualRfidInput()" 
+                                            class="w-full px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">
+                                            <i class="fas fa-keyboard mr-2"></i>Input Manual RFID
+                                        </button>
+                                        <div class="grid grid-cols-2 gap-1 mb-2">
+                                            <button 
+                                                wire:click="getApiStatus" 
+                                                class="px-2 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-xs font-medium">
+                                                📊 API Mode
+                                            </button>
+                                            <button 
+                                                wire:click="testSimpelsConnection" 
+                                                class="px-2 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs font-medium">
+                                                🌐 Test API
+                                            </button>
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-1">
+                                            <button 
+                                                wire:click="testLivewireConnection" 
+                                                class="px-2 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-xs font-medium">
+                                                🧪 Livewire
+                                            </button>
+                                            <button 
+                                                wire:click="resetRfidState" 
+                                                class="px-2 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-xs font-medium">
+                                                🔄 Reset
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         @elseif($selectedSantri)
                             <!-- Santri Found -->
-                            <div class="text-center py-4">
-                                <div class="mb-3">
-                                    <i class="fas fa-user-check text-3xl text-green-500 mb-2"></i>
-                                    <h4 class="text-base font-medium text-gray-900">Santri Ditemukan</h4>
+                            <div class="py-4">
+                                <!-- Header -->
+                                <div class="text-center mb-4">
+                                    <div class="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-3">
+                                        <i class="fas fa-user-check text-2xl text-green-600"></i>
+                                    </div>
+                                    <h4 class="text-lg font-semibold text-gray-900">Data Santri</h4>
+                                    <p class="text-sm text-gray-600">Konfirmasi data sebelum pembayaran</p>
                                 </div>
                                 
-                                <!-- Santri Info -->
-                                <div class="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
-                                    <div class="space-y-1 text-xs">
-                                        <div class="flex justify-between">
-                                            <span class="font-medium">Nama:</span>
-                                            <span>{{ $selectedSantri->name }}</span>
-                                        </div>
-                                        <div class="flex justify-between">
-                                            <span class="font-medium">Kelas:</span>
-                                            <span>{{ $selectedSantri->class ?: '-' }}</span>
-                                        </div>
-                                        <div class="flex justify-between">
-                                            <span class="font-medium">Saldo:</span>
-                                            <span class="font-bold text-green-600">{{ $selectedSantri->formatted_balance }}</span>
-                                        </div>
-                                        @if($selectedSantri->spending_limit > 0)
-                                            <div class="flex justify-between">
-                                                <span class="font-medium">Limit Belanja:</span>
-                                                <span>{{ $selectedSantri->formatted_spending_limit }}</span>
+                                <!-- Santri Information Card -->
+                                <div class="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4 mb-4">
+                                    <div class="space-y-3">
+                                        <!-- Nama Santri -->
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center">
+                                                <i class="fas fa-user text-green-600 mr-2"></i>
+                                                <span class="text-sm font-medium text-gray-700">Nama Santri:</span>
                                             </div>
+                                            <span class="text-sm font-bold text-gray-900">
+                                                {{ is_array($selectedSantri) ? ($selectedSantri['nama_santri'] ?? $selectedSantri['name'] ?? '-') : ($selectedSantri->nama_santri ?? $selectedSantri->name ?? '-') }}
+                                            </span>
+                                        </div>
+                                        
+                                        <!-- Kelas -->
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center">
+                                                <i class="fas fa-graduation-cap text-blue-600 mr-2"></i>
+                                                <span class="text-sm font-medium text-gray-700">Kelas:</span>
+                                            </div>
+                                            <span class="text-sm font-semibold text-gray-800">
+                                                {{ is_array($selectedSantri) ? ($selectedSantri['kelas'] ?? $selectedSantri['class'] ?? '-') : ($selectedSantri->kelas ?? $selectedSantri->class ?? '-') }}
+                                            </span>
+                                        </div>
+                                        
+                                        <!-- Saldo -->
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center">
+                                                <i class="fas fa-wallet text-green-600 mr-2"></i>
+                                                <span class="text-sm font-medium text-gray-700">Saldo Saat Ini:</span>
+                                            </div>
+                                            <span class="text-sm font-bold text-green-700">
+                                                Rp {{ number_format($santriBalance, 0, ',', '.') }}
+                                            </span>
+                                        </div>
+                                        
+                                        <!-- Limit Harian -->
+                                        @if($dailySpendingLimit > 0)
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center">
+                                                <i class="fas fa-clock text-orange-600 mr-2"></i>
+                                                <span class="text-sm font-medium text-gray-700">Limit Harian:</span>
+                                            </div>
+                                            <span class="text-sm font-semibold text-gray-800">
+                                                Rp {{ number_format($dailySpendingLimit, 0, ',', '.') }}
+                                            </span>
+                                        </div>
+                                        
+                                        <!-- Sisa Limit -->
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center">
+                                                <i class="fas fa-hourglass-half text-orange-600 mr-2"></i>
+                                                <span class="text-sm font-medium text-gray-700">Sisa Limit Hari Ini:</span>
+                                            </div>
+                                            <span class="text-sm font-bold {{ $remainingLimit >= $this->total ? 'text-green-700' : 'text-red-600' }}">
+                                                Rp {{ number_format($remainingLimit, 0, ',', '.') }}
+                                            </span>
+                                        </div>
                                         @endif
                                     </div>
                                 </div>
 
+                                <!-- Payment Summary -->
+                                <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
+                                    <h5 class="text-sm font-medium text-gray-900 mb-2">Ringkasan Pembayaran</h5>
+                                    <div class="space-y-1">
+                                        <div class="flex justify-between text-sm">
+                                            <span class="text-gray-600">Total Belanja:</span>
+                                            <span class="font-semibold text-gray-900">Rp {{ number_format($this->total, 0, ',', '.') }}</span>
+                                        </div>
+                                        <div class="flex justify-between text-sm">
+                                            <span class="text-gray-600">Saldo Setelah Bayar:</span>
+                                            <span class="font-bold {{ ($santriBalance - $this->total) >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                                                Rp {{ number_format($santriBalance - $this->total, 0, ',', '.') }}
+                                            </span>
+                                        </div>
+                                        @if($dailySpendingLimit > 0)
+                                        <div class="flex justify-between text-sm">
+                                            <span class="text-gray-600">Sisa Limit Setelah Bayar:</span>
+                                            <span class="font-bold {{ ($remainingLimit - $this->total) >= 0 ? 'text-orange-600' : 'text-red-600' }}">
+                                                Rp {{ number_format($remainingLimit - $this->total, 0, ',', '.') }}
+                                            </span>
+                                        </div>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                <!-- Warning Messages -->
+                                @if($santriBalance < $this->total)
+                                    <div class="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                                        <div class="flex items-center">
+                                            <i class="fas fa-exclamation-triangle text-red-500 mr-2"></i>
+                                            <p class="text-sm text-red-700 font-medium">Saldo tidak mencukupi untuk transaksi ini!</p>
+                                        </div>
+                                    </div>
+                                @elseif($dailySpendingLimit > 0 && $remainingLimit < $this->total)
+                                    <div class="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
+                                        <div class="flex items-center">
+                                            <i class="fas fa-exclamation-triangle text-orange-500 mr-2"></i>
+                                            <p class="text-sm text-orange-700 font-medium">Transaksi melebihi batas limit harian!</p>
+                                        </div>
+                                    </div>
+                                @endif
+
                                 <!-- Action Buttons -->
-                                <div class="flex space-x-2">
-                                    <button wire:click="closeRfidModal" class="flex-1 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm">
-                                        Cancel
+                                <div class="flex space-x-3">
+                                    <button wire:click="closeRfidModal" class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium transition-colors">
+                                        <i class="fas fa-times mr-2"></i>Batal
                                     </button>
-                                    <button onclick="processRfidPayment()" class="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
-                                        <i class="fas fa-check mr-1"></i>Confirm Payment
+                                    <button 
+                                        onclick="processRfidPayment()" 
+                                        class="flex-1 px-4 py-2.5 {{ ($santriBalance >= $this->total && ($dailySpendingLimit <= 0 || $remainingLimit >= $this->total)) ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed' }} text-white rounded-lg text-sm font-medium transition-colors"
+                                        {{ ($santriBalance < $this->total || ($dailySpendingLimit > 0 && $remainingLimit < $this->total)) ? 'disabled' : '' }}
+                                    >
+                                        <i class="fas fa-credit-card mr-2"></i>Bayar Sekarang
                                     </button>
                                 </div>
                             </div>
@@ -418,7 +569,25 @@
                     if (rfidInput && rfidInput.offsetParent !== null) {
                         setTimeout(() => {
                             rfidInput.focus();
-                            console.log('RFID input focused');
+                            rfidInput.select();
+                            console.log('RFID input focused and selected');
+                            
+                            // Add event listener for immediate processing (with debounce)
+                            let rfidProcessing = false;
+                            rfidInput.addEventListener('input', function(e) {
+                                const value = e.target.value.trim();
+                                if (value.length >= 8 && !rfidProcessing) { // Prevent multiple processing
+                                    rfidProcessing = true;
+                                    console.log('Auto-processing RFID:', value);
+                                    setTimeout(() => {
+                                        @this.call('handleRfidScan', value);
+                                        e.target.value = '';
+                                        setTimeout(() => {
+                                            rfidProcessing = false; // Reset flag after processing
+                                        }, 1000);
+                                    }, 300); // Increased delay
+                                }
+                            });
                         }, 100);
                     }
                 }
@@ -430,6 +599,37 @@
             subtree: true
         });
     }
+    
+    // Global function for manual RFID input
+    window.triggerManualRfidInput = function() {
+        const rfidInput = document.getElementById('rfid-input');
+        if (rfidInput) {
+            const rfidValue = rfidInput.value.trim();
+            if (rfidValue) {
+                console.log('Manual RFID input:', rfidValue);
+                @this.call('handleRfidScan', rfidValue);
+                rfidInput.value = '';
+            } else {
+                alert('Silakan masukkan nomor RFID terlebih dahulu');
+                rfidInput.focus();
+            }
+        }
+    };
+    
+    // Add global keyboard handler for RFID modal
+    document.addEventListener('keydown', function(e) {
+        // ESC key to force close modal if stuck
+        if (e.key === 'Escape' && e.shiftKey) {
+            console.log('Force closing RFID modal with Shift+ESC');
+            @this.call('forceCloseRfidModal');
+        }
+        // F12 to reset RFID state (debug)
+        else if (e.key === 'F12' && e.ctrlKey) {
+            e.preventDefault();
+            console.log('Debugging: Reset RFID state');
+            @this.call('forceCloseRfidModal');
+        }
+    });
     
     function setupCustomerScannerIntegration() {
         // Check if customerScanner is available
@@ -444,31 +644,24 @@
                 // Call original method
                 originalDisplayCustomerInfo.call(this, customer);
                 
-                // If RFID modal is open, set customer data in Livewire
+                // If RFID modal is open, process the RFID scan
                 try {
                     const showRfidModal = @this.get('showRfidModal');
-                    if (showRfidModal && customer) {
-                        console.log('Setting customer data in Livewire...');
+                    const selectedSantri = @this.get('selectedSantri');
+                    
+                    // Only process RFID if modal is open AND no santri is already selected
+                    if (showRfidModal && customer && customer.rfid_tag && !selectedSantri) {
+                        console.log('Processing RFID scan via Livewire...');
                         
-                        @this.set('selectedSantri', {
-                            id: customer.id,
-                            nama_santri: customer.nama_santri,
-                            name: customer.nama_santri,
-                            kelas: customer.kelas,
-                            class: customer.kelas,
-                            saldo: customer.saldo,
-                            rfid_tag: customer.rfid_tag
-                        });
+                        // Call Livewire method to handle RFID scan
+                        @this.call('handleRfidScan', customer.rfid_tag);
                         
-                        console.log('Customer data set successfully');
-                        
-                        // Show success notification
-                        if (window.customerScanner.showSuccess) {
-                            window.customerScanner.showSuccess(`Santri ditemukan: ${customer.nama_santri} - ${customer.kelas}`);
-                        }
+                        console.log('RFID scan processed successfully');
+                    } else if (selectedSantri) {
+                        console.log('Santri already selected, skipping RFID scan');
                     }
                 } catch (error) {
-                    console.error('Error setting customer data:', error);
+                    console.error('Error processing RFID scan:', error);
                 }
             };
         } else {
@@ -479,6 +672,77 @@
     }
     
     function setupGlobalRfidFunctions() {
+        // RFID Scanner Input Buffer
+        let rfidBuffer = '';
+        let rfidTimeout = null;
+        
+        // Handle RFID Scanner Input with buffer for split reads
+        window.handleRfidScannerInput = function(event) {
+            const input = event.target;
+            
+            // Clear previous timeout
+            if (rfidTimeout) {
+                clearTimeout(rfidTimeout);
+            }
+            
+            // If Enter key is pressed
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                
+                // Get current value
+                const currentValue = input.value.trim();
+                
+                console.log('RFID Scanner Enter pressed', {
+                    currentValue: currentValue,
+                    length: currentValue.length,
+                    buffer: rfidBuffer
+                });
+                
+                // If we have buffered data, combine it
+                if (rfidBuffer && rfidBuffer !== currentValue) {
+                    const combinedValue = rfidBuffer + currentValue;
+                    console.log('Combining buffered RFID:', {
+                        buffer: rfidBuffer,
+                        current: currentValue,
+                        combined: combinedValue
+                    });
+                    input.value = combinedValue;
+                    rfidBuffer = '';
+                }
+                
+                // Wait 100ms to ensure all scanner data is received
+                setTimeout(() => {
+                    const finalValue = input.value.trim();
+                    
+                    console.log('Processing RFID:', {
+                        value: finalValue,
+                        length: finalValue.length
+                    });
+                    
+                    if (finalValue.length >= 8) { // Minimum 8 digits
+                        // Call Livewire method
+                        @this.call('handleRfidScan', finalValue);
+                        
+                        // Clear input after processing
+                        setTimeout(() => {
+                            input.value = '';
+                            rfidBuffer = '';
+                        }, 500);
+                    } else {
+                        console.warn('RFID too short:', finalValue);
+                    }
+                }, 100);
+                
+                return false;
+            }
+            
+            // Store current value in buffer
+            rfidTimeout = setTimeout(() => {
+                rfidBuffer = input.value.trim();
+                console.log('RFID buffer updated:', rfidBuffer);
+            }, 50);
+        };
+        
         // Global function for RFID payment processing
         window.processRfidPayment = async function() {
             console.log('Processing RFID payment...');
@@ -517,11 +781,23 @@
                 
                 // Process payment in Livewire backend directly
                 console.log('Calling Livewire confirmRfidPayment...');
-                const result = await @this.call('confirmRfidPayment');
-                console.log('Payment result:', result);
+                console.log('Livewire component:', @this);
+                
+                try {
+                    const result = await @this.call('confirmRfidPayment');
+                    console.log('Payment result:', result);
+                    
+                    if (result === false) {
+                        console.error('Payment returned false');
+                    }
+                } catch (callError) {
+                    console.error('Livewire call error:', callError);
+                    throw callError;
+                }
                 
             } catch (error) {
                 console.error('RFID Payment error:', error);
+                console.error('Error stack:', error.stack);
                 window.notificationSystem.error(
                     '❌ Payment Error',
                     'Terjadi kesalahan saat memproses pembayaran: ' + error.message
@@ -541,23 +817,30 @@
             }
             
             // Success notification from backend
-            Livewire.on('showRfidSuccess', (data) => {
-                console.log('RFID Success event received:', data);
+            Livewire.on('showRfidSuccess', (event) => {
+                console.log('RFID Success event received:', event);
+                // Livewire v3 wraps data in array
+                const data = Array.isArray(event) ? event[0] : event;
+                console.log('Extracted data:', data);
+                
                 window.notificationSystem.rfidSuccess(
-                    data.customerName,
-                    data.amount,
-                    data.newBalance,
-                    data.transactionRef
+                    data.customerName || 'Unknown',
+                    data.amount || 0,
+                    data.newBalance || 0,
+                    data.transactionRef || 'N/A'
                 );
             });
             
             // Error notification from backend
-            Livewire.on('showRfidError', (data) => {
-                console.log('RFID Error event received:', data);
+            Livewire.on('showRfidError', (event) => {
+                console.log('RFID Error event received:', event);
+                // Livewire v3 wraps data in array
+                const data = Array.isArray(event) ? event[0] : event;
+                
                 window.notificationSystem.rfidError(
-                    data.errorMessage,
-                    data.customerName,
-                    data.amount
+                    data.errorMessage || 'Unknown error',
+                    data.customerName || 'Unknown',
+                    data.amount || 0
                 );
             });
             
@@ -587,17 +870,42 @@
             Livewire.on('showNotification', (data) => {
                 console.log('General notification event received:', data);
                 
-                if (window.notificationSystem && window.notificationSystem[data.type]) {
-                    window.notificationSystem[data.type](
-                        data.title,
-                        data.message,
-                        data.options || {}
+                // Ensure data is properly structured
+                const notifData = Array.isArray(data) ? data[0] : data;
+                
+                if (window.notificationSystem && typeof window.notificationSystem[notifData.type] === 'function') {
+                    window.notificationSystem[notifData.type](
+                        notifData.title,
+                        notifData.message,
+                        notifData.options || {}
                     );
                 } else {
-                    console.error('Notification system method not found:', data.type);
-                    // Fallback to basic alert
-                    alert(data.title + ': ' + data.message);
+                    console.error('Notification system method not found:', notifData.type);
+                    console.log('Available notification methods:', Object.keys(window.notificationSystem || {}));
+                    
+                    // Fallback to success method if available
+                    if (window.notificationSystem && typeof window.notificationSystem.success === 'function') {
+                        window.notificationSystem.success(
+                            notifData.title || 'Notification',
+                            notifData.message || 'Message',
+                            notifData.options || {}
+                        );
+                    } else {
+                        // Last resort fallback
+                        alert((notifData.title || 'Notification') + ': ' + (notifData.message || 'Message'));
+                    }
                 }
+            });
+            
+            // Auto-close modal on scan completion (for error recovery)
+            Livewire.on('rfidScanCompleted', () => {
+                console.log('RFID scan completed - auto closing modal');
+                setTimeout(() => {
+                    const modal = document.querySelector('[wire\\:click="closeRfidModal"]');
+                    if (modal) {
+                        modal.click();
+                    }
+                }, 2000);
             });
             
             console.log('Livewire event listeners setup complete');
@@ -625,6 +933,31 @@
             } else {
                 console.error('CustomerScanner not available or RFID tag not provided');
             }
+        };
+        
+        // Debug functions for RFID troubleshooting
+        window.debugRfidState = function() {
+            console.log('=== RFID DEBUG STATE ===');
+            console.log('Modal visible:', document.querySelector('#rfid-modal') !== null);
+            console.log('RFID Input:', document.getElementById('rfid-input'));
+            console.log('Livewire available:', typeof @this !== 'undefined');
+            console.log('Notification system:', typeof window.notificationSystem);
+            console.log('========================');
+        };
+        
+        window.forceResetRfid = function() {
+            console.log('Force resetting RFID state...');
+            @this.call('resetRfidState');
+        };
+        
+        window.testRfidWithValue = function(rfidValue = '24910818') {
+            console.log('Testing RFID with value:', rfidValue);
+            @this.call('handleRfidScan', rfidValue);
+        };
+        
+        window.testLivewire = function() {
+            console.log('Testing Livewire connection...');
+            @this.call('testLivewireConnection');
         };
     }
     </script>

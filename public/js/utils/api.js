@@ -4,8 +4,18 @@ class SIMPelsAPI {
         this.baseURL = API_CONFIG.baseURL;
         this.timeout = API_CONFIG.timeout;
         this.retries = API_CONFIG.retries;
-        this.headers = API_CONFIG.headers;
+        this.headers = { ...API_CONFIG.headers };
         this.debug = API_CONFIG.debug;
+        
+        // Remove null/undefined headers
+        Object.keys(this.headers).forEach(key => {
+            if (this.headers[key] == null) {
+                delete this.headers[key];
+            }
+        });
+        
+        // Enable production logging for request/response debugging
+        this.debug = true;
     }
     
     /**
@@ -19,9 +29,24 @@ class SIMPelsAPI {
             ...options
         };
         
-        // Add request logging
+        // Enhanced request logging with timestamp and request ID
+        const requestId = this.generateRequestId();
+        const requestTime = Date.now();
+        
         if (this.debug) {
-            console.log(`[SIMPels API] ${config.method || 'GET'} ${url}`, config.body ? JSON.parse(config.body) : null);
+            console.group(`🌐 [SIMPels API Request ${requestId}]`);
+            console.log(`⏰ Time: ${new Date().toISOString()}`);
+            console.log(`🎯 Method: ${config.method || 'GET'}`);
+            console.log(`🔗 URL: ${url}`);
+            console.log(`📋 Headers:`, this.headers);
+            if (config.body) {
+                try {
+                    console.log(`📦 Body:`, JSON.parse(config.body));
+                } catch (e) {
+                    console.log(`📦 Body:`, config.body);
+                }
+            }
+            console.groupEnd();
         }
         
         let lastError;
@@ -32,9 +57,19 @@ class SIMPelsAPI {
                 const response = await this.fetchWithTimeout(url, config);
                 const data = await response.json();
                 
-                // Log response
+                // Enhanced response logging
+                const responseTime = Date.now() - requestTime;
+                
                 if (this.debug) {
-                    console.log(`[SIMPels API] Response:`, data);
+                    console.group(`📥 [SIMPels API Response ${requestId}]`);
+                    console.log(`⏱️ Response Time: ${responseTime}ms`);
+                    console.log(`📊 Status: ${response.status} ${response.statusText}`);
+                    console.log(`📋 Headers:`, Object.fromEntries(response.headers.entries()));
+                    console.log(`📦 Data:`, data);
+                    console.groupEnd();
+                    
+                    // Log to performance monitoring
+                    this.logPerformance(endpoint, responseTime, response.status);
                 }
                 
                 // Check if response indicates success
@@ -49,6 +84,17 @@ class SIMPelsAPI {
                 
                 if (this.debug) {
                     console.warn(`[SIMPels API] Attempt ${attempt} failed:`, error.message);
+                }
+                
+                // Use error handler for intelligent error notification (only on final failure)
+                if (window.errorHandler && attempt === this.retries) {
+                    const context = {
+                        operation: 'api_request',
+                        endpoint: endpoint,
+                        attempt: attempt,
+                        maxRetries: this.retries
+                    };
+                    window.errorHandler.handleAPIError(error, context);
                 }
                 
                 // Don't retry on certain errors
@@ -89,6 +135,64 @@ class SIMPelsAPI {
      */
     sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    
+    /**
+     * Generate unique request ID for logging
+     */
+    generateRequestId() {
+        return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+    }
+    
+    /**
+     * Log performance metrics
+     */
+    logPerformance(endpoint, responseTime, statusCode) {
+        const performanceEntry = {
+            endpoint: endpoint,
+            responseTime: responseTime,
+            statusCode: statusCode,
+            timestamp: new Date().toISOString(),
+            success: statusCode >= 200 && statusCode < 300
+        };
+        
+        // Store in localStorage for performance monitoring
+        const perfLog = JSON.parse(localStorage.getItem('simpels_api_performance') || '[]');
+        perfLog.unshift(performanceEntry);
+        
+        // Keep only last 100 entries
+        if (perfLog.length > 100) {
+            perfLog.splice(100);
+        }
+        
+        localStorage.setItem('simpels_api_performance', JSON.stringify(perfLog));
+        
+        // Warn about slow requests
+        if (responseTime > 5000) {
+            console.warn(`⚠️ Slow API response: ${endpoint} took ${responseTime}ms`);
+        }
+    }
+    
+    /**
+     * Get performance statistics
+     */
+    getPerformanceStats() {
+        const perfLog = JSON.parse(localStorage.getItem('simpels_api_performance') || '[]');
+        
+        if (perfLog.length === 0) {
+            return { message: 'No performance data available' };
+        }
+        
+        const stats = {
+            totalRequests: perfLog.length,
+            successRate: (perfLog.filter(p => p.success).length / perfLog.length * 100).toFixed(2) + '%',
+            averageResponseTime: Math.round(perfLog.reduce((sum, p) => sum + p.responseTime, 0) / perfLog.length) + 'ms',
+            slowestRequest: Math.max(...perfLog.map(p => p.responseTime)) + 'ms',
+            fastestRequest: Math.min(...perfLog.map(p => p.responseTime)) + 'ms',
+            recentErrors: perfLog.filter(p => !p.success).slice(0, 5)
+        };
+        
+        return stats;
     }
     
     /**
@@ -203,6 +307,53 @@ class SIMPelsAPI {
 
 // Create global instance
 window.simpelsAPI = new SIMPelsAPI();
+
+// Global debugging helpers
+window.SIMPelsDebug = {
+    // Get API performance statistics
+    getPerformanceStats: () => window.simpelsAPI.getPerformanceStats(),
+    
+    // Clear performance log
+    clearPerformanceLog: () => {
+        localStorage.removeItem('simpels_api_performance');
+        console.log('SIMPels API performance log cleared');
+    },
+    
+    // Test API connection
+    testConnection: async () => {
+        const start = performance.now();
+        try {
+            const result = await window.simpelsAPI.testConnection();
+            const time = Math.round(performance.now() - start);
+            console.log(`✅ API Connection Test: ${result.success ? 'SUCCESS' : 'FAILED'} (${time}ms)`);
+            console.log('Response:', result);
+            return result;
+        } catch (error) {
+            const time = Math.round(performance.now() - start);
+            console.error(`❌ API Connection Test: FAILED (${time}ms)`);
+            console.error('Error:', error);
+            return { success: false, error: error.message };
+        }
+    },
+    
+    // Show recent API logs
+    showRecentLogs: (limit = 10) => {
+        const perfLog = JSON.parse(localStorage.getItem('simpels_api_performance') || '[]');
+        console.table(perfLog.slice(0, limit));
+    },
+    
+    // Monitor API in real-time
+    startMonitoring: () => {
+        console.log('🔍 Starting SIMPels API monitoring... Check console for real-time logs');
+        window.simpelsAPI.debug = true;
+    },
+    
+    // Stop API monitoring
+    stopMonitoring: () => {
+        console.log('⏸️ Stopped SIMPels API monitoring');
+        window.simpelsAPI.debug = false;
+    }
+};
 
 // Export for module use
 if (typeof module !== 'undefined' && module.exports) {
