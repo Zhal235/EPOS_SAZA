@@ -58,7 +58,7 @@
             <h3 class="text-xs font-semibold text-indigo-200 uppercase tracking-wider">Reports</h3>
         </div>
         
-        <a href="#" class="menu-item flex items-center px-4 py-3 text-white rounded-lg">
+        <a href="{{ route('sales.report') }}" class="menu-item flex items-center px-4 py-3 text-white rounded-lg {{ request()->routeIs('sales.report') ? 'active' : '' }}">
             <i class="fas fa-chart-line w-5 text-center"></i>
             <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">
                 @if($user->isCashier())

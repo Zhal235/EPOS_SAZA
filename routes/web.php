@@ -5,6 +5,7 @@ use App\Livewire\PosTerminal;
 use App\Livewire\Products;
 use App\Livewire\Dashboard;
 use App\Livewire\TransactionHistory;
+use App\Livewire\SalesReport;
 
 // Public routes
 Route::view('/', 'welcome')->name('home');
@@ -16,6 +17,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('products', Products::class)->name('products');
     Route::get('categories', \App\Livewire\Categories::class)->name('categories');
     Route::get('transactions', TransactionHistory::class)->name('transactions');
+    
+    // Reports routes
+    Route::get('sales-report', SalesReport::class)->name('sales.report');
     
     // Customer routes
     Route::get('customers', \App\Livewire\Customers::class)->name('customers');
