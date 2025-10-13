@@ -37,6 +37,9 @@ class SalesReport extends Component
         $this->cashiers = User::whereIn('role', ['admin', 'cashier'])
             ->orderBy('name')
             ->get();
+        
+        // Generate initial report automatically
+        $this->generateReport();
     }
 
     public function updatedReportType()
@@ -88,7 +91,9 @@ class SalesReport extends Component
         $this->totalTransactions = $transactions->count();
         $this->totalProfit = $transactions->sum(function ($transaction) {
             return $transaction->items->sum(function ($item) {
-                return ($item->price - ($item->product->cost_price ?? 0)) * $item->quantity;
+                // Calculate profit: (unit_price - cost_price) * quantity
+                $costPrice = $item->product->cost_price ?? 0;
+                return ($item->unit_price - $costPrice) * $item->quantity;
             });
         });
         $this->averageTransaction = $this->totalTransactions > 0 
@@ -106,7 +111,7 @@ class SalesReport extends Component
                 $q->where('user_id', $this->selectedCashier);
             }
         })
-        ->select('product_id', DB::raw('SUM(quantity) as total_quantity'), DB::raw('SUM(price * quantity) as total_sales'))
+        ->select('product_id', DB::raw('SUM(quantity) as total_quantity'), DB::raw('SUM(total_price) as total_sales'))
         ->with('product')
         ->groupBy('product_id')
         ->orderByDesc('total_sales')
@@ -124,14 +129,31 @@ class SalesReport extends Component
 
         // Sales by hour (for daily reports)
         if ($this->reportType === 'daily') {
-            $this->salesByHour = Transaction::whereBetween('created_at', [
-                Carbon::parse($this->dateFrom)->startOfDay(),
-                Carbon::parse($this->dateTo)->endOfDay()
-            ])
-            ->select(DB::raw('HOUR(created_at) as hour'), DB::raw('COUNT(*) as count'), DB::raw('SUM(total_amount) as total'))
-            ->groupBy('hour')
-            ->orderBy('hour')
-            ->get();
+            // Check database driver to use correct SQL function
+            $driver = config('database.default');
+            $connection = config("database.connections.{$driver}.driver");
+            
+            if ($connection === 'sqlite') {
+                // SQLite uses strftime
+                $this->salesByHour = Transaction::whereBetween('created_at', [
+                    Carbon::parse($this->dateFrom)->startOfDay(),
+                    Carbon::parse($this->dateTo)->endOfDay()
+                ])
+                ->select(DB::raw("CAST(strftime('%H', created_at) as INTEGER) as hour"), DB::raw('COUNT(*) as count'), DB::raw('SUM(total_amount) as total'))
+                ->groupBy('hour')
+                ->orderBy('hour')
+                ->get();
+            } else {
+                // MySQL/PostgreSQL use HOUR()
+                $this->salesByHour = Transaction::whereBetween('created_at', [
+                    Carbon::parse($this->dateFrom)->startOfDay(),
+                    Carbon::parse($this->dateTo)->endOfDay()
+                ])
+                ->select(DB::raw('HOUR(created_at) as hour'), DB::raw('COUNT(*) as count'), DB::raw('SUM(total_amount) as total'))
+                ->groupBy('hour')
+                ->orderBy('hour')
+                ->get();
+            }
         }
 
         session()->flash('message', 'Report generated successfully!');
@@ -152,6 +174,9 @@ class SalesReport extends Component
             $this->selectedCashier = $user->id;
         }
 
-        return view('livewire.sales-report')->layout('layouts.app');
+        return view('livewire.sales-report')
+            ->layout('layouts.epos', [
+                'header' => auth()->user()->isCashier() ? 'My Sales Report' : 'Sales Report'
+            ]);
     }
 }
