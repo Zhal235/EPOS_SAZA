@@ -24,6 +24,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Customer routes
     Route::get('customers', \App\Livewire\Customers::class)->name('customers');
     
+    // Staff Management routes (Admin only)
+    Route::get('staff', \App\Livewire\StaffManagement::class)->name('staff')->middleware('can:access-admin');
+    
     // Download template route
     Route::get('products/download-template', function() {
         $fileName = 'Product_Import_Template_' . date('Y-m-d_H-i-s') . '.xlsx';

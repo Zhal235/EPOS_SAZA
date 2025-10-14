@@ -90,13 +90,11 @@
         </div>
         
         @if($user->isAdmin())
-        <a href="#" class="menu-item flex items-center px-4 py-3 text-white rounded-lg">
+        <a href="{{ route('staff') }}" class="menu-item flex items-center px-4 py-3 text-white rounded-lg {{ request()->routeIs('staff') ? 'active' : '' }}">
             <i class="fas fa-users w-5 text-center"></i>
-            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Staff</span>
+            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Staff Management</span>
         </a>
-        @endif
-
-        <a href="{{ route('customers') }}" class="menu-item flex items-center px-4 py-3 text-white rounded-lg {{ request()->routeIs('customers') ? 'active' : '' }}">
+        @endif        <a href="{{ route('customers') }}" class="menu-item flex items-center px-4 py-3 text-white rounded-lg {{ request()->routeIs('customers') ? 'active' : '' }}">
             <i class="fas fa-user-friends w-5 text-center"></i>
             <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Customers</span>
         </a>

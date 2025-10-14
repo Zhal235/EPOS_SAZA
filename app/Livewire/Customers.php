@@ -26,7 +26,6 @@ class Customers extends Component
     public $name = '';
     public $email = '';
     public $phone = '';
-    public $password = '';
     public $customer_type = 'regular';
     public $is_active = true;
     public $nis = '';
@@ -34,6 +33,9 @@ class Customers extends Component
     public $subject = '';
     public $experience = '';
     public $class = '';
+    public $rfid_number = '';
+    public $balance = 0;
+    public $spending_limit = 50000;
 
     protected $queryString = [
         'search' => ['except' => ''],
@@ -44,9 +46,8 @@ class Customers extends Component
     
     protected $rules = [
         'name' => 'required|string|max:255',
-        'email' => 'required|email|unique:users,email',
+        'email' => 'nullable|email|unique:users,email',
         'phone' => 'nullable|string|max:20',
-        'password' => 'required|string|min:8',
         'customer_type' => 'required|in:regular,umum,santri,guru',
         'is_active' => 'boolean',
         'nis' => 'nullable|string|max:20',
@@ -54,6 +55,9 @@ class Customers extends Component
         'subject' => 'nullable|string|max:100',
         'experience' => 'nullable|integer|min:0',
         'class' => 'nullable|string|max:50',
+        'rfid_number' => 'nullable|string|max:50',
+        'balance' => 'nullable|numeric|min:0',
+        'spending_limit' => 'nullable|numeric|min:0',
     ];
 
     public function updatingActiveTab()
@@ -275,13 +279,15 @@ class Customers extends Component
                         'name' => $guruData['nama_guru'],
                         'email' => $guruData['email'] ?? $guruData['nip'] . '@guru.simpels.local',
                         'phone' => $guruData['no_hp'] ?? null,
-                        'password' => bcrypt('guru123'), // Default password
-                        'role' => 'cashier', // Use valid role from enum
+                        'password' => bcrypt('customer-no-login-' . rand(1000000, 9999999)), // Customer can't login
+                        'role' => 'customer', // Guru adalah PELANGGAN, bukan staff
                         'customer_type' => 'guru',
                         'nip' => $guruData['nip'],
                         'subject' => $guruData['mata_pelajaran'] ?? null,
                         'experience' => $guruData['pengalaman_tahun'] ?? 0,
                         'rfid_number' => $guruData['rfid_tag'] ?? null,
+                        'balance' => $guruData['saldo'] ?? 0,
+                        'spending_limit' => $guruData['limit_harian'] ?? 100000,
                         'is_active' => ($guruData['status'] ?? 'aktif') === 'aktif',
                     ];
                     
@@ -353,7 +359,6 @@ class Customers extends Component
         $this->name = '';
         $this->email = '';
         $this->phone = '';
-        $this->password = '';
         $this->customer_type = 'regular';
         $this->is_active = true;
         $this->nis = '';
@@ -361,6 +366,9 @@ class Customers extends Component
         $this->subject = '';
         $this->experience = '';
         $this->class = '';
+        $this->rfid_number = '';
+        $this->balance = 0;
+        $this->spending_limit = 50000;
         $this->resetErrorBag();
     }
     
@@ -368,21 +376,24 @@ class Customers extends Component
     {
         $this->validate();
         
+        // Customer data - TIDAK BISA LOGIN ke sistem EPOS (hanya data member/pelanggan)
         $data = [
             'name' => $this->name,
-            'email' => $this->email,
+            'email' => $this->email ?: ($this->nis ?: $this->nip) . '@customer.local', // Generate email if empty
             'phone' => $this->phone,
-            'password' => bcrypt($this->password),
+            'password' => bcrypt('customer-no-login-' . rand(1000000, 9999999)), // Random password (customer can't login)
             'customer_type' => $this->customer_type,
             'is_active' => $this->is_active,
-            'role' => 'customer', // Default role for customers
+            'role' => 'customer', // Customer role - TIDAK BISA LOGIN
+            'rfid_number' => $this->rfid_number,
+            'balance' => $this->balance ?? 0,
+            'spending_limit' => $this->spending_limit ?? 50000,
         ];
         
         // Add specific fields based on customer type
         if ($this->customer_type === 'santri') {
             $data['nis'] = $this->nis;
             $data['class'] = $this->class;
-            $data['balance'] = 0; // Default balance for santri
         } elseif ($this->customer_type === 'guru') {
             $data['nip'] = $this->nip;
             $data['subject'] = $this->subject;
@@ -391,7 +402,7 @@ class Customers extends Component
         
         User::create($data);
         
-        session()->flash('message', ucfirst($this->activeTab) . ' berhasil ditambahkan!');
+        session()->flash('message', ucfirst($this->activeTab) . ' berhasil ditambahkan sebagai pelanggan!');
         $this->closeAddModal();
     }
 

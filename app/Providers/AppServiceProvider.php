@@ -22,6 +22,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Define authorization gates
+        \Illuminate\Support\Facades\Gate::define('access-admin', function ($user) {
+            return $user->canAccessAdmin();
+        });
+        
+        // Define gate to check if user can login (customers cannot login)
+        \Illuminate\Support\Facades\Gate::define('can-login', function ($user) {
+            return in_array($user->role, ['admin', 'manager', 'cashier']);
+        });
     }
 }
