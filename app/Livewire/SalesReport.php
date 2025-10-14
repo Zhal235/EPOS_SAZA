@@ -267,7 +267,8 @@ class SalesReport extends Component
         ->map(function ($item) {
             $product = $item->product;
             $costPrice = $product->cost_price ?? 0;
-            $profit = ($item->unit_price - $costPrice) * $item->total_quantity;
+            $totalCost = $costPrice * $item->total_quantity;
+            $profit = $item->total_sales - $totalCost;
             $profitMargin = $item->total_sales > 0 ? ($profit / $item->total_sales) * 100 : 0;
             
             return [

@@ -624,19 +624,19 @@
             <div class="overflow-x-auto">
                 <table class="w-full">
                     <thead>
-                        <tr class="bg-gray-50 dark:bg-gray-700">
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Product</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Category</th>
-                            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Qty Sold</th>
-                            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Sales</th>
-                            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Profit</th>
-                            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Margin %</th>
-                            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Stock</th>
+                        <tr class="bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600">
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-800 dark:text-gray-200 uppercase">Product</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-800 dark:text-gray-200 uppercase">Category</th>
+                            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-800 dark:text-gray-200 uppercase">Qty Sold</th>
+                            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-800 dark:text-gray-200 uppercase">Sales</th>
+                            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-800 dark:text-gray-200 uppercase">Profit</th>
+                            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-800 dark:text-gray-200 uppercase">Margin %</th>
+                            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-800 dark:text-gray-200 uppercase">Stock</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                         @foreach($productPerformance as $product)
-                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                            <tr class="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                                 <td class="px-4 py-3">
                                     <div class="font-medium text-gray-900 dark:text-white">{{ $product['product_name'] }}</div>
                                     <div class="text-xs text-gray-500 dark:text-gray-400">{{ $product['transaction_count'] }} transactions</div>
@@ -650,21 +650,34 @@
                                 <td class="px-4 py-3 text-right font-semibold text-green-600 dark:text-green-400">
                                     Rp {{ number_format($product['sales'], 0, ',', '.') }}
                                 </td>
-                                <td class="px-4 py-3 text-right font-semibold text-blue-600 dark:text-blue-400">
-                                    Rp {{ number_format($product['profit'], 0, ',', '.') }}
+                                <td class="px-4 py-3 text-right font-semibold">
+                                    <span class="{{ $product['profit'] >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400' }}">
+                                        Rp {{ number_format($product['profit'], 0, ',', '.') }}
+                                    </span>
                                 </td>
                                 <td class="px-4 py-3 text-right">
                                     <span class="px-2 py-1 text-xs font-bold rounded
                                         {{ $product['profit_margin'] >= 30 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : '' }}
                                         {{ $product['profit_margin'] >= 15 && $product['profit_margin'] < 30 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' : '' }}
-                                        {{ $product['profit_margin'] < 15 ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' : '' }}">
+                                        {{ $product['profit_margin'] >= 0 && $product['profit_margin'] < 15 ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' : '' }}
+                                        {{ $product['profit_margin'] < 0 ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' : '' }}">
                                         {{ number_format($product['profit_margin'], 1) }}%
                                     </span>
                                 </td>
                                 <td class="px-4 py-3 text-right">
-                                    <span class="font-medium {{ $product['current_stock'] < 10 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white' }}">
-                                        {{ $product['current_stock'] }}
-                                    </span>
+                                    @if($product['current_stock'] == 0)
+                                        <span class="px-2 py-1 text-xs font-bold bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded">
+                                            Out of Stock
+                                        </span>
+                                    @elseif($product['current_stock'] < 10)
+                                        <span class="px-2 py-1 text-xs font-bold bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded">
+                                            {{ $product['current_stock'] }} (Low)
+                                        </span>
+                                    @else
+                                        <span class="font-medium text-gray-900 dark:text-white">
+                                            {{ $product['current_stock'] }}
+                                        </span>
+                                    @endif
                                 </td>
                             </tr>
                         @endforeach
