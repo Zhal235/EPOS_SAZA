@@ -1,4 +1,4 @@
-<div>
+<div x-data="{ activeTab: 'sales' }">
     <!-- Quick Stats Banner -->
     <div class="mb-6">
         <div class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-xl shadow-lg p-6 text-white">
@@ -6,9 +6,9 @@
                 <div>
                     <h2 class="text-2xl font-bold">
                         @if(auth()->user()->isCashier())
-                            Personal Sales Analytics
+                            Personal Sales & Analytics
                         @else
-                            Sales Analytics Dashboard
+                            Sales & Analytics Dashboard
                         @endif
                     </h2>
                     <p class="text-indigo-100 mt-1">Comprehensive sales insights and performance metrics</p>
@@ -27,6 +27,26 @@
                         @endif
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tab Navigation -->
+    <div class="mb-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-2">
+            <div class="flex gap-2">
+                <button @click="activeTab = 'sales'" 
+                        :class="activeTab === 'sales' ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'"
+                        class="flex-1 px-6 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Sales Overview</span>
+                </button>
+                <button @click="activeTab = 'analytics'" 
+                        :class="activeTab === 'analytics' ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'"
+                        class="flex-1 px-6 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Analytics & Insights</span>
+                </button>
             </div>
         </div>
     </div>
@@ -129,8 +149,10 @@
         </div>
     @endif
 
-    <!-- Summary Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+    <!-- Sales Overview Tab -->
+    <div x-show="activeTab === 'sales'" x-transition>
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         <!-- Total Sales -->
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border-l-4 border-blue-600 p-6 transform hover:scale-105 transition-transform duration-200">
             <div class="flex items-center justify-between">
@@ -374,27 +396,282 @@
         </div>
     @endif
 
-    <!-- Empty State for No Data -->
-    @if($totalTransactions === 0 && ($dateFrom || $dateTo))
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border-2 border-dashed border-gray-300 dark:border-gray-600 p-12 text-center">
-            <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900 dark:to-purple-900 rounded-full mb-4">
-                <i class="fas fa-chart-line text-4xl text-indigo-600 dark:text-indigo-300"></i>
+        <!-- Empty State for No Data -->
+        @if($totalTransactions === 0 && ($dateFrom || $dateTo))
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border-2 border-dashed border-gray-300 dark:border-gray-600 p-12 text-center">
+                <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900 dark:to-purple-900 rounded-full mb-4">
+                    <i class="fas fa-chart-line text-4xl text-indigo-600 dark:text-indigo-300"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-2">No Sales Data Found</h3>
+                <p class="text-gray-600 dark:text-gray-400 mb-6">
+                    There are no transactions for the selected period.<br>
+                    Try adjusting your date range or filters to see results.
+                </p>
+                <div class="flex items-center justify-center gap-4">
+                    <button wire:click="$set('reportType', 'monthly')" 
+                            class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors">
+                        <i class="fas fa-calendar-alt mr-2"></i>View This Month
+                    </button>
+                    <button wire:click="$set('dateFrom', ''); $set('dateTo', '')" 
+                            class="px-6 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-lg font-medium transition-colors">
+                        <i class="fas fa-times mr-2"></i>Clear Filters
+                    </button>
+                </div>
             </div>
-            <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-2">No Sales Data Found</h3>
-            <p class="text-gray-600 dark:text-gray-400 mb-6">
-                There are no transactions for the selected period.<br>
-                Try adjusting your date range or filters to see results.
-            </p>
-            <div class="flex items-center justify-center gap-4">
-                <button wire:click="$set('reportType', 'monthly')" 
-                        class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors">
-                    <i class="fas fa-calendar-alt mr-2"></i>View This Month
-                </button>
-                <button wire:click="$set('dateFrom', ''); $set('dateTo', '')" 
-                        class="px-6 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-lg font-medium transition-colors">
-                    <i class="fas fa-times mr-2"></i>Clear Filters
-                </button>
+        @endif
+    </div>
+    
+    <!-- Analytics & Insights Tab -->
+    <div x-show="activeTab === 'analytics'" x-transition>
+        <!-- Growth Comparison Section -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <!-- Sales Growth Card -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-bold text-gray-800 dark:text-white">
+                        <i class="fas fa-chart-line text-green-500 mr-2"></i>Sales Growth
+                    </h3>
+                    <select wire:model.live="comparisonPeriod" class="text-sm rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700" style="color: #1f2937 !important;">
+                        <option value="previous" class="text-gray-900 bg-white">vs Previous Period</option>
+                        <option value="last_month" class="text-gray-900 bg-white">vs Last Month</option>
+                        <option value="last_year" class="text-gray-900 bg-white">vs Last Year</option>
+                    </select>
+                </div>
+                <div class="space-y-4">
+                    <div class="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Current Period</p>
+                                <p class="text-2xl font-bold text-gray-900 dark:text-white">Rp {{ number_format($growthData['current_sales'] ?? 0, 0, ',', '.') }}</p>
+                            </div>
+                            <div class="text-right">
+                                @if(isset($growthData['sales_growth']))
+                                    @if($growthData['sales_growth'] >= 0)
+                                        <div class="flex items-center gap-1 text-green-600 dark:text-green-400">
+                                            <i class="fas fa-arrow-up"></i>
+                                            <span class="text-xl font-bold">{{ number_format(abs($growthData['sales_growth']), 1) }}%</span>
+                                        </div>
+                                    @else
+                                        <div class="flex items-center gap-1 text-red-600 dark:text-red-400">
+                                            <i class="fas fa-arrow-down"></i>
+                                            <span class="text-xl font-bold">{{ number_format(abs($growthData['sales_growth']), 1) }}%</span>
+                                        </div>
+                                    @endif
+                                @endif
+                            </div>
+                        </div>
+                        <div class="mt-2 pt-2 border-t border-green-200 dark:border-green-700">
+                            <p class="text-xs text-gray-500 dark:text-gray-400">{{ $growthData['compare_period_label'] ?? 'Previous' }}: Rp {{ number_format($growthData['compare_sales'] ?? 0, 0, ',', '.') }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Total Transactions</p>
+                                <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($growthData['current_transactions'] ?? 0) }}</p>
+                            </div>
+                            <div class="text-right">
+                                @if(isset($growthData['transactions_growth']))
+                                    @if($growthData['transactions_growth'] >= 0)
+                                        <div class="flex items-center gap-1 text-green-600 dark:text-green-400">
+                                            <i class="fas fa-arrow-up"></i>
+                                            <span class="text-xl font-bold">{{ number_format(abs($growthData['transactions_growth']), 1) }}%</span>
+                                        </div>
+                                    @else
+                                        <div class="flex items-center gap-1 text-red-600 dark:text-red-400">
+                                            <i class="fas fa-arrow-down"></i>
+                                            <span class="text-xl font-bold">{{ number_format(abs($growthData['transactions_growth']), 1) }}%</span>
+                                        </div>
+                                    @endif
+                                @endif
+                            </div>
+                        </div>
+                        <div class="mt-2 pt-2 border-t border-blue-200 dark:border-blue-700">
+                            <p class="text-xs text-gray-500 dark:text-gray-400">{{ $growthData['compare_period_label'] ?? 'Previous' }}: {{ number_format($growthData['compare_transactions'] ?? 0) }} transactions</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Peak Hours Card -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-bold text-gray-800 dark:text-white">
+                        <i class="fas fa-clock text-orange-500 mr-2"></i>Peak Hours
+                    </h3>
+                    <span class="text-sm text-gray-500 dark:text-gray-400 bg-orange-50 dark:bg-orange-900/30 px-3 py-1 rounded-full">
+                        Top 5
+                    </span>
+                </div>
+                @if(count($peakHours) > 0)
+                    <div class="space-y-3">
+                        @foreach($peakHours as $index => $peak)
+                            <div class="flex items-center justify-between p-3 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 rounded-lg">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center">
+                                        <span class="font-bold text-orange-600 dark:text-orange-300">{{ $index + 1 }}</span>
+                                    </div>
+                                    <div>
+                                        <p class="font-bold text-gray-900 dark:text-white">{{ $peak['hour'] }}</p>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ $peak['count'] }} transactions</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-bold text-green-600 dark:text-green-400">Rp {{ number_format($peak['sales'] / 1000, 0) }}K</p>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="text-center py-8">
+                        <i class="fas fa-clock text-4xl text-gray-300 dark:text-gray-600 mb-2"></i>
+                        <p class="text-gray-500 dark:text-gray-400">No peak hours data</p>
+                    </div>
+                @endif
             </div>
         </div>
-    @endif
+        
+        <!-- Sales Trend Chart -->
+        @if(count($salesTrend) > 0)
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold text-gray-800 dark:text-white">
+                    <i class="fas fa-chart-area text-indigo-500 mr-2"></i>Sales Trend
+                </h3>
+                <span class="text-sm text-gray-500 dark:text-gray-400 bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">
+                    {{ count($salesTrend) }} days
+                </span>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+                @php
+                    $maxSales = collect($salesTrend)->max('sales');
+                @endphp
+                @foreach($salesTrend as $day)
+                    @php
+                        $heightPercentage = $maxSales > 0 ? ($day['sales'] / $maxSales) * 100 : 0;
+                    @endphp
+                    <div class="relative group">
+                        <div class="bg-gradient-to-t from-indigo-100 to-indigo-50 dark:from-indigo-900 dark:to-indigo-800 rounded-lg p-3 text-center hover:shadow-lg transition-all">
+                            <div class="flex flex-col items-center justify-end" style="height: 120px;">
+                                <div class="w-full bg-gradient-to-t from-indigo-600 to-purple-600 rounded-t transition-all duration-500" 
+                                     style="height: {{ $heightPercentage }}%"></div>
+                            </div>
+                            <p class="text-xs font-bold text-gray-900 dark:text-white mt-2">{{ $day['label'] }}</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">{{ $day['count'] }} sales</p>
+                            <p class="text-xs text-green-600 dark:text-green-400 font-bold">{{ number_format($day['sales'] / 1000, 0) }}K</p>
+                        </div>
+                        <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+                            Rp {{ number_format($day['sales'], 0, ',', '.') }}
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+        @endif
+        
+        <!-- Category Performance -->
+        @if(count($categoryPerformance) > 0)
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold text-gray-800 dark:text-white">
+                    <i class="fas fa-layer-group text-purple-500 mr-2"></i>Category Performance
+                </h3>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                @foreach($categoryPerformance as $category)
+                    <div class="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div class="flex items-start justify-between mb-3">
+                            <div>
+                                <h4 class="font-bold text-gray-900 dark:text-white">{{ $category['category'] }}</h4>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ $category['transaction_count'] }} transactions</p>
+                            </div>
+                            <div class="w-12 h-12 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center">
+                                <i class="fas fa-tags text-purple-600 dark:text-purple-300"></i>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600 dark:text-gray-400">Total Sales</span>
+                                <span class="font-bold text-green-600 dark:text-green-400">Rp {{ number_format($category['sales'], 0, ',', '.') }}</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600 dark:text-gray-400">Items Sold</span>
+                                <span class="font-semibold text-gray-900 dark:text-white">{{ $category['quantity'] }}</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600 dark:text-gray-400">Avg Value</span>
+                                <span class="font-semibold text-indigo-600 dark:text-indigo-400">Rp {{ number_format($category['avg_transaction_value'], 0, ',', '.') }}</span>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+        @endif
+        
+        <!-- Product Performance Table -->
+        @if(count($productPerformance) > 0)
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold text-gray-800 dark:text-white">
+                    <i class="fas fa-box-open text-blue-500 mr-2"></i>Product Performance Analysis
+                </h3>
+                <span class="text-sm text-gray-500 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">
+                    {{ count($productPerformance) }} products
+                </span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="bg-gray-50 dark:bg-gray-700">
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Product</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Category</th>
+                            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Qty Sold</th>
+                            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Sales</th>
+                            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Profit</th>
+                            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Margin %</th>
+                            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Stock</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                        @foreach($productPerformance as $product)
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                                <td class="px-4 py-3">
+                                    <div class="font-medium text-gray-900 dark:text-white">{{ $product['product_name'] }}</div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">{{ $product['transaction_count'] }} transactions</div>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span class="px-2 py-1 text-xs font-medium bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-full">
+                                        {{ $product['category'] }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 text-right font-semibold text-gray-900 dark:text-white">{{ $product['quantity'] }}</td>
+                                <td class="px-4 py-3 text-right font-semibold text-green-600 dark:text-green-400">
+                                    Rp {{ number_format($product['sales'], 0, ',', '.') }}
+                                </td>
+                                <td class="px-4 py-3 text-right font-semibold text-blue-600 dark:text-blue-400">
+                                    Rp {{ number_format($product['profit'], 0, ',', '.') }}
+                                </td>
+                                <td class="px-4 py-3 text-right">
+                                    <span class="px-2 py-1 text-xs font-bold rounded
+                                        {{ $product['profit_margin'] >= 30 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : '' }}
+                                        {{ $product['profit_margin'] >= 15 && $product['profit_margin'] < 30 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' : '' }}
+                                        {{ $product['profit_margin'] < 15 ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' : '' }}">
+                                        {{ number_format($product['profit_margin'], 1) }}%
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 text-right">
+                                    <span class="font-medium {{ $product['current_stock'] < 10 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white' }}">
+                                        {{ $product['current_stock'] }}
+                                    </span>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        @endif
+    </div>
 </div>

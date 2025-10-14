@@ -62,9 +62,9 @@
             <i class="fas fa-chart-line w-5 text-center"></i>
             <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">
                 @if($user->isCashier())
-                    My Sales
+                    My Sales & Analytics
                 @else
-                    Sales Reports
+                    Sales & Analytics
                 @endif
             </span>
         </a>
@@ -73,11 +73,6 @@
         <a href="#" class="menu-item flex items-center px-4 py-3 text-white rounded-lg">
             <i class="fas fa-dollar-sign w-5 text-center"></i>
             <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Financial</span>
-        </a>
-        
-        <a href="#" class="menu-item flex items-center px-4 py-3 text-white rounded-lg">
-            <i class="fas fa-chart-bar w-5 text-center"></i>
-            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Analytics</span>
         </a>
         @endif
     </div>
