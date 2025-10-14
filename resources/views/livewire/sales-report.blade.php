@@ -35,17 +35,19 @@
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
         <div class="flex items-center mb-4">
             <i class="fas fa-filter text-indigo-600 text-lg mr-2"></i>
-            <h3 class="text-lg font-bold text-gray-800 dark:text-white">Report Filters</h3>
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white">Report Filters</h3>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <!-- Report Type -->
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Report Type</label>
-                <select wire:model.live="reportType" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-indigo-500 focus:ring-indigo-500">
-                    <option value="daily">Today</option>
-                    <option value="weekly">This Week</option>
-                    <option value="monthly">This Month</option>
-                    <option value="custom">Custom Range</option>
+                <label class="block text-sm font-medium text-white dark:text-gray-300 mb-2">
+                    <i class="fas fa-chart-bar mr-1"></i>Report Type
+                </label>
+                <select wire:model.live="reportType" class="w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:border-indigo-500 focus:ring-indigo-500" style="color: #1f2937 !important;">
+                    <option value="daily" class="text-gray-900 bg-white">Today</option>
+                    <option value="weekly" class="text-gray-900 bg-white">This Week</option>
+                    <option value="monthly" class="text-gray-900 bg-white">This Month</option>
+                    <option value="custom" class="text-gray-900 bg-white">Custom Range</option>
                 </select>
             </div>
 
@@ -55,9 +57,9 @@
                     <i class="fas fa-calendar-alt mr-1"></i>From Date
                 </label>
                 <input type="date" wire:model="dateFrom" 
-                       class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-indigo-500 focus:ring-indigo-500 transition-all"
+                       class="w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:border-indigo-500 focus:ring-indigo-500 transition-all"
                        x-bind:disabled="'{{ $reportType }}' !== 'custom'"
-                       x-bind:class="'{{ $reportType }}' !== 'custom' ? 'bg-gray-100 cursor-not-allowed' : ''">
+                       x-bind:class="'{{ $reportType }}' !== 'custom' ? 'bg-gray-100 dark:bg-gray-600 cursor-not-allowed' : ''">
             </div>
 
             <!-- Date To -->
@@ -66,19 +68,21 @@
                     <i class="fas fa-calendar-check mr-1"></i>To Date
                 </label>
                 <input type="date" wire:model="dateTo" 
-                       class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-indigo-500 focus:ring-indigo-500 transition-all"
+                       class="w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:border-indigo-500 focus:ring-indigo-500 transition-all"
                        x-bind:disabled="'{{ $reportType }}' !== 'custom'"
-                       x-bind:class="'{{ $reportType }}' !== 'custom' ? 'bg-gray-100 cursor-not-allowed' : ''">
+                       x-bind:class="'{{ $reportType }}' !== 'custom' ? 'bg-gray-100 dark:bg-gray-600 cursor-not-allowed' : ''">
             </div>
 
-            <!-- Cashier Filter (Admin only) -->
+                        <!-- Cashier Filter (Admin only) -->
             @if(auth()->user()->canAccessAdmin())
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Cashier</label>
-                <select wire:model="selectedCashier" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-indigo-500 focus:ring-indigo-500">
-                    <option value="">All Cashiers</option>
+                <label class="block text-sm font-medium text-white dark:text-gray-300 mb-2">
+                    <i class="fas fa-user mr-1"></i>Cashier
+                </label>
+                <select wire:model="selectedCashier" class="w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:border-indigo-500 focus:ring-indigo-500" style="color: #1f2937 !important;">
+                    <option value="" class="text-gray-900 bg-white">All Cashiers</option>
                     @foreach($cashiers as $cashier)
-                        <option value="{{ $cashier->id }}">{{ $cashier->name }}</option>
+                        <option value="{{ $cashier->id }}" class="text-gray-900 bg-white">{{ $cashier->name }}</option>
                     @endforeach
                 </select>
             </div>
@@ -86,19 +90,19 @@
 
             <!-- Payment Method Filter -->
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Payment Method</label>
-                <select wire:model="selectedPaymentMethod" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-indigo-500 focus:ring-indigo-500">
-                    <option value="">All Methods</option>
-                    <option value="cash">Cash</option>
-                    <option value="qris">QRIS</option>
-                    <option value="rfid">RFID</option>
-                    <option value="card">Card</option>
-                    <option value="transfer">Transfer</option>
+                <label class="block text-sm font-medium text-white dark:text-gray-300 mb-2">
+                    <i class="fas fa-credit-card mr-1"></i>Payment Method
+                </label>
+                <select wire:model="selectedPaymentMethod" class="w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:border-indigo-500 focus:ring-indigo-500" style="color: #1f2937 !important;">
+                    <option value="" class="text-gray-900 bg-white">All Methods</option>
+                    <option value="cash" class="text-gray-900 bg-white">Cash</option>
+                    <option value="qris" class="text-gray-900 bg-white">QRIS</option>
+                    <option value="rfid" class="text-gray-900 bg-white">RFID</option>
+                    <option value="card" class="text-gray-900 bg-white">Card</option>
+                    <option value="transfer" class="text-gray-900 bg-white">Transfer</option>
                 </select>
             </div>
-        </div>
-
-        <!-- Action Buttons -->
+        </div>        <!-- Action Buttons -->
         <div class="flex flex-wrap gap-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
             <button wire:click="generateReport" 
                     class="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">

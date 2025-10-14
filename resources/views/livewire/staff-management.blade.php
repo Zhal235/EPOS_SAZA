@@ -116,19 +116,19 @@
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full">
-                <thead class="bg-gray-50 dark:bg-gray-900">
+                <thead class="bg-gradient-to-r from-indigo-600 to-purple-600">
                     <tr>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Staff Member</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Contact</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Role</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Status</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Joined</th>
-                        <th class="px-6 py-4 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">Staff Member</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">Contact</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">Role</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">Joined</th>
+                        <th class="px-6 py-4 text-right text-xs font-semibold text-white uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
                     @forelse($staffMembers as $staff)
-                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <tr class="hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors">
                             <td class="px-6 py-4">
                                 <div class="flex items-center gap-3">
                                     <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white
@@ -138,19 +138,19 @@
                                         {{ strtoupper(substr($staff->name, 0, 2)) }}
                                     </div>
                                     <div>
-                                        <p class="font-semibold text-gray-900 dark:text-white">{{ $staff->name }}</p>
-                                        <p class="text-sm text-gray-500 dark:text-gray-400">ID: {{ $staff->id }}</p>
+                                        <p class="font-semibold text-gray-900 dark:text-white select-none">{{ $staff->name }}</p>
+                                        <p class="text-sm text-indigo-600 dark:text-indigo-400 select-none">ID: {{ $staff->id }}</p>
                                     </div>
                                 </div>
                             </td>
                             <td class="px-6 py-4">
                                 <div>
-                                    <p class="text-sm text-gray-900 dark:text-white">
-                                        <i class="fas fa-envelope text-gray-400 mr-2"></i>{{ $staff->email }}
+                                    <p class="text-sm text-gray-900 dark:text-white select-none">
+                                        <i class="fas fa-envelope text-indigo-500 mr-2"></i>{{ $staff->email }}
                                     </p>
                                     @if($staff->phone)
-                                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                            <i class="fas fa-phone text-gray-400 mr-2"></i>{{ $staff->phone }}
+                                        <p class="text-sm text-gray-600 dark:text-gray-300 mt-1 select-none">
+                                            <i class="fas fa-phone text-indigo-500 mr-2"></i>{{ $staff->phone }}
                                         </p>
                                     @endif
                                 </div>
@@ -172,29 +172,29 @@
                             </td>
                             <td class="px-6 py-4">
                                 <button wire:click="toggleStatus({{ $staff->id }})" 
-                                        class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold transition-colors
-                                        {{ $staff->is_active ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 hover:bg-green-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200 hover:bg-gray-200' }}">
-                                    <span class="w-2 h-2 rounded-full mr-2 {{ $staff->is_active ? 'bg-green-500' : 'bg-gray-500' }}"></span>
+                                        class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold transition-colors select-none
+                                        {{ $staff->is_active ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 hover:bg-green-200 dark:hover:bg-green-800' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-800' }}">
+                                    <span class="w-2 h-2 rounded-full mr-2 {{ $staff->is_active ? 'bg-green-500' : 'bg-red-500' }}"></span>
                                     {{ $staff->is_active ? 'Active' : 'Inactive' }}
                                 </button>
                             </td>
                             <td class="px-6 py-4">
-                                <div class="text-sm text-gray-900 dark:text-white">
+                                <div class="text-sm font-medium text-gray-900 dark:text-white select-none">
                                     {{ $staff->created_at->format('M d, Y') }}
                                 </div>
-                                <div class="text-xs text-gray-500 dark:text-gray-400">
+                                <div class="text-xs text-indigo-600 dark:text-indigo-400 select-none">
                                     {{ $staff->created_at->diffForHumans() }}
                                 </div>
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-end gap-2">
                                     <button wire:click="openEditModal({{ $staff->id }})" 
-                                            class="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900 rounded-lg transition-colors"
+                                            class="p-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm"
                                             title="Edit">
                                         <i class="fas fa-edit"></i>
                                     </button>
                                     <button wire:click="confirmDelete({{ $staff->id }})" 
-                                            class="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900 rounded-lg transition-colors"
+                                            class="p-2 text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors shadow-sm"
                                             title="Delete">
                                         <i class="fas fa-trash"></i>
                                     </button>
@@ -203,12 +203,12 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-6 py-12 text-center">
-                                <div class="inline-flex items-center justify-center w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full mb-4">
-                                    <i class="fas fa-users text-3xl text-gray-400"></i>
+                            <td colspan="6" class="px-6 py-12 text-center bg-white dark:bg-gray-800">
+                                <div class="inline-flex items-center justify-center w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 rounded-full mb-4">
+                                    <i class="fas fa-users text-3xl text-indigo-600 dark:text-indigo-400"></i>
                                 </div>
-                                <p class="text-gray-500 dark:text-gray-400 font-medium">No staff members found</p>
-                                <p class="text-gray-400 dark:text-gray-500 text-sm mt-1">Try adjusting your search or filters</p>
+                                <p class="text-gray-900 dark:text-white font-medium">No staff members found</p>
+                                <p class="text-indigo-600 dark:text-indigo-400 text-sm mt-1">Click "Add Staff" to create a new staff member</p>
                             </td>
                         </tr>
                     @endforelse
@@ -217,7 +217,7 @@
         </div>
 
         <!-- Pagination -->
-        <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900">
+        <div class="px-6 py-4 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 border-t border-indigo-100 dark:border-gray-700">
             {{ $staffMembers->links() }}
         </div>
     </div>
@@ -231,15 +231,15 @@
                      @click="$wire.closeModal()"></div>
 
                 <!-- Modal Panel -->
-                <div class="relative inline-block w-full max-w-2xl px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white dark:bg-gray-800 rounded-lg shadow-xl sm:my-8 sm:align-middle sm:p-6">
+                <div class="relative inline-block w-full max-w-2xl px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white rounded-lg shadow-xl sm:my-8 sm:align-middle sm:p-6">
                     <!-- Modal Header -->
-                    <div class="flex items-center justify-between mb-6">
-                        <h3 class="text-2xl font-bold text-gray-900 dark:text-white">
+                    <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
+                        <h3 class="text-lg font-bold text-gray-900">
                             <i class="fas {{ $isEditMode ? 'fa-edit' : 'fa-plus' }} text-indigo-600 mr-2"></i>
                             {{ $isEditMode ? 'Edit Staff Member' : 'Add New Staff Member' }}
                         </h3>
-                        <button @click="$wire.closeModal()" class="text-gray-400 hover:text-gray-600">
-                            <i class="fas fa-times text-xl"></i>
+                        <button @click="$wire.closeModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                            <i class="fas fa-times text-lg"></i>
                         </button>
                     </div>
 
@@ -248,61 +248,61 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <!-- Name -->
                             <div class="md:col-span-2">
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    <i class="fas fa-user mr-1"></i>Full Name *
+                                <label class="block text-sm font-medium text-gray-900 mb-2">
+                                    <i class="fas fa-user text-indigo-600 mr-1"></i>Full Name *
                                 </label>
                                 <input type="text" wire:model="name" 
-                                       class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white text-gray-900"
                                        placeholder="Enter full name">
-                                @error('name') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+                                @error('name') <span class="text-red-500 text-xs mt-1 block">{{ $message }}</span> @enderror
                             </div>
 
                             <!-- Email -->
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    <i class="fas fa-envelope mr-1"></i>Email *
+                                <label class="block text-sm font-medium text-gray-900 mb-2">
+                                    <i class="fas fa-envelope text-indigo-600 mr-1"></i>Email *
                                 </label>
                                 <input type="email" wire:model="email" 
-                                       class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white text-gray-900"
                                        placeholder="email@example.com">
-                                @error('email') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+                                @error('email') <span class="text-red-500 text-xs mt-1 block">{{ $message }}</span> @enderror
                             </div>
 
                             <!-- Phone -->
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    <i class="fas fa-phone mr-1"></i>Phone Number
+                                <label class="block text-sm font-medium text-gray-900 mb-2">
+                                    <i class="fas fa-phone text-indigo-600 mr-1"></i>Phone Number
                                 </label>
                                 <input type="text" wire:model="phone" 
-                                       class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white text-gray-900"
                                        placeholder="+62 xxx xxxx xxxx">
-                                @error('phone') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+                                @error('phone') <span class="text-red-500 text-xs mt-1 block">{{ $message }}</span> @enderror
                             </div>
 
                             <!-- Role -->
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    <i class="fas fa-user-tag mr-1"></i>Role *
+                                <label class="block text-sm font-medium text-gray-900 mb-2">
+                                    <i class="fas fa-user-tag text-indigo-600 mr-1"></i>Role *
                                 </label>
                                 <select wire:model="role" 
-                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white">
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white text-gray-900">
                                     <option value="cashier">Cashier</option>
                                     <option value="manager">Manager</option>
                                     <option value="admin">Admin</option>
                                 </select>
-                                @error('role') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+                                @error('role') <span class="text-red-500 text-xs mt-1 block">{{ $message }}</span> @enderror
                             </div>
 
                             <!-- Status -->
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    <i class="fas fa-toggle-on mr-1"></i>Status
+                                <label class="block text-sm font-medium text-gray-900 mb-2">
+                                    <i class="fas fa-toggle-on text-indigo-600 mr-1"></i>Status
                                 </label>
                                 <div class="flex items-center gap-4 mt-3">
                                     <label class="inline-flex items-center cursor-pointer">
                                         <input type="checkbox" wire:model="is_active" class="sr-only peer">
-                                        <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
-                                        <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">
+                                        <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                                        <span class="ms-3 text-sm font-medium text-gray-900">
                                             {{ $is_active ? 'Active' : 'Inactive' }}
                                         </span>
                                     </label>
@@ -310,31 +310,31 @@
                             </div>
 
                             <!-- Password Section -->
-                            <div class="md:col-span-2 border-t border-gray-200 dark:border-gray-700 pt-4 mt-2">
-                                <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">
-                                    <i class="fas fa-lock mr-1"></i>
+                            <div class="md:col-span-2 border-t border-gray-200 pt-4 mt-2">
+                                <h4 class="text-sm font-semibold text-gray-900 mb-4">
+                                    <i class="fas fa-lock text-indigo-600 mr-1"></i>
                                     {{ $isEditMode ? 'Change Password (leave blank to keep current)' : 'Set Password *' }}
                                 </h4>
 
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <!-- Password -->
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        <label class="block text-sm font-medium text-gray-900 mb-2">
                                             Password {{ $isEditMode ? '' : '*' }}
                                         </label>
                                         <input type="password" wire:model="password" 
-                                               class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+                                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white text-gray-900"
                                                placeholder="••••••••">
-                                        @error('password') <span class="text-red-500 text-xs mt-1">{{ $message }}</span> @enderror
+                                        @error('password') <span class="text-red-500 text-xs mt-1 block">{{ $message }}</span> @enderror
                                     </div>
 
                                     <!-- Confirm Password -->
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        <label class="block text-sm font-medium text-gray-900 mb-2">
                                             Confirm Password {{ $isEditMode ? '' : '*' }}
                                         </label>
                                         <input type="password" wire:model="password_confirmation" 
-                                               class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+                                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white text-gray-900"
                                                placeholder="••••••••">
                                     </div>
                                 </div>
@@ -342,13 +342,13 @@
                         </div>
 
                         <!-- Modal Footer -->
-                        <div class="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
                             <button type="button" @click="$wire.closeModal()" 
-                                    class="px-6 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-2 border-gray-300 dark:border-gray-600 hover:border-gray-400 rounded-lg font-medium transition-all">
+                                    class="px-6 py-2 bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 rounded-lg font-medium transition-colors">
                                 <i class="fas fa-times mr-2"></i>Cancel
                             </button>
                             <button type="submit" 
-                                    class="px-6 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg">
+                                    class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors">
                                 <i class="fas fa-save mr-2"></i>{{ $isEditMode ? 'Update' : 'Create' }} Staff
                             </button>
                         </div>
@@ -367,23 +367,23 @@
                      @click="$wire.closeModal()"></div>
 
                 <!-- Modal Panel -->
-                <div class="relative inline-block w-full max-w-md px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white dark:bg-gray-800 rounded-lg shadow-xl sm:my-8 sm:align-middle sm:p-6">
+                <div class="relative inline-block w-full max-w-md px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white rounded-lg shadow-xl sm:my-8 sm:align-middle sm:p-6">
                     <div class="text-center">
-                        <div class="inline-flex items-center justify-center w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full mb-4">
-                            <i class="fas fa-exclamation-triangle text-3xl text-red-600 dark:text-red-300"></i>
+                        <div class="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
+                            <i class="fas fa-exclamation-triangle text-3xl text-red-600"></i>
                         </div>
-                        <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Delete Staff Member</h3>
-                        <p class="text-gray-600 dark:text-gray-400 mb-6">
-                            Are you sure you want to delete <strong>{{ $staffToDelete->name }}</strong>? This action cannot be undone.
+                        <h3 class="text-lg font-bold text-gray-900 mb-2">Delete Staff Member</h3>
+                        <p class="text-gray-700 mb-6">
+                            Are you sure you want to delete <strong class="text-gray-900">{{ $staffToDelete->name }}</strong>? This action cannot be undone.
                         </p>
 
                         <div class="flex items-center justify-center gap-3">
                             <button wire:click="closeModal" 
-                                    class="px-6 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-2 border-gray-300 dark:border-gray-600 hover:border-gray-400 rounded-lg font-medium transition-all">
+                                    class="px-6 py-2 bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 rounded-lg font-medium transition-colors">
                                 <i class="fas fa-times mr-2"></i>Cancel
                             </button>
                             <button wire:click="deleteStaff" 
-                                    class="px-6 py-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg">
+                                    class="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors">
                                 <i class="fas fa-trash mr-2"></i>Delete
                             </button>
                         </div>
