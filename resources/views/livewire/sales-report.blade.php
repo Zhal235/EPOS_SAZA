@@ -132,73 +132,73 @@
     <!-- Summary Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         <!-- Total Sales -->
-        <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white transform hover:scale-105 transition-transform duration-200">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border-l-4 border-blue-600 p-6 transform hover:scale-105 transition-transform duration-200">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-blue-100 text-sm font-medium uppercase tracking-wide">Total Sales</p>
-                    <h3 class="text-3xl font-bold mt-2">Rp {{ number_format($totalSales, 0, ',', '.') }}</h3>
+                    <p class="text-blue-600 dark:text-blue-400 text-sm font-semibold uppercase tracking-wide">Total Sales</p>
+                    <h3 class="text-3xl font-bold text-gray-900 dark:text-white mt-2">Rp {{ number_format($totalSales, 0, ',', '.') }}</h3>
                     @if($totalSales > 0)
-                        <p class="text-blue-200 text-xs mt-2">
-                            <i class="fas fa-arrow-up mr-1"></i>Active period
+                        <p class="text-gray-600 dark:text-gray-400 text-xs mt-2">
+                            <i class="fas fa-arrow-up text-green-500 mr-1"></i>Active period
                         </p>
                     @endif
                 </div>
-                <div class="bg-white bg-opacity-20 rounded-full p-4 animate-pulse">
-                    <i class="fas fa-money-bill-wave text-3xl"></i>
+                <div class="bg-blue-100 dark:bg-blue-900 rounded-full p-4">
+                    <i class="fas fa-money-bill-wave text-blue-600 dark:text-blue-400 text-3xl"></i>
                 </div>
             </div>
         </div>
 
         <!-- Total Transactions -->
-        <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-6 text-white transform hover:scale-105 transition-transform duration-200">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border-l-4 border-green-600 p-6 transform hover:scale-105 transition-transform duration-200">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-green-100 text-sm font-medium uppercase tracking-wide">Transactions</p>
-                    <h3 class="text-3xl font-bold mt-2">{{ number_format($totalTransactions) }}</h3>
+                    <p class="text-green-600 dark:text-green-400 text-sm font-semibold uppercase tracking-wide">Transactions</p>
+                    <h3 class="text-3xl font-bold text-gray-900 dark:text-white mt-2">{{ number_format($totalTransactions) }}</h3>
                     @if($totalTransactions > 0)
-                        <p class="text-green-200 text-xs mt-2">
-                            <i class="fas fa-check-circle mr-1"></i>Completed orders
+                        <p class="text-gray-600 dark:text-gray-400 text-xs mt-2">
+                            <i class="fas fa-check-circle text-green-500 mr-1"></i>Completed orders
                         </p>
                     @endif
                 </div>
-                <div class="bg-white bg-opacity-20 rounded-full p-4">
-                    <i class="fas fa-receipt text-3xl"></i>
+                <div class="bg-green-100 dark:bg-green-900 rounded-full p-4">
+                    <i class="fas fa-receipt text-green-600 dark:text-green-400 text-3xl"></i>
                 </div>
             </div>
         </div>
 
         <!-- Average Transaction -->
-        <div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-6 text-white transform hover:scale-105 transition-transform duration-200">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border-l-4 border-purple-600 p-6 transform hover:scale-105 transition-transform duration-200">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-purple-100 text-sm font-medium uppercase tracking-wide">Average Sale</p>
-                    <h3 class="text-3xl font-bold mt-2">Rp {{ number_format($averageTransaction, 0, ',', '.') }}</h3>
+                    <p class="text-purple-600 dark:text-purple-400 text-sm font-semibold uppercase tracking-wide">Average Sale</p>
+                    <h3 class="text-3xl font-bold text-gray-900 dark:text-white mt-2">Rp {{ number_format($averageTransaction, 0, ',', '.') }}</h3>
                     @if($averageTransaction > 0)
-                        <p class="text-purple-200 text-xs mt-2">
-                            <i class="fas fa-balance-scale mr-1"></i>Per transaction
+                        <p class="text-gray-600 dark:text-gray-400 text-xs mt-2">
+                            <i class="fas fa-balance-scale text-purple-500 mr-1"></i>Per transaction
                         </p>
                     @endif
                 </div>
-                <div class="bg-white bg-opacity-20 rounded-full p-4">
-                    <i class="fas fa-calculator text-3xl"></i>
+                <div class="bg-purple-100 dark:bg-purple-900 rounded-full p-4">
+                    <i class="fas fa-calculator text-purple-600 dark:text-purple-400 text-3xl"></i>
                 </div>
             </div>
         </div>
 
         <!-- Total Profit -->
-        <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg p-6 text-white transform hover:scale-105 transition-transform duration-200">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border-l-4 border-orange-600 p-6 transform hover:scale-105 transition-transform duration-200">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-orange-100 text-sm font-medium uppercase tracking-wide">Profit</p>
-                    <h3 class="text-3xl font-bold mt-2">Rp {{ number_format($totalProfit, 0, ',', '.') }}</h3>
+                    <p class="text-orange-600 dark:text-orange-400 text-sm font-semibold uppercase tracking-wide">Profit</p>
+                    <h3 class="text-3xl font-bold text-gray-900 dark:text-white mt-2">Rp {{ number_format($totalProfit, 0, ',', '.') }}</h3>
                     @if($totalProfit > 0)
-                        <p class="text-orange-200 text-xs mt-2">
-                            <i class="fas fa-trending-up mr-1"></i>Net earnings
+                        <p class="text-gray-600 dark:text-gray-400 text-xs mt-2">
+                            <i class="fas fa-trending-up text-green-500 mr-1"></i>Net earnings
                         </p>
                     @endif
                 </div>
-                <div class="bg-white bg-opacity-20 rounded-full p-4">
-                    <i class="fas fa-chart-line text-3xl"></i>
+                <div class="bg-orange-100 dark:bg-orange-900 rounded-full p-4">
+                    <i class="fas fa-chart-line text-orange-600 dark:text-orange-400 text-3xl"></i>
                 </div>
             </div>
         </div>
