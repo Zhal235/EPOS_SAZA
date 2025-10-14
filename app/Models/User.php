@@ -220,11 +220,12 @@ class User extends Authenticatable
     }
 
     /**
-     * Scope for regular customers only
+     * Scope for regular customers only (exclude staff/admin)
      */
     public function scopeRegularCustomers($query)
     {
-        return $query->where('customer_type', 'regular');
+        return $query->where('customer_type', 'regular')
+                    ->where('role', 'customer');
     }
 
     /**
