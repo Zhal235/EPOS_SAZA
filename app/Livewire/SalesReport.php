@@ -260,18 +260,32 @@ class SalesReport extends Component
             DB::raw('SUM(quantity) as total_quantity'), 
             DB::raw('SUM(total_price) as total_sales'),
             DB::raw('COUNT(DISTINCT transaction_id) as transaction_count'))
-        ->with('product.category')
+        ->with(['product' => function($query) {
+            $query->with('category');
+        }])
         ->groupBy('product_id')
         ->orderByDesc('total_sales')
         ->get()
         ->map(function ($item) {
-            $product = $item->product;
+            // Get fresh product data directly from database with current stock
+            $product = \App\Models\Product::where('id', $item->product_id)
+                ->with('category')
+                ->first();
+            
+            if (!$product) {
+                return null;
+            }
+            
             $costPrice = $product->cost_price ?? 0;
             $totalCost = $costPrice * $item->total_quantity;
             $profit = $item->total_sales - $totalCost;
             $profitMargin = $item->total_sales > 0 ? ($profit / $item->total_sales) * 100 : 0;
             
+            // Get the actual stock from database
+            $currentStock = \App\Models\Product::where('id', $item->product_id)->value('stock') ?? 0;
+            
             return [
+                'product_id' => $product->id,
                 'product_name' => $product->name ?? 'Unknown',
                 'category' => $product->category->name ?? 'Uncategorized',
                 'quantity' => $item->total_quantity,
@@ -279,9 +293,11 @@ class SalesReport extends Component
                 'profit' => $profit,
                 'profit_margin' => $profitMargin,
                 'transaction_count' => $item->transaction_count,
-                'current_stock' => $product->stock ?? 0,
+                'current_stock' => $currentStock,
             ];
-        });
+        })
+        ->filter() // Remove null entries
+        ->values(); // Reindex array
     }
     
     public function calculateCategoryPerformance()
