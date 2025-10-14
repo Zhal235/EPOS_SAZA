@@ -647,7 +647,7 @@
                     </thead>
                     <tbody>
                         @foreach($productPerformance as $index => $product)
-                            <tr class="{{ $index % 2 == 0 ? 'bg-gray-100 dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-750' }} hover:bg-indigo-100 dark:hover:bg-gray-700 transition-all duration-150">
+                            <tr class="{{ $index % 2 == 0 ? 'bg-gray-700 dark:bg-gray-800' : 'bg-gray-600 dark:bg-gray-750' }} hover:bg-gray-500 dark:hover:bg-gray-700 transition-all duration-150">
                                 <td class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                                     <div class="font-bold text-gray-900 dark:text-white text-sm">{{ $product['product_name'] }}</div>
                                     <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">

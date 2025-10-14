@@ -282,7 +282,7 @@ class SalesReport extends Component
             $profitMargin = $item->total_sales > 0 ? ($profit / $item->total_sales) * 100 : 0;
             
             // Get the actual stock from database
-            $currentStock = \App\Models\Product::where('id', $item->product_id)->value('stock') ?? 0;
+            $currentStock = \App\Models\Product::where('id', $item->product_id)->value('stock_quantity') ?? 0;
             
             return [
                 'product_id' => $product->id,
