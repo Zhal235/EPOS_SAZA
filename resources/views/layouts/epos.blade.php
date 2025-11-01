@@ -60,7 +60,7 @@
             }
         </style>
     </head>
-    <body class="font-sans antialiased bg-gray-50" x-data="{ sidebarOpen: true, darkMode: false }" :class="{ 'dark': darkMode }">
+    <body class="font-sans antialiased bg-gray-50" x-data="{ sidebarOpen: true }">
         <div class="flex h-screen overflow-hidden">
             <!-- Sidebar -->
             <div class="sidebar fixed inset-y-0 left-0 z-50 flex flex-col" 
@@ -180,13 +180,6 @@
                                 </div>
                             </div>
 
-                            <!-- Search -->
-                            <div class="relative">
-                                <input type="text" placeholder="Search products, customers..." 
-                                       class="w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                                <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
-                            </div>
-
                             <!-- Notifications -->
                             <div class="relative">
                                 <button class="p-2 text-gray-400 hover:text-gray-600 relative">
@@ -201,13 +194,6 @@
                                     <i class="fas fa-plus mr-2"></i>New Sale
                                 </a>
                             </div>
-
-                            <!-- Theme Toggle -->
-                            <button @click="darkMode = !darkMode" 
-                                    class="p-2 text-gray-400 hover:text-gray-600">
-                                <i class="fas fa-moon" x-show="!darkMode"></i>
-                                <i class="fas fa-sun" x-show="darkMode"></i>
-                            </button>
 
                             <!-- User Menu -->
                             <div class="relative" x-data="{ open: false }">
@@ -274,7 +260,10 @@
         <!-- Global Scripts -->
         @livewireScripts
         
-        <!-- EPOS Notification System (Load first) -->
+        <!-- Environment Config (Load FIRST to disable console in production) -->
+        <script src="/js/config/env.js"></script>
+        
+        <!-- EPOS Notification System -->
         <script src="/js/modules/notification-system.js"></script>
         <script src="/js/modules/error-handler.js"></script>
         
@@ -300,12 +289,12 @@
         
         @if($isPosPage)
         <!-- POS-specific scripts (only load on POS pages) -->
-        <script>console.log('🏪 Loading POS-specific scripts for:', '{{ $header ?? 'POS' }}');</script>
+        <script>if(window.APP_DEBUG) console.log('🏪 Loading POS-specific scripts for:', '{{ $header ?? 'POS' }}');</script>
         <script src="/js/modules/customer-scanner.js"></script>
         <script src="/js/modules/transaction-processor.js"></script>
         <script src="/js/integration/pos-integration.js"></script>
         @else
-        <script>console.log('📄 Non-POS page detected:', '{{ $header ?? 'Unknown' }}', '- Skipping POS scripts');</script>
+        <script>if(window.APP_DEBUG) console.log('📄 Non-POS page detected:', '{{ $header ?? 'Unknown' }}', '- Skipping POS scripts');</script>
         @endif
         
         <!-- Global scripts -->
@@ -315,28 +304,9 @@
         <meta name="user-name" content="{{ auth()->user()->name }}">
         <meta name="user-id" content="{{ auth()->user()->id }}">
         
-        <!-- Add refund button to header actions -->
+        <!-- System initialization -->
         <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Add refund button to header
-            const headerActions = document.querySelector('.flex.items-center.space-x-4');
-            if (headerActions) {
-                const refundBtn = document.createElement('button');
-                refundBtn.innerHTML = '<i class="fas fa-undo mr-2"></i>Refund';
-                refundBtn.className = 'px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors';
-                refundBtn.onclick = () => refundProcessor.processRefundFromDialog();
-                headerActions.appendChild(refundBtn);
-                
-                // Add log viewer button (for admin)
-                @if(auth()->user()->isAdmin())
-                const logBtn = document.createElement('button');
-                logBtn.innerHTML = '<i class="fas fa-list mr-2"></i>Logs';
-                logBtn.className = 'px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors';
-                logBtn.onclick = () => transactionLogger.showLogViewer();
-                headerActions.appendChild(logBtn);
-                @endif
-            }
-            
             // Log system startup
             transactionLogger.logSystem('ePOS system started', {
                 user: '{{ auth()->user()->name }}',
@@ -361,10 +331,12 @@
             }
         });
         
-        // Debug Livewire
-        console.log('Livewire loaded:', typeof Livewire !== 'undefined');
-        if (typeof Livewire !== 'undefined') {
-            console.log('Livewire version:', Livewire.version || 'unknown');
+        // Debug Livewire (only in development)
+        if (window.APP_DEBUG) {
+            console.log('Livewire loaded:', typeof Livewire !== 'undefined');
+            if (typeof Livewire !== 'undefined') {
+                console.log('Livewire version:', Livewire.version || 'unknown');
+            }
         }
         </script>
     </body>

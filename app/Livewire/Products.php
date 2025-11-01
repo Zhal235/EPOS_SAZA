@@ -273,8 +273,15 @@ class Products extends Component
      */
     public function confirmDelete($productId)
     {
+        \Log::info('confirmDelete called', ['productId' => $productId]);
+        
         $this->productToDelete = Product::findOrFail($productId);
         $this->showDeleteModal = true;
+        
+        \Log::info('Delete modal opened', [
+            'productToDelete' => $this->productToDelete->name,
+            'showDeleteModal' => $this->showDeleteModal
+        ]);
     }
 
     /**

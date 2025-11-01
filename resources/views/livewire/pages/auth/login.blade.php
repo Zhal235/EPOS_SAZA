@@ -28,7 +28,7 @@ $togglePassword = function () {
 
 ?>
 
-<div>
+<div x-data="{ showPassword: @entangle('showPassword') }">
     <!-- Header -->
     <div class="text-center mb-6">
         <h2 class="text-2xl font-bold text-gray-800 mb-2">Welcome Back!</h2>

@@ -1,0 +1,385 @@
+<?php
+
+namespace App\Livewire;
+
+use Livewire\Component;
+use Livewire\WithPagination;
+use App\Models\FinancialTransaction;
+use App\Models\SimpelsWithdrawal;
+use App\Models\Transaction;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+
+class Financial extends Component
+{
+    use WithPagination;
+
+    public $activeTab = 'overview';
+    public $dateFrom;
+    public $dateTo;
+    public $filterType = 'all';
+    public $filterStatus = 'all';
+    public $searchQuery = '';
+
+    // Withdrawal modal
+    public $showWithdrawalModal = false;
+    public $withdrawalPeriodStart;
+    public $withdrawalPeriodEnd;
+    public $withdrawalAmount;
+    public $withdrawalMethod = 'cash';
+    public $bankName = '';
+    public $accountNumber = '';
+    public $accountName = '';
+    public $withdrawalNotes = '';
+
+    protected $queryString = ['activeTab', 'dateFrom', 'dateTo'];
+
+    public function mount()
+    {
+        $this->dateFrom = now()->startOfMonth()->format('Y-m-d');
+        $this->dateTo = now()->format('Y-m-d');
+        $this->withdrawalPeriodStart = now()->startOfMonth()->format('Y-m-d');
+        $this->withdrawalPeriodEnd = now()->format('Y-m-d');
+    }
+
+    public function setTab($tab)
+    {
+        $this->activeTab = $tab;
+        $this->resetPage();
+    }
+
+    public function updatingSearchQuery()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingFilterType()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingFilterStatus()
+    {
+        $this->resetPage();
+    }
+
+    public function applyDateFilter()
+    {
+        $this->resetPage();
+        $this->dispatch('showNotification', [
+            'type' => 'success',
+            'title' => 'Filter Diterapkan',
+            'message' => 'Data diperbarui'
+        ]);
+    }
+
+    public function resetFilters()
+    {
+        $this->dateFrom = now()->startOfMonth()->format('Y-m-d');
+        $this->dateTo = now()->format('Y-m-d');
+        $this->filterType = 'all';
+        $this->filterStatus = 'all';
+        $this->searchQuery = '';
+        $this->resetPage();
+    }
+
+    public function getDashboardSummary()
+    {
+        $query = FinancialTransaction::query()
+            ->whereBetween('created_at', [
+                Carbon::parse($this->dateFrom)->startOfDay(),
+                Carbon::parse($this->dateTo)->endOfDay()
+            ]);
+
+        // Total RFID payments
+        $totalRfidPayments = (clone $query)->rfidPayments()->completed()->sum('amount');
+        
+        // Total yang sudah masuk dalam withdrawal request (via sistem baru)
+        $totalInWithdrawal = FinancialTransaction::rfidPayments()
+            ->completed()
+            ->whereNotNull('withdrawal_id')
+            ->whereBetween('created_at', [
+                Carbon::parse($this->dateFrom)->startOfDay(),
+                Carbon::parse($this->dateTo)->endOfDay()
+            ])
+            ->sum('amount');
+
+        // Total yang belum masuk withdrawal request (tersedia untuk ditarik)
+        $availableForWithdrawal = $totalRfidPayments - $totalInWithdrawal;
+
+        return [
+            'total_income' => (clone $query)->income()->completed()->sum('amount'),
+            'total_expense' => (clone $query)->expense()->completed()->sum('amount'),
+            'total_rfid_payments' => $totalRfidPayments,
+            'total_refunds' => (clone $query)->refunds()->completed()->sum('amount'),
+            'total_transactions' => (clone $query)->completed()->count(),
+            'pending_sync' => FinancialTransaction::notSynced()->where('type', FinancialTransaction::TYPE_RFID_PAYMENT)->count(),
+            'pending_withdrawal' => $availableForWithdrawal,
+            'pending_withdrawal_formatted' => 'Rp ' . number_format($availableForWithdrawal, 0, ',', '.'),
+            'withdrawn_amount' => $totalInWithdrawal,
+        ];
+    }
+
+    public function getTransactionsProperty()
+    {
+        $query = FinancialTransaction::with(['user', 'transaction', 'withdrawnBy'])
+            ->whereBetween('created_at', [
+                Carbon::parse($this->dateFrom)->startOfDay(),
+                Carbon::parse($this->dateTo)->endOfDay()
+            ]);
+
+        if ($this->filterType !== 'all') {
+            $query->where('type', $this->filterType);
+        }
+
+        if ($this->filterStatus !== 'all') {
+            $query->where('status', $this->filterStatus);
+        }
+
+        if ($this->searchQuery) {
+            $query->where(function($q) {
+                $q->where('transaction_number', 'like', '%' . $this->searchQuery . '%')
+                  ->orWhere('santri_name', 'like', '%' . $this->searchQuery . '%')
+                  ->orWhere('rfid_tag', 'like', '%' . $this->searchQuery . '%')
+                  ->orWhere('description', 'like', '%' . $this->searchQuery . '%');
+            });
+        }
+
+        return $query->latest()->paginate(20);
+    }
+
+    public function getWithdrawalsProperty()
+    {
+        return SimpelsWithdrawal::with(['requestedBy', 'approvedBy'])
+            ->latest()
+            ->paginate(10);
+    }
+
+    public function getChartData()
+    {
+        $startDate = Carbon::parse($this->dateFrom);
+        $endDate = Carbon::parse($this->dateTo);
+        $days = $endDate->diffInDays($startDate) + 1;
+
+        $data = [];
+        for ($i = 0; $i < $days; $i++) {
+            $date = $startDate->copy()->addDays($i);
+            
+            $income = FinancialTransaction::income()
+                ->completed()
+                ->whereDate('created_at', $date)
+                ->sum('amount');
+            
+            $expense = FinancialTransaction::expense()
+                ->completed()
+                ->whereDate('created_at', $date)
+                ->sum('amount');
+
+            $data[] = [
+                'date' => $date->format('d M'),
+                'income' => (float) $income,
+                'expense' => (float) $expense,
+                'net' => (float) ($income - $expense)
+            ];
+        }
+
+        return $data;
+    }
+
+    public function openWithdrawalModal()
+    {
+        $this->showWithdrawalModal = true;
+    }
+
+    public function closeWithdrawalModal()
+    {
+        $this->showWithdrawalModal = false;
+        $this->reset(['withdrawalAmount', 'withdrawalMethod', 'bankName', 'accountNumber', 'accountName', 'withdrawalNotes']);
+    }
+
+    public function createWithdrawal()
+    {
+        // Get available balance
+        $availableBalance = $this->getDashboardSummary()['pending_withdrawal'];
+        
+        $this->validate([
+            'withdrawalAmount' => 'nullable|numeric|min:1|max:' . $availableBalance,
+            'withdrawalMethod' => 'required|in:bank_transfer,cash',
+            'bankName' => 'required_if:withdrawalMethod,bank_transfer',
+            'accountNumber' => 'required_if:withdrawalMethod,bank_transfer',
+            'accountName' => 'required_if:withdrawalMethod,bank_transfer',
+        ], [
+            'withdrawalAmount.numeric' => 'Jumlah harus berupa angka',
+            'withdrawalAmount.min' => 'Jumlah minimal Rp 1',
+            'withdrawalAmount.max' => 'Jumlah melebihi saldo tersedia (Rp ' . number_format($availableBalance, 0, ',', '.') . ')',
+            'withdrawalMethod.required' => 'Metode penarikan harus dipilih',
+            'bankName.required_if' => 'Nama bank harus diisi',
+            'accountNumber.required_if' => 'Nomor rekening harus diisi',
+            'accountName.required_if' => 'Nama pemegang rekening harus diisi',
+        ]);
+
+        try {
+            \Log::info('Creating withdrawal request', [
+                'method' => $this->withdrawalMethod,
+                'bank_name' => $this->bankName,
+            ]);
+
+            // Use FinancialService to create withdrawal request
+            $financialService = app(\App\Services\FinancialService::class);
+            
+            // Get all available transactions (tidak pakai periode, ambil semua yang belum ditarik)
+            $withdrawal = $financialService->createWithdrawalRequest([
+                'period_start' => null, // Will use all available transactions
+                'period_end' => null,
+                'withdrawal_amount' => $this->withdrawalAmount, // Nominal yang diinput user
+                'withdrawal_method' => $this->withdrawalMethod,
+                'bank_name' => $this->bankName,
+                'account_number' => $this->accountNumber,
+                'account_name' => $this->accountName,
+                'notes' => $this->withdrawalNotes,
+            ]);
+
+            \Log::info('Withdrawal request created successfully', [
+                'withdrawal_number' => $withdrawal->withdrawal_number,
+                'total_amount' => $withdrawal->total_amount
+            ]);
+
+            $this->closeWithdrawalModal();
+            $this->dispatch('showNotification', [
+                'type' => 'success',
+                'title' => 'Berhasil',
+                'message' => "Permintaan penarikan {$withdrawal->withdrawal_number} berhasil dibuat (Rp " . number_format($withdrawal->total_amount, 0, ',', '.') . ") dan dikirim ke SIMPels"
+            ]);
+            
+            $this->setTab('withdrawals');
+
+        } catch (\Exception $e) {
+            \Log::error('Failed to create withdrawal request', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            $this->dispatch('showNotification', [
+                'type' => 'error',
+                'title' => 'Gagal',
+                'message' => 'Gagal membuat permintaan penarikan: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    public function approveWithdrawal($id)
+    {
+        try {
+            $withdrawal = SimpelsWithdrawal::findOrFail($id);
+            
+            if ($withdrawal->status !== SimpelsWithdrawal::STATUS_PENDING) {
+                throw new \Exception('Penarikan ini sudah diproses');
+            }
+
+            $withdrawal->approve(auth()->id());
+
+            $this->dispatch('showNotification', [
+                'type' => 'success',
+                'title' => 'Berhasil',
+                'message' => 'Penarikan berhasil disetujui'
+            ]);
+
+        } catch (\Exception $e) {
+            $this->dispatch('showNotification', [
+                'type' => 'error',
+                'title' => 'Gagal',
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function completeWithdrawal($id)
+    {
+        try {
+            DB::beginTransaction();
+
+            $withdrawal = SimpelsWithdrawal::with('transactions')->findOrFail($id);
+            
+            if ($withdrawal->status !== SimpelsWithdrawal::STATUS_PROCESSING) {
+                throw new \Exception('Penarikan harus disetujui terlebih dahulu');
+            }
+
+            // Mark all related transactions as withdrawn
+            foreach ($withdrawal->transactions as $transaction) {
+                $transaction->markAsWithdrawn($withdrawal->withdrawal_number, auth()->id());
+            }
+
+            // Update withdrawal status
+            $withdrawal->update([
+                'withdrawn_amount' => $withdrawal->total_amount,
+                'remaining_amount' => 0,
+            ]);
+            
+            $withdrawal->complete();
+
+            DB::commit();
+
+            $this->dispatch('showNotification', [
+                'type' => 'success',
+                'title' => 'Berhasil',
+                'message' => 'Penarikan berhasil diselesaikan'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            $this->dispatch('showNotification', [
+                'type' => 'error',
+                'title' => 'Gagal',
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function cancelWithdrawal($id)
+    {
+        try {
+            $withdrawal = SimpelsWithdrawal::findOrFail($id);
+            
+            if ($withdrawal->status === SimpelsWithdrawal::STATUS_COMPLETED) {
+                throw new \Exception('Penarikan yang sudah selesai tidak bisa dibatalkan');
+            }
+
+            $withdrawal->cancel('Dibatalkan oleh ' . auth()->user()->name);
+
+            $this->dispatch('showNotification', [
+                'type' => 'success',
+                'title' => 'Berhasil',
+                'message' => 'Penarikan berhasil dibatalkan'
+            ]);
+
+        } catch (\Exception $e) {
+            $this->dispatch('showNotification', [
+                'type' => 'error',
+                'title' => 'Gagal',
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function exportTransactions()
+    {
+        // TODO: Implement export functionality
+        $this->dispatch('showNotification', [
+            'type' => 'info',
+            'title' => 'Coming Soon',
+            'message' => 'Fitur export akan segera tersedia'
+        ]);
+    }
+
+    public function render()
+    {
+        return view('livewire.financial', [
+            'summary' => $this->getDashboardSummary(),
+            'transactions' => $this->transactions,
+            'withdrawals' => $this->withdrawals,
+            'chartData' => $this->getChartData(),
+        ])->layout('layouts.epos', [
+            'header' => 'Financial Management'
+        ]);
+    }
+}

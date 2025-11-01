@@ -1,87 +1,87 @@
 <div>
     <!-- Statistics Cards -->
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4">
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-4">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 uppercase">Total Staff</p>
-                    <h3 class="text-2xl font-bold text-gray-800 dark:text-white mt-1">{{ $stats['total'] }}</h3>
+                    <p class="text-xs text-gray-500 uppercase">Total Staff</p>
+                    <h3 class="text-2xl font-bold text-gray-800 mt-1">{{ $stats['total'] }}</h3>
                 </div>
-                <div class="bg-indigo-100 dark:bg-indigo-900 rounded-full p-3">
-                    <i class="fas fa-users text-indigo-600 dark:text-indigo-300"></i>
+                <div class="bg-indigo-100 rounded-full p-3">
+                    <i class="fas fa-users text-indigo-600"></i>
                 </div>
             </div>
         </div>
 
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4">
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-4">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 uppercase">Admins</p>
-                    <h3 class="text-2xl font-bold text-gray-800 dark:text-white mt-1">{{ $stats['admin'] }}</h3>
+                    <p class="text-xs text-gray-500 uppercase">Admins</p>
+                    <h3 class="text-2xl font-bold text-gray-800 mt-1">{{ $stats['admin'] }}</h3>
                 </div>
-                <div class="bg-red-100 dark:bg-red-900 rounded-full p-3">
-                    <i class="fas fa-crown text-red-600 dark:text-red-300"></i>
+                <div class="bg-red-100 rounded-full p-3">
+                    <i class="fas fa-crown text-red-600"></i>
                 </div>
             </div>
         </div>
 
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4">
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-4">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 uppercase">Managers</p>
-                    <h3 class="text-2xl font-bold text-gray-800 dark:text-white mt-1">{{ $stats['manager'] }}</h3>
+                    <p class="text-xs text-gray-500 uppercase">Managers</p>
+                    <h3 class="text-2xl font-bold text-gray-800 mt-1">{{ $stats['manager'] }}</h3>
                 </div>
-                <div class="bg-blue-100 dark:bg-blue-900 rounded-full p-3">
-                    <i class="fas fa-user-tie text-blue-600 dark:text-blue-300"></i>
+                <div class="bg-blue-100 rounded-full p-3">
+                    <i class="fas fa-user-tie text-blue-600"></i>
                 </div>
             </div>
         </div>
 
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4">
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-4">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 uppercase">Cashiers</p>
-                    <h3 class="text-2xl font-bold text-gray-800 dark:text-white mt-1">{{ $stats['cashier'] }}</h3>
+                    <p class="text-xs text-gray-500 uppercase">Cashiers</p>
+                    <h3 class="text-2xl font-bold text-gray-800 mt-1">{{ $stats['cashier'] }}</h3>
                 </div>
-                <div class="bg-green-100 dark:bg-green-900 rounded-full p-3">
-                    <i class="fas fa-cash-register text-green-600 dark:text-green-300"></i>
+                <div class="bg-green-100 rounded-full p-3">
+                    <i class="fas fa-cash-register text-green-600"></i>
                 </div>
             </div>
         </div>
 
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4">
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-4">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 uppercase">Active</p>
-                    <h3 class="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">{{ $stats['active'] }}</h3>
+                    <p class="text-xs text-gray-500 uppercase">Active</p>
+                    <h3 class="text-2xl font-bold text-green-600 mt-1">{{ $stats['active'] }}</h3>
                 </div>
-                <div class="bg-green-100 dark:bg-green-900 rounded-full p-3">
-                    <i class="fas fa-check-circle text-green-600 dark:text-green-300"></i>
+                <div class="bg-green-100 rounded-full p-3">
+                    <i class="fas fa-check-circle text-green-600"></i>
                 </div>
             </div>
         </div>
 
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4">
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-4">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 uppercase">Inactive</p>
-                    <h3 class="text-2xl font-bold text-gray-600 dark:text-gray-400 mt-1">{{ $stats['inactive'] }}</h3>
+                    <p class="text-xs text-gray-500 uppercase">Inactive</p>
+                    <h3 class="text-2xl font-bold text-gray-600 mt-1">{{ $stats['inactive'] }}</h3>
                 </div>
-                <div class="bg-gray-100 dark:bg-gray-900 rounded-full p-3">
-                    <i class="fas fa-ban text-gray-600 dark:text-gray-400"></i>
+                <div class="bg-gray-100 rounded-full p-3">
+                    <i class="fas fa-ban text-gray-600"></i>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Search and Actions -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
+    <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-6">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <!-- Search -->
             <div class="relative flex-1 max-w-md">
                 <input type="text" wire:model.live.debounce.300ms="search" 
                        placeholder="Search staff by name, email, or phone..." 
-                       class="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white">
+                       class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
                 <i class="fas fa-search absolute left-3 top-4 text-gray-400"></i>
             </div>
 
@@ -113,7 +113,7 @@
     @endif
 
     <!-- Staff Table -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full">
                 <thead class="bg-gradient-to-r from-indigo-600 to-purple-600">
@@ -126,9 +126,9 @@
                         <th class="px-6 py-4 text-right text-xs font-semibold text-white uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
+                <tbody class="divide-y divide-gray-200 bg-white">
                     @forelse($staffMembers as $staff)
-                        <tr class="hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors">
+                        <tr class="hover:bg-indigo-50 transition-colors">
                             <td class="px-6 py-4">
                                 <div class="flex items-center gap-3">
                                     <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white
@@ -138,18 +138,18 @@
                                         {{ strtoupper(substr($staff->name, 0, 2)) }}
                                     </div>
                                     <div>
-                                        <p class="font-semibold text-gray-900 dark:text-white select-none">{{ $staff->name }}</p>
-                                        <p class="text-sm text-indigo-600 dark:text-indigo-400 select-none">ID: {{ $staff->id }}</p>
+                                        <p class="font-semibold text-gray-900 select-none">{{ $staff->name }}</p>
+                                        <p class="text-sm text-indigo-600 select-none">ID: {{ $staff->id }}</p>
                                     </div>
                                 </div>
                             </td>
                             <td class="px-6 py-4">
                                 <div>
-                                    <p class="text-sm text-gray-900 dark:text-white select-none">
+                                    <p class="text-sm text-gray-900 select-none">
                                         <i class="fas fa-envelope text-indigo-500 mr-2"></i>{{ $staff->email }}
                                     </p>
                                     @if($staff->phone)
-                                        <p class="text-sm text-gray-600 dark:text-gray-300 mt-1 select-none">
+                                        <p class="text-sm text-gray-600 mt-1 select-none">
                                             <i class="fas fa-phone text-indigo-500 mr-2"></i>{{ $staff->phone }}
                                         </p>
                                     @endif
@@ -157,9 +157,9 @@
                             </td>
                             <td class="px-6 py-4">
                                 <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold
-                                    {{ $staff->role === 'admin' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' : '' }}
-                                    {{ $staff->role === 'manager' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' : '' }}
-                                    {{ $staff->role === 'cashier' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : '' }}">
+                                    {{ $staff->role === 'admin' ? 'bg-red-100 text-red-800' : '' }}
+                                    {{ $staff->role === 'manager' ? 'bg-blue-100 text-blue-800' : '' }}
+                                    {{ $staff->role === 'cashier' ? 'bg-green-100 text-green-800' : '' }}">
                                     @if($staff->role === 'admin')
                                         <i class="fas fa-crown mr-1"></i>
                                     @elseif($staff->role === 'manager')
@@ -173,16 +173,16 @@
                             <td class="px-6 py-4">
                                 <button wire:click="toggleStatus({{ $staff->id }})" 
                                         class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold transition-colors select-none
-                                        {{ $staff->is_active ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 hover:bg-green-200 dark:hover:bg-green-800' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-800' }}">
+                                        {{ $staff->is_active ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-red-100 text-red-800 hover:bg-red-200' }}">
                                     <span class="w-2 h-2 rounded-full mr-2 {{ $staff->is_active ? 'bg-green-500' : 'bg-red-500' }}"></span>
                                     {{ $staff->is_active ? 'Active' : 'Inactive' }}
                                 </button>
                             </td>
                             <td class="px-6 py-4">
-                                <div class="text-sm font-medium text-gray-900 dark:text-white select-none">
+                                <div class="text-sm font-medium text-gray-900 select-none">
                                     {{ $staff->created_at->format('M d, Y') }}
                                 </div>
-                                <div class="text-xs text-indigo-600 dark:text-indigo-400 select-none">
+                                <div class="text-xs text-indigo-600 select-none">
                                     {{ $staff->created_at->diffForHumans() }}
                                 </div>
                             </td>
@@ -203,12 +203,12 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-6 py-12 text-center bg-white dark:bg-gray-800">
-                                <div class="inline-flex items-center justify-center w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 rounded-full mb-4">
-                                    <i class="fas fa-users text-3xl text-indigo-600 dark:text-indigo-400"></i>
+                            <td colspan="6" class="px-6 py-12 text-center bg-white">
+                                <div class="inline-flex items-center justify-center w-16 h-16 bg-indigo-100 rounded-full mb-4">
+                                    <i class="fas fa-users text-3xl text-indigo-600"></i>
                                 </div>
-                                <p class="text-gray-900 dark:text-white font-medium">No staff members found</p>
-                                <p class="text-indigo-600 dark:text-indigo-400 text-sm mt-1">Click "Add Staff" to create a new staff member</p>
+                                <p class="text-gray-900 font-medium">No staff members found</p>
+                                <p class="text-indigo-600 text-sm mt-1">Click "Add Staff" to create a new staff member</p>
                             </td>
                         </tr>
                     @endforelse
@@ -217,7 +217,7 @@
         </div>
 
         <!-- Pagination -->
-        <div class="px-6 py-4 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 border-t border-indigo-100 dark:border-gray-700">
+        <div class="px-6 py-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-t border-indigo-100">
             {{ $staffMembers->links() }}
         </div>
     </div>

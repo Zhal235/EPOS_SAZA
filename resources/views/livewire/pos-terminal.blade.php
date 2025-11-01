@@ -372,30 +372,6 @@
                                             class="w-full px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">
                                             <i class="fas fa-keyboard mr-2"></i>Input Manual RFID
                                         </button>
-                                        <div class="grid grid-cols-2 gap-1 mb-2">
-                                            <button 
-                                                wire:click="getApiStatus" 
-                                                class="px-2 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-xs font-medium">
-                                                📊 API Mode
-                                            </button>
-                                            <button 
-                                                wire:click="testSimpelsConnection" 
-                                                class="px-2 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs font-medium">
-                                                🌐 Test API
-                                            </button>
-                                        </div>
-                                        <div class="grid grid-cols-2 gap-1">
-                                            <button 
-                                                wire:click="testLivewireConnection" 
-                                                class="px-2 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-xs font-medium">
-                                                🧪 Livewire
-                                            </button>
-                                            <button 
-                                                wire:click="resetRfidState" 
-                                                class="px-2 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-xs font-medium">
-                                                🔄 Reset
-                                            </button>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -835,12 +811,17 @@
                 const data = Array.isArray(event) ? event[0] : event;
                 console.log('Extracted data:', data);
                 
-                window.notificationSystem.rfidSuccess(
-                    data.customerName || 'Unknown',
-                    data.amount || 0,
-                    data.newBalance || 0,
-                    data.transactionRef || 'N/A'
-                );
+                // Clear all existing notifications first to prevent duplicates
+                if (window.notificationSystem) {
+                    window.notificationSystem.removeAll();
+                    
+                    window.notificationSystem.rfidSuccess(
+                        data.customerName || 'Unknown',
+                        data.amount || 0,
+                        data.newBalance || 0,
+                        data.transactionRef || 'N/A'
+                    );
+                }
             });
             
             // Error notification from backend

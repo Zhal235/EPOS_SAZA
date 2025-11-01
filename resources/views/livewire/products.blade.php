@@ -1,4 +1,4 @@
-<div>
+<div x-data="{ showDeleteModal: @entangle('showDeleteModal') }">
     <!-- Statistics Cards -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -172,13 +172,13 @@
 
                         <!-- Action Buttons -->
                         <div class="flex space-x-2">
-                            <button wire:click="openEditModal({{ $product->id }})" class="flex-1 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                            <button wire:click.prevent="openEditModal({{ $product->id }})" type="button" class="flex-1 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
                                 <i class="fas fa-edit mr-1"></i>Edit
                             </button>
-                            <button wire:click="openViewModal({{ $product->id }})" class="flex-1 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                            <button wire:click.prevent="openViewModal({{ $product->id }})" type="button" class="flex-1 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
                                 <i class="fas fa-eye mr-1"></i>View
                             </button>
-                            <button wire:click="confirmDelete({{ $product->id }})" class="px-3 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                            <button wire:click.prevent="confirmDelete({{ $product->id }})" type="button" class="px-3 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors" title="Delete Product">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -666,40 +666,86 @@
         </div>
     </div>
     @endif
-</div>
 
-<!-- Delete Confirmation Modal -->
-@if($showDeleteModal)
-<x-modal name="delete-product" :show="$showDeleteModal" wire:key="delete-product-modal">
-    <div class="p-6">
-        <div class="flex items-center mb-4">
-            <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mr-4">
-                <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
-            </div>
-            <div>
-                <h2 class="text-lg font-medium text-gray-900">Delete Product</h2>
-                <p class="text-sm text-gray-500">This action cannot be undone</p>
-            </div>
-        </div>
+    <!-- Delete Confirmation Modal -->
+    <div x-show="showDeleteModal" 
+         x-cloak
+         class="fixed inset-0 z-50 overflow-y-auto" 
+         style="display: none;">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+             @click="showDeleteModal = false"></div>
         
-        @if($productToDelete)
-        <div class="mb-6">
-            <p class="text-gray-700">Are you sure you want to delete the product:</p>
-            <p class="font-semibold text-gray-900 mt-1">{{ $productToDelete->name }}</p>
-            <p class="text-sm text-gray-500">SKU: {{ $productToDelete->sku }}</p>
-        </div>
-        @endif
-        
-        <div class="flex justify-end space-x-3">
-            <button wire:click="cancelDelete" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
-                Cancel
-            </button>
-            <button wire:click="deleteProduct" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
-                <i class="fas fa-trash mr-2"></i>Delete Product
-            </button>
+        <!-- Modal Content -->
+        <div class="flex items-center justify-center min-h-screen px-4 py-6">
+            <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-auto"
+                 @click.stop>
+                <div class="p-6">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mr-4">
+                            <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-medium text-gray-900">Delete Product</h2>
+                            <p class="text-sm text-gray-500">This action cannot be undone</p>
+                        </div>
+                    </div>
+                    
+                    @if($productToDelete)
+                    <div class="mb-6">
+                        <p class="text-gray-700">Are you sure you want to delete the product:</p>
+                        <p class="font-semibold text-gray-900 mt-1">{{ $productToDelete->name }}</p>
+                        <p class="text-sm text-gray-500">SKU: {{ $productToDelete->sku }}</p>
+                    </div>
+                    @else
+                    <div class="mb-6">
+                        <p class="text-gray-700">Loading product information...</p>
+                    </div>
+                    @endif
+                    
+                    <div class="flex justify-end space-x-3">
+                        <button wire:click="cancelDelete" 
+                                type="button" 
+                                class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                            Cancel
+                        </button>
+                        <button wire:click="deleteProduct" 
+                                type="button" 
+                                class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                            <i class="fas fa-trash mr-2"></i>Delete Product
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-</x-modal>
-@endif
 
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+
+    @if(config('app.debug'))
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Products page loaded');
+        
+        // Debug Livewire
+        if (typeof Livewire !== 'undefined') {
+            console.log('Livewire is loaded');
+            
+            // Listen to Livewire events
+            Livewire.on('productDeleted', () => {
+                console.log('Product deleted successfully');
+            });
+        } else {
+            console.error('Livewire is not loaded!');
+        }
+        
+        // Debug modal state
+        document.addEventListener('livewire:update', () => {
+            console.log('Livewire updated');
+        });
+    });
+    </script>
+    @endif
 </div>
