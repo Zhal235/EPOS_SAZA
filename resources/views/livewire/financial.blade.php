@@ -618,9 +618,3 @@
         </div>
     </div>
 </div>
-
-@push('styles')
-<style>
-    [x-cloak] { display: none !important; }
-</style>
-@endpush
