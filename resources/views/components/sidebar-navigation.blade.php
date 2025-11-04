@@ -70,7 +70,7 @@
         </a>
 
         @if($user->canAccessAdmin())
-        <a href="#" class="menu-item flex items-center px-4 py-3 text-white rounded-lg">
+        <a href="{{ route('financial') }}" class="menu-item flex items-center px-4 py-3 text-white rounded-lg {{ request()->routeIs('financial') ? 'active' : '' }}">
             <i class="fas fa-dollar-sign w-5 text-center"></i>
             <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Keuangan</span>
         </a>
