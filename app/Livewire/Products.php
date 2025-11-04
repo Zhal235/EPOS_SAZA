@@ -319,11 +319,11 @@ class Products extends Component
 
             Product::create($this->productForm);
 
-            session()->flash('message', 'Product created successfully!');
+            session()->flash('message', 'Produk berhasil dibuat!');
             $this->closeAddModal();
             
         } catch (\Exception $e) {
-            session()->flash('error', 'Failed to create product: ' . $e->getMessage());
+            session()->flash('error', 'Gagal membuat produk: ' . $e->getMessage());
         }
     }
 
@@ -339,7 +339,7 @@ class Products extends Component
         $this->validate($rules);
 
         if (!$this->selectedProduct) {
-            session()->flash('error', 'Product not found!');
+            session()->flash('error', 'Produk tidak ditemukan!');
             $this->closeEditModal();
             return;
         }
@@ -353,11 +353,11 @@ class Products extends Component
 
             $this->selectedProduct->update($this->productForm);
 
-            session()->flash('message', 'Product updated successfully!');
+            session()->flash('message', 'Produk berhasil diperbarui!');
             $this->closeEditModal();
             
         } catch (\Exception $e) {
-            session()->flash('error', 'Failed to update product: ' . $e->getMessage());
+            session()->flash('error', 'Gagal memperbarui produk: ' . $e->getMessage());
         }
     }
 
@@ -367,7 +367,7 @@ class Products extends Component
     public function deleteProduct()
     {
         if (!$this->productToDelete) {
-            session()->flash('error', 'Product not found!');
+            session()->flash('error', 'Produk tidak ditemukan!');
             $this->cancelDelete();
             return;
         }
@@ -376,11 +376,11 @@ class Products extends Component
             $productName = $this->productToDelete->name;
             $this->productToDelete->delete();
             
-            session()->flash('message', "Product '{$productName}' deleted successfully!");
+            session()->flash('message', "Produk '{$productName}' berhasil dihapus!");
             $this->cancelDelete();
             $this->resetPage();
         } catch (\Exception $e) {
-            session()->flash('error', 'Failed to delete product: ' . $e->getMessage());
+            session()->flash('error', 'Gagal menghapus produk: ' . $e->getMessage());
             $this->cancelDelete();
         }
     }
@@ -404,19 +404,19 @@ class Products extends Component
             }
             
             if ($result['success']) {
-                session()->flash('message', "Successfully imported {$result['imported']} products!");
+                session()->flash('message', "Berhasil mengimpor {$result['imported']} produk!");
                 if ($result['errors'] > 0) {
-                    session()->flash('warning', "Import completed with {$result['errors']} errors. Check the format and try again for failed items.");
+                    session()->flash('warning', "Import selesai dengan {$result['errors']} kesalahan. Periksa format dan coba lagi untuk item yang gagal.");
                 }
             } else {
-                session()->flash('error', 'Import failed: ' . $result['message']);
+                session()->flash('error', 'Import gagal: ' . $result['message']);
             }
             
             $this->closeImportModal();
             $this->resetPage();
             
         } catch (\Exception $e) {
-            session()->flash('error', 'Import failed: ' . $e->getMessage());
+            session()->flash('error', 'Import gagal: ' . $e->getMessage());
             $this->closeImportModal();
         }
     }
@@ -699,7 +699,7 @@ class Products extends Component
             'outOfStockCount' => Product::where('stock_quantity', 0)->count(),
             'totalValue' => Product::selectRaw('SUM(stock_quantity * cost_price) as total')->value('total') ?? 0
         ])->layout('layouts.epos', [
-            'header' => 'Products Management'
+            'header' => 'Manajemen Produk'
         ]);
     }
 }

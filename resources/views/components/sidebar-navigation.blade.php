@@ -18,7 +18,7 @@
         <a href="{{ route('pos') }}" 
            class="menu-item flex items-center px-4 py-3 text-white rounded-lg {{ request()->routeIs('pos') ? 'active' : '' }}">
             <i class="fas fa-shopping-cart w-5 text-center"></i>
-            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">POS Terminal</span>
+            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Terminal POS</span>
             <span x-show="sidebarOpen" class="ml-auto">
                 <div class="notification-badge w-2 h-2 bg-yellow-400 rounded-full"></div>
             </span>
@@ -26,7 +26,7 @@
 
         <a href="{{ route('transactions') }}" class="menu-item flex items-center px-4 py-3 text-white rounded-lg {{ request()->routeIs('transactions') ? 'active' : '' }}">
             <i class="fas fa-receipt w-5 text-center"></i>
-            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Transaction History</span>
+            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Riwayat Transaksi</span>
         </a>
     </div>
 
@@ -39,7 +39,7 @@
         
         <a href="{{ route('products') }}" class="menu-item flex items-center px-4 py-3 text-white rounded-lg {{ request()->routeIs('products') ? 'active' : '' }}">
             <i class="fas fa-box w-5 text-center"></i>
-            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Products & Stock</span>
+            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Produk & Stok</span>
             @if(isset($lowStockCount) && $lowStockCount > 0)
                 <span x-show="sidebarOpen" class="ml-auto bg-red-500 text-white text-xs px-2 py-1 rounded-full">{{ $lowStockCount }}</span>
             @endif
@@ -47,7 +47,7 @@
         
         <a href="{{ route('categories') }}" class="menu-item flex items-center px-4 py-3 text-white rounded-lg {{ request()->routeIs('categories') ? 'active' : '' }}">
             <i class="fas fa-tags w-5 text-center"></i>
-            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Categories & Suppliers</span>
+            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Kategori & Supplier</span>
         </a>
     </div>
     @endif
@@ -62,9 +62,9 @@
             <i class="fas fa-chart-line w-5 text-center"></i>
             <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">
                 @if($user->isCashier())
-                    My Sales & Analytics
+                    Penjualan & Analitik Saya
                 @else
-                    Sales & Analytics
+                    Penjualan & Analitik
                 @endif
             </span>
         </a>
@@ -72,7 +72,7 @@
         @if($user->canAccessAdmin())
         <a href="#" class="menu-item flex items-center px-4 py-3 text-white rounded-lg">
             <i class="fas fa-dollar-sign w-5 text-center"></i>
-            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Financial</span>
+            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Keuangan</span>
         </a>
         @endif
     </div>
@@ -87,16 +87,16 @@
         @if($user->isAdmin())
         <a href="{{ route('staff') }}" class="menu-item flex items-center px-4 py-3 text-white rounded-lg {{ request()->routeIs('staff') ? 'active' : '' }}">
             <i class="fas fa-users w-5 text-center"></i>
-            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Staff Management</span>
+            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Manajemen Staf</span>
         </a>
         @endif        <a href="{{ route('customers') }}" class="menu-item flex items-center px-4 py-3 text-white rounded-lg {{ request()->routeIs('customers') ? 'active' : '' }}">
             <i class="fas fa-user-friends w-5 text-center"></i>
-            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Customers</span>
+            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Pelanggan</span>
         </a>
         
         <a href="#" class="menu-item flex items-center px-4 py-3 text-white rounded-lg">
             <i class="fas fa-credit-card w-5 text-center"></i>
-            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Payment Methods</span>
+            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Metode Pembayaran</span>
         </a>
     </div>
     @endif
@@ -110,13 +110,13 @@
         @if($user->canAccessAdmin())
         <a href="#" class="menu-item flex items-center px-4 py-3 text-white rounded-lg">
             <i class="fas fa-cog w-5 text-center"></i>
-            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Settings</span>
+            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Pengaturan</span>
         </a>
         @endif
 
         <a href="#" class="menu-item flex items-center px-4 py-3 text-white rounded-lg">
             <i class="fas fa-bell w-5 text-center"></i>
-            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Notifications</span>
+            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Notifikasi</span>
             <span x-show="sidebarOpen" class="ml-auto bg-green-500 text-white text-xs px-2 py-1 rounded-full">3</span>
         </a>
 
@@ -124,7 +124,7 @@
         @if($user->isCashier())
         <a href="#" class="menu-item flex items-center px-4 py-3 text-white rounded-lg">
             <i class="fas fa-clock w-5 text-center"></i>
-            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">My Shift</span>
+            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Shift Saya</span>
         </a>
         @endif
     </div>

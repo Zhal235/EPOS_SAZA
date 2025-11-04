@@ -253,7 +253,7 @@ class RefundManager extends Component
         return view('livewire.refund-manager', [
             'transactions' => $this->transactions,
         ])->layout('layouts.epos', [
-            'header' => 'Refund Manager'
+            'header' => 'Manajemen Refund'
         ]);
     }
 }

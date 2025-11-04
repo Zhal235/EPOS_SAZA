@@ -404,7 +404,7 @@ class SalesReport extends Component
 
         return view('livewire.sales-report')
             ->layout('layouts.epos', [
-                'header' => auth()->user()->isCashier() ? 'My Sales & Analytics' : 'Sales & Analytics Dashboard'
+                'header' => auth()->user()->isCashier() ? 'Penjualan & Analitik Saya' : 'Dashboard Penjualan & Analitik'
             ]);
     }
 }

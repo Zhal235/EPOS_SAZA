@@ -120,8 +120,8 @@ class PosTerminal extends Component
         if (!$product || $product->stock_quantity <= 0) {
             $this->dispatch('showNotification', [
                 'type' => 'error',
-                'title' => '❌ Out of Stock',
-                'message' => 'Product is out of stock!',
+                'title' => '❌ Stok Habis',
+                'message' => 'Produk kehabisan stok!',
                 'options' => ['duration' => 3000]
             ]);
             return;
@@ -130,8 +130,8 @@ class PosTerminal extends Component
         if (!$product->is_active) {
             $this->dispatch('showNotification', [
                 'type' => 'error',
-                'title' => '❌ Unavailable',
-                'message' => 'Product is not available!',
+                'title' => '❌ Tidak Tersedia',
+                'message' => 'Produk tidak tersedia!',
                 'options' => ['duration' => 3000]
             ]);
             return;
@@ -144,8 +144,8 @@ class PosTerminal extends Component
             if ($existingItem['quantity'] >= $product->stock_quantity) {
                 $this->dispatch('showNotification', [
                     'type' => 'warning',
-                    'title' => '⚠️ Stock Limit',
-                    'message' => 'Not enough stock available!',
+                    'title' => '⚠️ Batas Stok',
+                    'message' => 'Stok tidak mencukupi!',
                     'options' => ['duration' => 3000]
                 ]);
                 return;
@@ -175,8 +175,8 @@ class PosTerminal extends Component
         // Show quick success notification
         $this->dispatch('showNotification', [
             'type' => 'success',
-            'title' => '✅ Added to Cart',
-            'message' => "{$product->name} added successfully!",
+            'title' => '✅ Ditambah ke Keranjang',
+            'message' => "{$product->name} berhasil ditambahkan!",
             'options' => ['duration' => 2000, 'sound' => false]
         ]);
     }
@@ -192,8 +192,8 @@ class PosTerminal extends Component
         if ($quantity > $product->stock_quantity) {
             $this->dispatch('showNotification', [
                 'type' => 'warning',
-                'title' => '⚠️ Stock Limit',
-                'message' => 'Not enough stock available!',
+                'title' => '⚠️ Batas Stok',
+                'message' => 'Stok tidak mencukupi!',
                 'options' => ['duration' => 3000]
             ]);
             return;
@@ -354,8 +354,8 @@ class PosTerminal extends Component
         
         $this->dispatch('showNotification', [
             'type' => 'success',
-            'title' => '✅ Livewire Test',
-            'message' => 'Livewire connection working! Time: ' . now()->format('H:i:s'),
+            'title' => '✅ Tes Livewire',
+            'message' => 'Koneksi Livewire berfungsi! Waktu: ' . now()->format('H:i:s'),
             'options' => ['duration' => 3000]
         ]);
         
@@ -403,10 +403,10 @@ class PosTerminal extends Component
         
         $this->dispatch('showNotification', [
             'type' => $isAvailable ? 'success' : 'info',
-            'title' => $isAvailable ? '🟢 Production Mode' : '🟡 Development Mode',
+            'title' => $isAvailable ? '🟢 Mode Produksi' : '🟡 Mode Pengembangan',
             'message' => $isAvailable ? 
-                "API Connected: {$config['api_url']}" : 
-                "API Unavailable. Using fallback data for testing.",
+                "API Terhubung: {$config['api_url']}" : 
+                "API Tidak Tersedia. Menggunakan data cadangan untuk pengujian.",
             'options' => ['duration' => 5000]
         ]);
         
@@ -432,8 +432,8 @@ class PosTerminal extends Component
                 
                 $this->dispatch('showNotification', [
                     'type' => 'success',
-                    'title' => '✅ API Connection Success',
-                    'message' => "SIMPels API connected! Response time: {$healthStatus['response_time_ms']}ms",
+                    'title' => '✅ Koneksi API Berhasil',
+                    'message' => "SIMPels API terhubung! Waktu respon: {$healthStatus['response_time_ms']}ms",
                     'options' => ['duration' => 5000]
                 ]);
             } else {
@@ -445,7 +445,7 @@ class PosTerminal extends Component
             
             $this->dispatch('showNotification', [
                 'type' => 'error',
-                'title' => '❌ API Connection Failed',
+                'title' => '❌ Koneksi API Gagal',
                 'message' => 'SIMPels API tidak dapat diakses: ' . $e->getMessage(),
                 'options' => ['duration' => 8000]
             ]);
@@ -472,8 +472,8 @@ class PosTerminal extends Component
         if (empty($this->barcodeInput)) {
             $this->dispatch('showNotification', [
                 'type' => 'warning',
-                'title' => '⚠️ Empty Barcode',
-                'message' => 'Please enter a barcode!',
+                'title' => '⚠️ Barcode Kosong',
+                'message' => 'Silakan masukkan barcode!',
                 'options' => ['duration' => 3000]
             ]);
             return;
@@ -486,8 +486,8 @@ class PosTerminal extends Component
         if (!$product) {
             $this->dispatch('showNotification', [
                 'type' => 'error',
-                'title' => '❌ Not Found',
-                'message' => 'Product not found with barcode: ' . $this->barcodeInput,
+                'title' => '❌ Tidak Ditemukan',
+                'message' => 'Produk tidak ditemukan dengan barcode: ' . $this->barcodeInput,
                 'options' => ['duration' => 4000]
             ]);
             $this->barcodeInput = '';
@@ -503,8 +503,8 @@ class PosTerminal extends Component
         if (empty($this->cart)) {
             $this->dispatch('showNotification', [
                 'type' => 'warning',
-                'title' => '⚠️ Empty Cart',
-                'message' => 'Cart is empty! Add products first.',
+                'title' => '⚠️ Keranjang Kosong',
+                'message' => 'Keranjang kosong! Tambahkan produk terlebih dahulu.',
                 'options' => ['duration' => 3000]
             ]);
             return;
@@ -524,8 +524,8 @@ class PosTerminal extends Component
         
         $this->dispatch('showNotification', [
             'type' => 'info',
-            'title' => '📋 Transaction Held',
-            'message' => "Transaction {$holdId} held with {$itemCount} items",
+            'title' => '📋 Transaksi Ditahan',
+            'message' => "Transaksi {$holdId} ditahan dengan {$itemCount} item",
             'options' => ['duration' => 4000]
         ]);
     }
@@ -541,8 +541,8 @@ class PosTerminal extends Component
             
             $this->dispatch('showNotification', [
                 'type' => 'success',
-                'title' => '📥 Transaction Loaded',
-                'message' => "Loaded {$holdId} with {$itemCount} items",
+                'title' => '📥 Transaksi Dimuat',
+                'message' => "Memuat {$holdId} dengan {$itemCount} item",
                 'options' => ['duration' => 3000]
             ]);
         }
@@ -904,7 +904,7 @@ class PosTerminal extends Component
     public function processPayment()
     {
         if (empty($this->cart)) {
-            session()->flash('error', 'Cart is empty!');
+            session()->flash('error', 'Keranjang kosong!');
             return;
         }
 

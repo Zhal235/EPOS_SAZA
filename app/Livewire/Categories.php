@@ -137,11 +137,11 @@ class Categories extends Component
 
         try {
             Category::create($this->categoryForm);
-            session()->flash('message', 'Category created successfully!');
+            session()->flash('message', 'Kategori berhasil dibuat!');
             $this->closeAddCategoryModal();
             $this->resetPage();
         } catch (\Exception $e) {
-            session()->flash('error', 'Failed to create category: ' . $e->getMessage());
+            session()->flash('error', 'Gagal membuat kategori: ' . $e->getMessage());
         }
     }
 
@@ -170,10 +170,10 @@ class Categories extends Component
 
         try {
             $this->selectedCategory->update($this->categoryForm);
-            session()->flash('message', 'Category updated successfully!');
+            session()->flash('message', 'Kategori berhasil diperbarui!');
             $this->closeEditCategoryModal();
         } catch (\Exception $e) {
-            session()->flash('error', 'Failed to update category: ' . $e->getMessage());
+            session()->flash('error', 'Gagal memperbarui kategori: ' . $e->getMessage());
         }
     }
 
@@ -193,17 +193,17 @@ class Categories extends Component
     {
         try {
             if ($this->categoryToDelete->products()->count() > 0) {
-                session()->flash('error', 'Cannot delete category that has products. Please reassign products first.');
+                session()->flash('error', 'Tidak dapat menghapus kategori yang memiliki produk. Silakan pindahkan produk terlebih dahulu.');
                 $this->closeDeleteCategoryModal();
                 return;
             }
 
             $this->categoryToDelete->delete();
-            session()->flash('message', 'Category deleted successfully!');
+            session()->flash('message', 'Kategori berhasil dihapus!');
             $this->closeDeleteCategoryModal();
             $this->resetPage();
         } catch (\Exception $e) {
-            session()->flash('error', 'Failed to delete category: ' . $e->getMessage());
+            session()->flash('error', 'Gagal menghapus kategori: ' . $e->getMessage());
         }
     }
 
@@ -226,11 +226,11 @@ class Categories extends Component
 
         try {
             Supplier::create($this->supplierForm);
-            session()->flash('message', 'Supplier created successfully!');
+            session()->flash('message', 'Supplier berhasil dibuat!');
             $this->closeAddSupplierModal();
             $this->resetPage();
         } catch (\Exception $e) {
-            session()->flash('error', 'Failed to create supplier: ' . $e->getMessage());
+            session()->flash('error', 'Gagal membuat supplier: ' . $e->getMessage());
         }
     }
 
@@ -260,10 +260,10 @@ class Categories extends Component
 
         try {
             $this->selectedSupplier->update($this->supplierForm);
-            session()->flash('message', 'Supplier updated successfully!');
+            session()->flash('message', 'Supplier berhasil diperbarui!');
             $this->closeEditSupplierModal();
         } catch (\Exception $e) {
-            session()->flash('error', 'Failed to update supplier: ' . $e->getMessage());
+            session()->flash('error', 'Gagal memperbarui supplier: ' . $e->getMessage());
         }
     }
 
@@ -283,17 +283,17 @@ class Categories extends Component
     {
         try {
             if ($this->supplierToDelete->products()->count() > 0) {
-                session()->flash('error', 'Cannot delete supplier that has products. Please reassign products first.');
+                session()->flash('error', 'Tidak dapat menghapus supplier yang memiliki produk. Silakan pindahkan produk terlebih dahulu.');
                 $this->closeDeleteSupplierModal();
                 return;
             }
 
             $this->supplierToDelete->delete();
-            session()->flash('message', 'Supplier deleted successfully!');
+            session()->flash('message', 'Supplier berhasil dihapus!');
             $this->closeDeleteSupplierModal();
             $this->resetPage();
         } catch (\Exception $e) {
-            session()->flash('error', 'Failed to delete supplier: ' . $e->getMessage());
+            session()->flash('error', 'Gagal menghapus supplier: ' . $e->getMessage());
         }
     }
 
@@ -351,7 +351,7 @@ class Categories extends Component
                 'activeCategories' => 0,
                 'totalSuppliers' => $totalSuppliers,
                 'activeSuppliers' => $activeSuppliers,
-            ])->layout('layouts.epos', ['header' => 'Categories & Suppliers']);
+            ])->layout('layouts.epos', ['header' => 'Kategori & Supplier']);
         }
     }
 }

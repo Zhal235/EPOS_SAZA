@@ -119,7 +119,7 @@ class TransactionHistory extends Component
         return view('livewire.transaction-history', [
             'transactions' => $this->getTransactions()
         ])->layout('layouts.epos', [
-            'header' => 'Transaction History'
+            'header' => 'Riwayat Transaksi'
         ]);
     }
 }

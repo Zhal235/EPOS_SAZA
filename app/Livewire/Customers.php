@@ -524,6 +524,6 @@ class Customers extends Component
     {
         return view('livewire.customers', [
             'customers' => $this->customers,
-        ])->layout('layouts.epos', ['header' => 'Customer Management']);
+        ])->layout('layouts.epos', ['header' => 'Manajemen Pelanggan']);
     }
 }

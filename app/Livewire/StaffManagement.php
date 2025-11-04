@@ -100,7 +100,7 @@ class StaffManagement extends Component
 
                 $user->update($data);
                 
-                session()->flash('message', 'Staff member updated successfully!');
+                session()->flash('message', 'Staf berhasil diperbarui!');
             } else {
                 User::create([
                     'name' => $this->name,
@@ -111,13 +111,13 @@ class StaffManagement extends Component
                     'is_active' => $this->is_active,
                 ]);
                 
-                session()->flash('message', 'Staff member created successfully!');
+                session()->flash('message', 'Staf berhasil dibuat!');
             }
 
             $this->closeModal();
             $this->resetPage();
         } catch (\Exception $e) {
-            session()->flash('error', 'An error occurred: ' . $e->getMessage());
+            session()->flash('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
     }
 
@@ -132,13 +132,13 @@ class StaffManagement extends Component
         if ($this->staffToDelete) {
             // Prevent deleting yourself
             if ($this->staffToDelete->id === auth()->id()) {
-                session()->flash('error', 'You cannot delete your own account!');
+                session()->flash('error', 'Anda tidak dapat menghapus akun sendiri!');
                 $this->showDeleteModal = false;
                 return;
             }
 
             $this->staffToDelete->delete();
-            session()->flash('message', 'Staff member deleted successfully!');
+            session()->flash('message', 'Staf berhasil dihapus!');
             $this->showDeleteModal = false;
             $this->staffToDelete = null;
             $this->resetPage();
@@ -151,12 +151,12 @@ class StaffManagement extends Component
         
         // Prevent deactivating yourself
         if ($user->id === auth()->id()) {
-            session()->flash('error', 'You cannot deactivate your own account!');
+            session()->flash('error', 'Anda tidak dapat menonaktifkan akun sendiri!');
             return;
         }
 
         $user->update(['is_active' => !$user->is_active]);
-        session()->flash('message', 'Staff status updated successfully!');
+        session()->flash('message', 'Status staf berhasil diperbarui!');
     }
 
     public function closeModal()
@@ -209,7 +209,7 @@ class StaffManagement extends Component
             'staffMembers' => $staffMembers,
             'stats' => $stats,
         ])->layout('layouts.epos', [
-            'header' => 'Staff Management'
+            'header' => 'Manajemen Staf'
         ]);
     }
 }

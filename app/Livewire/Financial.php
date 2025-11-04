@@ -379,7 +379,7 @@ class Financial extends Component
             'withdrawals' => $this->withdrawals,
             'chartData' => $this->getChartData(),
         ])->layout('layouts.epos', [
-            'header' => 'Financial Management'
+            'header' => 'Manajemen Keuangan'
         ]);
     }
 }

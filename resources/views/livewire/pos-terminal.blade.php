@@ -9,7 +9,7 @@
                 sessionStorage.setItem(messageId, 'shown');
                 setTimeout(() => {
                     window.notificationSystem.success(
-                        '✅ Success',
+                        '✅ Berhasil',
                         '{{ addslashes(session('message')) }}',
                         { 
                             duration: 4000, 
@@ -33,7 +33,7 @@
                 sessionStorage.setItem(errorId, 'shown');
                 setTimeout(() => {
                     window.notificationSystem.error(
-                        '❌ Error',
+                        '❌ Kesalahan',
                         '{{ addslashes(session('error')) }}',
                         { 
                             duration: 6000, 
@@ -58,17 +58,17 @@
                     <div class="flex items-center justify-between mb-6">
                         <div class="flex items-center space-x-4 flex-1">
                             <div class="relative flex-1 max-w-md">
-                                <input wire:model.live.debounce.300ms="search" type="text" placeholder="Search products..." 
+                                <input wire:model.live.debounce.300ms="search" type="text" placeholder="Cari produk..." 
                                        class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
                                 <i class="fas fa-search absolute left-3 top-4 text-gray-400"></i>
                             </div>
                             <div class="relative">
-                                <input wire:model="barcodeInput" wire:keydown.enter="scanBarcode" type="text" placeholder="Scan barcode..." 
+                                <input wire:model="barcodeInput" wire:keydown.enter="scanBarcode" type="text" placeholder="Pindai barcode..." 
                                        class="w-48 pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
                                 <i class="fas fa-barcode absolute left-3 top-4 text-gray-400"></i>
                             </div>
                             <button wire:click="scanBarcode" class="px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
-                                <i class="fas fa-barcode mr-2"></i>Scan
+                                <i class="fas fa-barcode mr-2"></i>Pindai
                             </button>
                         </div>
                     </div>
@@ -77,7 +77,7 @@
                     <div class="flex space-x-2 mb-6 overflow-x-auto">
                         <button wire:click="selectCategory('')" 
                                 class="px-4 py-2 {{ $selectedCategory == '' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }} rounded-lg text-sm whitespace-nowrap">
-                            All
+                            Semua
                         </button>
                         @foreach($categories as $category)
                             <button wire:click="selectCategory('{{ $category->id }}')" 
@@ -137,9 +137,9 @@
                     <!-- Customer Selection -->
                     @if($paymentMethod !== 'rfid')
                     <div class="mb-6">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Customer</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Pelanggan</label>
                         <select wire:model="customer" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                            <option value="walk-in">Walk-in Customer</option>
+                            <option value="walk-in">Pelanggan Biasa</option>
                             @foreach(\App\Models\User::regularCustomers()->get() as $regularCustomer)
                                 <option value="{{ $regularCustomer->id }}">{{ $regularCustomer->name }} - {{ $regularCustomer->email }}</option>
                             @endforeach
@@ -169,7 +169,7 @@
 
                     <!-- Cart Items -->
                     <div class="flex-1 mb-6">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Cart Items</h3>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Item Keranjang</h3>
                         
                         @if(count($cart) > 0)
                             <div class="space-y-3">
@@ -177,7 +177,7 @@
                                     <div class="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
                                         <div class="flex-1">
                                             <h4 class="font-medium text-gray-900 text-sm">{{ $item['name'] }}</h4>
-                                            <p class="text-xs text-gray-500">{{ 'Rp ' . number_format($item['price'], 0, ',', '.') }} each</p>
+                                            <p class="text-xs text-gray-500">{{ 'Rp ' . number_format($item['price'], 0, ',', '.') }} per item</p>
                                         </div>
                                         <div class="flex items-center space-x-2">
                                             <button wire:click="updateQuantity({{ $item['id'] }}, {{ $item['quantity'] - 1 }})" class="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200">
@@ -200,8 +200,8 @@
                         @else
                             <div class="text-center py-8">
                                 <i class="fas fa-shopping-cart text-gray-400 text-4xl mb-2"></i>
-                                <p class="text-gray-500 text-sm">Your cart is empty</p>
-                                <p class="text-gray-400 text-xs">Add products to get started</p>
+                                <p class="text-gray-500 text-sm">Keranjang Anda kosong</p>
+                                <p class="text-gray-400 text-xs">Tambahkan produk untuk mulai</p>
                             </div>
                         @endif
                     </div>
@@ -210,11 +210,11 @@
                     <div class="border-t border-gray-200 pt-4 mb-6">
                         <div class="space-y-2">
                             <div class="flex justify-between text-sm">
-                                <span class="text-gray-600">Subtotal ({{ $this->totalItems }} items)</span>
+                                <span class="text-gray-600">Subtotal ({{ $this->totalItems }} item)</span>
                                 <span class="text-gray-900">{{ 'Rp ' . number_format($this->subtotal, 0, ',', '.') }}</span>
                             </div>
                             <div class="flex justify-between text-sm">
-                                <span class="text-gray-600">Discount</span>
+                                <span class="text-gray-600">Diskon</span>
                                 <span class="text-green-600">-{{ 'Rp ' . number_format($discount, 0, ',', '.') }}</span>
                             </div>
                             <hr class="my-2">
@@ -227,11 +227,11 @@
 
                     <!-- Payment Methods -->
                     <div class="mb-6">
-                        <label class="block text-sm font-medium text-gray-700 mb-3">Payment Method</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-3">Metode Pembayaran</label>
                         <div class="grid grid-cols-2 gap-3">
                             <button wire:click="selectPaymentMethod('cash')" class="flex flex-col items-center p-3 border-2 {{ $paymentMethod == 'cash' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300' }} rounded-lg">
                                 <i class="fas fa-money-bill-wave {{ $paymentMethod == 'cash' ? 'text-indigo-600' : 'text-gray-600' }} mb-1"></i>
-                                <span class="text-xs font-medium {{ $paymentMethod == 'cash' ? 'text-indigo-600' : 'text-gray-600' }}">Cash</span>
+                                <span class="text-xs font-medium {{ $paymentMethod == 'cash' ? 'text-indigo-600' : 'text-gray-600' }}">Tunai</span>
                             </button>
                             <button wire:click="selectPaymentMethod('qris')" class="flex flex-col items-center p-3 border-2 {{ $paymentMethod == 'qris' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300' }} rounded-lg">
                                 <i class="fas fa-qrcode {{ $paymentMethod == 'qris' ? 'text-indigo-600' : 'text-gray-600' }} mb-1"></i>
@@ -243,7 +243,7 @@
                             </button>
                             <button wire:click="selectPaymentMethod('card')" class="flex flex-col items-center p-3 border-2 {{ $paymentMethod == 'card' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300' }} rounded-lg">
                                 <i class="fas fa-credit-card {{ $paymentMethod == 'card' ? 'text-indigo-600' : 'text-gray-600' }} mb-1"></i>
-                                <span class="text-xs font-medium {{ $paymentMethod == 'card' ? 'text-indigo-600' : 'text-gray-600' }}">Card</span>
+                                <span class="text-xs font-medium {{ $paymentMethod == 'card' ? 'text-indigo-600' : 'text-gray-600' }}">Kartu</span>
                             </button>
                         </div>
                     </div>
@@ -253,25 +253,25 @@
                         <button wire:click="processPayment" 
                                 @if(count($cart) == 0) disabled @endif
                                 class="w-full py-3 {{ count($cart) > 0 ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800' : 'bg-gray-300 cursor-not-allowed' }} text-white rounded-lg font-medium transition-all">
-                            <i class="fas fa-credit-card mr-2"></i>Process Payment
+                            <i class="fas fa-credit-card mr-2"></i>Proses Pembayaran
                         </button>
                         <div class="grid grid-cols-2 gap-3">
                             <button wire:click="holdTransaction" 
                                     @if(count($cart) == 0) disabled @endif
                                     class="py-2 {{ count($cart) > 0 ? 'border-gray-300 text-gray-700 hover:bg-gray-50' : 'border-gray-200 text-gray-400 cursor-not-allowed' }} border rounded-lg text-sm">
-                                <i class="fas fa-save mr-1"></i>Hold
+                                <i class="fas fa-save mr-1"></i>Tahan
                             </button>
                             <button wire:click="clearCart" 
                                     @if(count($cart) == 0) disabled @endif
                                     class="py-2 {{ count($cart) > 0 ? 'border-gray-300 text-gray-700 hover:bg-gray-50' : 'border-gray-200 text-gray-400 cursor-not-allowed' }} border rounded-lg text-sm">
-                                <i class="fas fa-trash mr-1"></i>Clear
+                                <i class="fas fa-trash mr-1"></i>Kosongkan
                             </button>
                         </div>
                         
                         <!-- Held Transactions -->
                         @if(count($holdTransactions) > 0)
                             <div class="mt-4 pt-4 border-t border-gray-200">
-                                <h4 class="text-sm font-medium text-gray-700 mb-2">Held Transactions</h4>
+                                <h4 class="text-sm font-medium text-gray-700 mb-2">Transaksi Tertahan</h4>
                                 <div class="space-y-2">
                                     @foreach($holdTransactions as $holdId => $held)
                                         <button wire:click="loadHeldTransaction('{{ $holdId }}')" 

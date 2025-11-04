@@ -141,7 +141,7 @@
                                     @endif
                                 </h1>
                                 <nav class="flex space-x-2 text-sm text-gray-500">
-                                    <a href="{{ route('dashboard') }}" class="hover:text-gray-700">Home</a>
+                                    <a href="{{ route('dashboard') }}" class="hover:text-gray-700">Beranda</a>
                                     <span>/</span>
                                     <span class="text-gray-900">
                                         @if(isset($header))
@@ -161,7 +161,7 @@
                                 <div id="api-connection-status" class="flex items-center space-x-2 px-3 py-2 rounded-lg transition-all cursor-pointer">
                                     <div class="flex items-center space-x-2">
                                         <div id="connection-indicator" class="w-3 h-3 rounded-full bg-gray-400 animate-pulse"></div>
-                                        <span id="connection-text" class="text-xs font-medium text-gray-600">Connecting...</span>
+                                        <span id="connection-text" class="text-xs font-medium text-gray-600">Menghubungkan...</span>
                                     </div>
                                 </div>
                                 
@@ -170,10 +170,10 @@
                                     <div class="p-3">
                                         <div class="font-semibold mb-1">SIMPels API Status</div>
                                         <div id="connection-details" class="text-gray-300">
-                                            Checking connection to SIMPels server...
+                                            Memeriksa koneksi ke server SIMPels...
                                         </div>
                                         <div class="text-gray-400 mt-2 text-xs">
-                                            Last checked: <span id="last-check-time">-</span>
+                                            Terakhir diperiksa: <span id="last-check-time">-</span>
                                         </div>
                                     </div>
                                     <div class="absolute top-0 right-4 transform -translate-y-1 w-2 h-2 bg-gray-900 rotate-45"></div>
@@ -191,7 +191,7 @@
                             <!-- Quick Actions -->
                             <div class="flex space-x-2">
                                 <a href="{{ route('pos') }}" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-                                    <i class="fas fa-plus mr-2"></i>New Sale
+                                    <i class="fas fa-plus mr-2"></i>Penjualan Baru
                                 </a>
                             </div>
 
@@ -212,16 +212,16 @@
                                 <div x-show="open" @click.away="open = false" x-transition
                                      class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
                                     <a href="{{ route('profile') }}" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100">
-                                        <i class="fas fa-user mr-3"></i>Profile
+                                        <i class="fas fa-user mr-3"></i>Profil
                                     </a>
                                     <a href="#" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100">
-                                        <i class="fas fa-cog mr-3"></i>Settings
+                                        <i class="fas fa-cog mr-3"></i>Pengaturan
                                     </a>
                                     <hr class="my-2">
                                     <form method="POST" action="{{ route('logout') }}">
                                         @csrf
                                         <button type="submit" class="flex items-center w-full px-4 py-2 text-gray-700 hover:bg-gray-100 text-left">
-                                            <i class="fas fa-sign-out-alt mr-3"></i>Logout
+                                            <i class="fas fa-sign-out-alt mr-3"></i>Keluar
                                         </button>
                                     </form>
                                 </div>
@@ -243,16 +243,16 @@
                 <div class="flex items-center space-x-4">
                     <div class="flex items-center">
                         <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                        <span>System Online</span>
+                        <span>Sistem Online</span>
                     </div>
                     <div class="flex items-center">
                         <i class="fas fa-database mr-2"></i>
-                        <span>Database Connected</span>
+                        <span>Database Terhubung</span>
                     </div>
                 </div>
                 <div class="flex items-center space-x-4">
-                    <span>Last Sync: {{ now()->format('H:i:s') }}</span>
-                    <span>Store: SAZA Main Branch</span>
+                    <span>Sinkronisasi Terakhir: {{ now()->format('H:i:s') }}</span>
+                    <span>Toko: SAZA Cabang Utama</span>
                 </div>
             </div>
         </footer>

@@ -10,7 +10,7 @@ class Dashboard extends Component
     {
         return view('livewire.dashboard')
             ->layout('layouts.epos', [
-                'header' => 'EPOS Dashboard'
+                'header' => 'Dashboard EPOS'
             ]);
     }
 }
