@@ -127,36 +127,8 @@ class SimpelsApiService
     public function getSantriByRfid($rfidTag)
     {
         // Use new SIMPELS 2.0 endpoint: GET /api/v1/wallets/rfid/uid/{uid}
+        // This endpoint already returns spent_today and sisa_limit_hari_ini calculated by backend
         $response = $this->makeRequest('GET', $this->endpoints['rfid_lookup'] . '/' . $rfidTag);
-        
-        // Add daily spending limit calculation
-        if ($response && isset($response['success']) && $response['success'] && isset($response['data'])) {
-            $santri = $response['data'];
-            
-            // Get today's spending to calculate remaining limit
-            try {
-                $dailySpending = $this->getSantriDailySpending($rfidTag);
-                $todaySpent = 0;
-                
-                if ($dailySpending && isset($dailySpending['data']['total_spent_today'])) {
-                    $todaySpent = $dailySpending['data']['total_spent_today'];
-                }
-                
-                $dailyLimit = $santri['limit_harian'] ?? 50000;
-                $remainingLimit = max(0, $dailyLimit - $todaySpent);
-                
-                $response['data']['limit_harian'] = $dailyLimit;
-                $response['data']['spent_today'] = $todaySpent;
-                $response['data']['sisa_limit_hari_ini'] = $remainingLimit;
-                
-            } catch (\Exception $e) {
-                Log::warning('Failed to get daily spending limit for santri: ' . $e->getMessage());
-                // Set default values if API call fails
-                $response['data']['limit_harian'] = $santri['limit_harian'] ?? 50000;
-                $response['data']['spent_today'] = 0;
-                $response['data']['sisa_limit_hari_ini'] = $santri['limit_harian'] ?? 50000;
-            }
-        }
         
         return $response;
     }
@@ -203,16 +175,19 @@ class SimpelsApiService
         $result = $this->makeRequest('POST', $this->endpoints['epos_transaction'], $eposData);
         
         if (!$result || !isset($result['success']) || !$result['success']) {
-            throw new \Exception('Failed to process payment: ' . ($result['message'] ?? 'Unknown error'));
+            $errorMsg = $result['message'] ?? 'Unknown error';
+            Log::error('SIMPELS payment rejected', ['result' => $result]);
+            throw new \Exception('Failed to process payment: ' . $errorMsg);
         }
 
         return [
             'success' => true,
             'data' => [
-                'new_balance' => $result['data']['balance_after'] ?? null,
+                'new_balance' => $result['data']['wallet_balance'] ?? $result['data']['balance_after'] ?? null,
+                'remaining_limit' => $result['data']['remaining_limit'] ?? null,
                 'santri_name' => $result['data']['santri_name'] ?? null,
                 'transaction_id' => $paymentData['transaction_ref'],
-                'wallet_transaction_id' => $result['data']['transaction_id'] ?? null,
+                'wallet_transaction_id' => $result['data']['transaction']['id'] ?? $result['data']['transaction_id'] ?? null,
                 'simpels_response' => $result
             ]
         ];
@@ -272,7 +247,7 @@ class SimpelsApiService
             'rfid_tag' => $rfidTag,
             'amount' => $amount,
             'notes' => $notes,
-            'timestamp' => now()->toISOString(),
+            'timestamp' => now()->timezone('Asia/Jakarta')->toDateTimeString(),
             'operator' => auth()->user()->name ?? 'System'
         ];
 
@@ -355,7 +330,7 @@ class SimpelsApiService
                     'status' => 'healthy',
                     'response_time_ms' => $duration,
                     'api_url' => $this->baseUrl,
-                    'last_check' => now()->toDateTimeString(),
+                    'last_check' => now()->timezone('Asia/Jakarta')->toDateTimeString(),
                     'http_status' => $response->status()
                 ];
             }
@@ -367,7 +342,7 @@ class SimpelsApiService
                 'status' => 'unhealthy',
                 'error' => $e->getMessage(),
                 'api_url' => $this->baseUrl,
-                'last_check' => now()->toDateTimeString()
+                'last_check' => now()->timezone('Asia/Jakarta')->toDateTimeString()
             ];
         }
     }

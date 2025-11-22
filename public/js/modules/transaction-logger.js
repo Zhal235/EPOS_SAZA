@@ -17,7 +17,7 @@ class TransactionLogger {
         // Log session start
         this.info('Logger initialized', {
             sessionId: this.sessionId,
-            timestamp: new Date().toISOString(),
+            timestamp: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }),
             userAgent: navigator.userAgent,
             url: window.location.href
         });
@@ -75,7 +75,7 @@ class TransactionLogger {
         const logEntry = {
             id: this.generateLogId(),
             sessionId: this.sessionId,
-            timestamp: new Date().toISOString(),
+            timestamp: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }),
             level: level.toLowerCase(),
             category: category,
             message: message,

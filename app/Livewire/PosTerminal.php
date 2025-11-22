@@ -287,9 +287,13 @@ class PosTerminal extends Component
             return;
         }
         
-        // Skip RFID scan if santri is already selected (post-payment scenario)
-        if ($this->selectedSantri) {
-            Log::info('Santri already selected, skipping RFID scan', ['rfid' => $rfidTag, 'selected_santri' => $this->selectedSantri['nama_santri'] ?? 'Unknown']);
+        // Skip RFID scan if santri is already selected (modal is open for current transaction)
+        // This prevents accidental re-scans during an active transaction
+        if ($this->selectedSantri && $this->showRfidModal) {
+            Log::info('Santri already selected, ignoring duplicate scan', [
+                'rfid' => $rfidTag, 
+                'selected_santri' => $this->selectedSantri['nama_santri'] ?? 'Unknown'
+            ]);
             return;
         }
         
@@ -702,6 +706,10 @@ class PosTerminal extends Component
             return false;
         }
 
+        // NOTE: global minimum balance is enforced by SIMPels backend (min_balance_jajan)
+        // Don't query local DB for wallet settings here to avoid inconsistencies or missing tables.
+        // We will proceed and rely on the SIMPels API (called later) to reject transactions that violate minimum balance rules.
+
         if ($this->dailySpendingLimit > 0 && $this->remainingLimit < $this->total) {
             $this->dispatch('showNotification', [
                 'type' => 'error',
@@ -842,16 +850,24 @@ class PosTerminal extends Component
                 ]);
 
                 if (!$paymentResponse || !isset($paymentResponse['success']) || !$paymentResponse['success']) {
-                    throw new \Exception('Payment processing failed: ' . ($paymentResponse['message'] ?? 'Unknown error from SIMPels API'));
+                    // If SIMPels returned a structured error, include it directly
+                    $msg = $paymentResponse['message'] ?? ($paymentResponse['data']['message'] ?? null) ?? 'Unknown error from SIMPels API';
+                    throw new \Exception('Payment processing failed: ' . $msg);
                 }
 
                 // Get updated balance from API response
                 $newBalance = $paymentResponse['data']['new_balance'] ?? ($this->santriBalance - $this->total);
                 $newRemainingLimit = $paymentResponse['data']['remaining_limit'] ?? ($this->remainingLimit - $this->total);
 
-                // Update component state so UI reflects new values immediately
+                // Update component state AND selectedSantri data so UI reflects new values immediately
                 $this->santriBalance = $newBalance;
                 $this->remainingLimit = $newRemainingLimit;
+                
+                // Also update selectedSantri array so the modal displays updated values
+                if ($this->selectedSantri) {
+                    $this->selectedSantri['saldo'] = $newBalance;
+                    $this->selectedSantri['sisa_limit_hari_ini'] = $newRemainingLimit;
+                }
 
                 Log::info("SIMPels Payment Success", [
                     'transaction_id' => $transaction->transaction_number,
@@ -866,9 +882,12 @@ class PosTerminal extends Component
                     'rfid' => $santriRfid
                 ]);
                 
-                // For production: decide whether to rollback transaction or continue with local processing
-                // For now, we'll fail the transaction if API fails to maintain data consistency
-                throw new \Exception('Pembayaran gagal diproses melalui sistem SIMPels: ' . $apiError->getMessage() . '. Silakan coba lagi atau hubungi administrator.');
+                // Simplify error message - extract only the core message
+                $errorMsg = $apiError->getMessage();
+                // Remove "Payment processing failed: " prefix if exists
+                $errorMsg = str_replace('Payment processing failed: ', '', $errorMsg);
+                
+                throw new \Exception($errorMsg);
             }
 
             DB::commit();
@@ -876,16 +895,16 @@ class PosTerminal extends Component
             $cartItemCount = count($this->cart);
             $transactionNumber = $transaction->transaction_number;
 
-            // Clear cart and close modal
+            // Clear cart and close modal after successful payment
             $this->clearCart();
             $this->closeRfidModal();
             
             // Show success notification
-                $this->dispatch('showRfidSuccess', [
+            $this->dispatch('showRfidSuccess', [
                 'customerName' => $santriName,
                 'amount' => $this->total,
-                    'newBalance' => $newBalance,
-                    'newRemainingLimit' => $newRemainingLimit,
+                'newBalance' => $newBalance,
+                'newRemainingLimit' => $newRemainingLimit,
                 'transactionRef' => $transactionNumber,
                 'itemCount' => $cartItemCount
             ]);

@@ -41,7 +41,7 @@ class SIMPelsAPI {
         
         if (this.debug) {
             console.group(`🌐 [SIMPels API Request ${requestId}]`);
-            console.log(`⏰ Time: ${new Date().toISOString()}`);
+            console.log(`⏰ Time (WIB): ${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}`);
             console.log(`🎯 Method: ${config.method || 'GET'}`);
             console.log(`🔗 URL: ${url}`);
             console.log(`📋 Headers:`, this.headers);
@@ -158,7 +158,7 @@ class SIMPelsAPI {
             endpoint: endpoint,
             responseTime: responseTime,
             statusCode: statusCode,
-            timestamp: new Date().toISOString(),
+            timestamp: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }),
             success: statusCode >= 200 && statusCode < 300
         };
         

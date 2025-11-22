@@ -139,7 +139,7 @@ class TransactionProcessor {
                 cart: [...cart],
                 totalAmount: totalAmount,
                 paymentMethod: paymentMethod,
-                timestamp: new Date().toISOString(),
+                timestamp: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }),
                 status: 'processing'
             };
             
@@ -219,7 +219,7 @@ class TransactionProcessor {
                     subtotal: item.quantity * item.price
                 })),
                 payment_method: 'rfid',
-                transaction_date: new Date().toISOString(),
+                transaction_date: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }),
                 cashier_name: this.getCurrentCashierName(),
                 pos_terminal_id: this.getPosTerminalId()
             };
@@ -248,7 +248,7 @@ class TransactionProcessor {
                     subtotal: item.quantity * item.price
                 })),
                 payment_method: 'rfid',
-                transaction_date: new Date().toISOString(),
+                transaction_date: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }),
                 cashier_name: this.getCurrentCashierName(),
                 pos_terminal_id: this.getPosTerminalId()
             });
@@ -261,7 +261,7 @@ class TransactionProcessor {
     queueForOfflineSync(syncData) {
         this.offlineQueue.push({
             ...syncData,
-            queued_at: new Date().toISOString(),
+            queued_at: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }),
             retry_count: 0,
             status: 'pending'
         });

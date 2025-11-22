@@ -319,8 +319,8 @@ class ErrorHandler {
                 key,
                 notificationCount: info.notificationCount,
                 occurrenceCount: info.occurrenceCount,
-                firstOccurrence: new Date(info.firstOccurrence).toISOString(),
-                lastNotification: new Date(info.lastNotificationTime).toISOString()
+                firstOccurrence: new Date(info.firstOccurrence).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }),
+                lastNotification: new Date(info.lastNotificationTime).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })
             });
         }
         
@@ -334,7 +334,7 @@ class ErrorHandler {
         console.error('[ErrorHandler] Error occurred:', {
             message: error.message,
             context: context,
-            timestamp: new Date().toISOString(),
+            timestamp: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }),
             stack: error.stack
         });
     }
@@ -343,7 +343,7 @@ class ErrorHandler {
         console.error('[ErrorHandler] Connection error:', {
             message: error.message,
             context: context,
-            timestamp: new Date().toISOString(),
+            timestamp: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }),
             connectionErrorFlag: this.connectionErrorFlag,
             lastConnectionErrorTime: this.lastConnectionErrorTime
         });

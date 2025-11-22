@@ -243,7 +243,7 @@ Route::prefix('api/epos')->group(function () {
                 'nominal' => $nominal,
                 'keterangan' => $keterangan,
                 'transaction_ref' => $transactionRef,
-                'timestamp' => now()->toISOString()
+                'timestamp' => now()->timezone('Asia/Jakarta')->toDateTimeString()
             ]
         ]);
     });
@@ -265,7 +265,7 @@ Route::prefix('api/epos')->group(function () {
                 'nominal' => $nominal,
                 'original_transaction_ref' => $originalTransactionRef,
                 'refund_reason' => $refundReason,
-                'timestamp' => now()->toISOString()
+                'timestamp' => now()->timezone('Asia/Jakarta')->toDateTimeString()
             ]
         ]);
     });
@@ -282,7 +282,7 @@ Route::prefix('api/epos')->group(function () {
                 'santri_id' => $request->input('santri_id'),
                 'total_amount' => $request->input('total_amount'),
                 'items' => $request->input('items'),
-                'synced_at' => now()->toISOString()
+                'synced_at' => now()->timezone('Asia/Jakarta')->toDateTimeString()
             ]
         ]);
     });
@@ -297,7 +297,7 @@ Route::prefix('api/epos')->group(function () {
                 'total_transactions_today' => 45,
                 'total_amount_today' => 2500000,
                 'server_status' => 'online',
-                'last_sync' => now()->toISOString()
+                'last_sync' => now()->timezone('Asia/Jakarta')->toDateTimeString()
             ]
         ]);
     });

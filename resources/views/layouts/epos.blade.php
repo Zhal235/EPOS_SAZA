@@ -311,7 +311,7 @@
             transactionLogger.logSystem('ePOS system started', {
                 user: '{{ auth()->user()->name }}',
                 role: '{{ auth()->user()->role }}',
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })
             });
         });
         

@@ -61,7 +61,7 @@ class RefundProcessor {
                 refund_amount: refundAmount,
                 reason: reason,
                 new_balance: response.data.saldo_sesudah,
-                processed_at: new Date().toISOString(),
+                processed_at: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }),
                 processed_by: this.getCurrentCashierName(),
                 status: 'completed'
             };
