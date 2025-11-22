@@ -55,10 +55,13 @@ class ConnectionStatusManager {
         this.setStatus('checking', 'Checking...', 'Testing connection to SIMPels API...');
         
         try {
-            // Use the existing API config
-            const response = await fetch(`${API_CONFIG.baseURL}/test-connection`, {
+            // Use the ping endpoint for connection test (no auth required)
+            const response = await fetch(`${API_CONFIG.baseURL}/ping`, {
                 method: 'GET',
-                headers: API_CONFIG.headers,
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
                 timeout: 10000
             });
             

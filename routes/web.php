@@ -7,8 +7,13 @@ use App\Livewire\Dashboard;
 use App\Livewire\TransactionHistory;
 use App\Livewire\SalesReport;
 
-// Public routes
-Route::view('/', 'welcome')->name('home');
+// Root route - redirect based on authentication status
+Route::get('/', function () {
+    if (auth()->check()) {
+        return redirect()->route('dashboard');
+    }
+    return redirect()->route('login');
+})->name('home');
 
 
 

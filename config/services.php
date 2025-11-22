@@ -36,15 +36,29 @@ return [
     ],
 
     'simpels' => [
-        'api_url' => env('SIMPELS_API_URL', 'http://localhost:8000/api/epos'),
+        'api_url' => env('SIMPELS_API_URL', 'http://localhost:8001/api/v1/wallets'),
         'timeout' => env('SIMPELS_API_TIMEOUT', 30),
         'api_key' => env('SIMPELS_API_KEY'),
         'endpoints' => [
+            // Health check
+            'ping' => '/ping', // GET - connection test
+            
+            // RFID lookup
+            'rfid_lookup' => '/rfid/uid', // GET /rfid/uid/{uid}
+            
+            // EPOS transaction
+            'epos_transaction' => '/epos/transaction', // POST with santri_id, amount, items
+            
+            // Withdrawal
+            'withdrawal_create' => '/epos/withdrawal', // POST
+            'withdrawal_status' => '/epos/withdrawal', // GET /{withdrawalNumber}/status
+            
+            // Legacy endpoints (deprecated - kept for backward compatibility)
             'santri_all' => '/santri/all',
             'guru_all' => '/guru/all',
             'santri_rfid' => '/santri/rfid',
             'guru_rfid' => '/guru/rfid',
-            'limit_summary' => '/limit/summary',
+            'limit_summary' => '/ping', // Redirect to ping
             'santri_deduct' => '/santri/{id}/deduct',
             'santri_refund' => '/santri/{id}/refund',
             'transaction_sync' => '/transaction/sync',

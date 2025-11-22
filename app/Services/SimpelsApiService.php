@@ -72,11 +72,11 @@ class SimpelsApiService
     }
 
     /**
-     * Test connection to SIMPels API
+     * Test connection to SIMPELS API using ping endpoint
      */
     public function testConnection()
     {
-        return $this->makeRequest('GET', $this->endpoints['limit_summary']);
+        return $this->makeRequest('GET', $this->endpoints['ping']);
     }
 
     /**
@@ -122,11 +122,12 @@ class SimpelsApiService
     }
 
     /**
-     * Get santri by RFID tag
+     * Get santri by RFID tag (UID)
      */
     public function getSantriByRfid($rfidTag)
     {
-        $response = $this->makeRequest('GET', $this->endpoints['santri_rfid'] . '/' . $rfidTag);
+        // Use new SIMPELS 2.0 endpoint: GET /api/v1/wallets/rfid/uid/{uid}
+        $response = $this->makeRequest('GET', $this->endpoints['rfid_lookup'] . '/' . $rfidTag);
         
         // Add daily spending limit calculation
         if ($response && isset($response['success']) && $response['success'] && isset($response['data'])) {
@@ -180,61 +181,39 @@ class SimpelsApiService
     }
 
     /**
-     * Process payment and deduct balance from santri account
+     * Process payment and deduct balance from santri account via SIMPELS 2.0 EPOS endpoint
      */
     public function processPayment($paymentData)
     {
-        // Step 1: Deduct saldo from santri account
-        $deductEndpoint = '/santri/' . $paymentData['santri_id'] . '/deduct';
-        
-        $deductData = [
-            'nominal' => $paymentData['amount'],
-            'keterangan' => $paymentData['description'] ?? 'EPOS Transaction',
-            'transaction_ref' => $paymentData['transaction_ref']
-        ];
-
-        Log::info("Deducting saldo through SIMPels API", $deductData);
-        
-        $deductResult = $this->makeRequest('POST', $deductEndpoint, $deductData);
-        
-        if (!$deductResult || !isset($deductResult['success']) || !$deductResult['success']) {
-            throw new \Exception('Failed to deduct saldo: ' . ($deductResult['message'] ?? 'Unknown error'));
-        }
-
-        // Step 2: Sync transaction with SIMPels for record keeping
-        $syncEndpoint = '/transaction/sync';
-        
-        $syncData = [
-            'epos_transaction_id' => $paymentData['transaction_ref'],
+        // Use SIMPELS 2.0 EPOS transaction endpoint: POST /api/v1/wallets/epos/transaction
+        $eposData = [
             'santri_id' => $paymentData['santri_id'],
-            'total_amount' => $paymentData['amount'],
-            'items' => $paymentData['items'] ?? [],
-            'payment_method' => 'rfid',
-            'transaction_date' => now()->toDateTimeString(),
-            'cashier_name' => auth()->user()->name ?? 'EPOS System'
+            'amount' => $paymentData['amount'],
+            'epos_txn_id' => $paymentData['transaction_ref'],
+            'meta' => [
+                'items' => $paymentData['items'] ?? [],
+                'description' => $paymentData['description'] ?? 'EPOS Transaction',
+                'cashier' => auth()->user()->name ?? 'EPOS System',
+                'terminal_id' => gethostname(),
+            ]
         ];
 
-        Log::info("Syncing transaction with SIMPels", $syncData);
+        Log::info("Processing EPOS payment through SIMPELS 2.0 API", $eposData);
         
-        try {
-            $syncResult = $this->makeRequest('POST', $syncEndpoint, $syncData);
-            Log::info("Transaction sync successful", $syncResult);
-        } catch (\Exception $e) {
-            // Log sync failure but don't fail the payment since saldo was already deducted
-            Log::warning("Transaction sync failed but payment was successful", [
-                'error' => $e->getMessage(),
-                'transaction_ref' => $paymentData['transaction_ref']
-            ]);
+        $result = $this->makeRequest('POST', $this->endpoints['epos_transaction'], $eposData);
+        
+        if (!$result || !isset($result['success']) || !$result['success']) {
+            throw new \Exception('Failed to process payment: ' . ($result['message'] ?? 'Unknown error'));
         }
 
         return [
             'success' => true,
             'data' => [
-                'new_balance' => $deductResult['data']['saldo_sesudah'] ?? null,
-                'santri_name' => $deductResult['data']['nama_santri'] ?? null,
+                'new_balance' => $result['data']['balance_after'] ?? null,
+                'santri_name' => $result['data']['santri_name'] ?? null,
                 'transaction_id' => $paymentData['transaction_ref'],
-                'saldo_deduction' => $deductResult,
-                'transaction_sync' => $syncResult ?? null
+                'wallet_transaction_id' => $result['data']['transaction_id'] ?? null,
+                'simpels_response' => $result
             ]
         ];
     }
@@ -301,22 +280,88 @@ class SimpelsApiService
     }
 
     /**
-     * Get API health status
+     * Create withdrawal request to SIMPELS 2.0
+     */
+    public function createWithdrawalRequest(array $withdrawalData)
+    {
+        try {
+            // Use SIMPELS 2.0 endpoint: POST /api/v1/wallets/epos/withdrawal
+            Log::info("Creating withdrawal request to SIMPELS 2.0", $withdrawalData);
+            
+            $response = $this->makeRequest('POST', $this->endpoints['withdrawal_create'], $withdrawalData);
+            
+            if ($response && isset($response['success']) && $response['success']) {
+                Log::info("Withdrawal request created successfully", [
+                    'withdrawal_number' => $withdrawalData['withdrawal_number'],
+                    'response' => $response
+                ]);
+                return $response;
+            }
+            
+            throw new \Exception('Invalid response from SIMPELS: ' . json_encode($response));
+
+        } catch (\Exception $e) {
+            Log::error('Failed to create withdrawal request to SIMPELS', [
+                'error' => $e->getMessage(),
+                'withdrawal_data' => $withdrawalData
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Get withdrawal status from SIMPELS 2.0
+     */
+    public function getWithdrawalStatus($withdrawalNumber)
+    {
+        try {
+            // Use SIMPELS 2.0 endpoint: GET /api/v1/wallets/epos/withdrawal/{withdrawalNumber}/status
+            $endpoint = $this->endpoints['withdrawal_status'] . '/' . $withdrawalNumber . '/status';
+            
+            $response = $this->makeRequest('GET', $endpoint);
+            
+            if ($response && isset($response['success']) && $response['success']) {
+                return $response;
+            }
+            
+            throw new \Exception('Invalid response from SIMPELS: ' . json_encode($response));
+
+        } catch (\Exception $e) {
+            Log::error('Failed to get withdrawal status from SIMPELS', [
+                'withdrawal_number' => $withdrawalNumber,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Get API health status (simplified for SIMPELS 2.0)
      */
     public function getHealthStatus()
     {
         try {
             $start = microtime(true);
-            $response = $this->testConnection();
+            
+            // Simple ping - try to access RFID endpoint
+            $url = $this->baseUrl . '/rfid/uid/PING_TEST';
+            $response = Http::timeout($this->timeout)->get($url);
+            
             $duration = round((microtime(true) - $start) * 1000, 2);
 
-            return [
-                'status' => 'healthy',
-                'response_time_ms' => $duration,
-                'api_url' => $this->baseUrl,
-                'last_check' => now()->toDateTimeString(),
-                'response' => $response
-            ];
+            // 404 is OK - means API is responding
+            if ($response->status() === 404 || $response->successful()) {
+                return [
+                    'status' => 'healthy',
+                    'response_time_ms' => $duration,
+                    'api_url' => $this->baseUrl,
+                    'last_check' => now()->toDateTimeString(),
+                    'http_status' => $response->status()
+                ];
+            }
+
+            throw new \Exception("Unexpected status: {$response->status()}");
+
         } catch (\Exception $e) {
             return [
                 'status' => 'unhealthy',

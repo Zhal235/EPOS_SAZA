@@ -819,7 +819,8 @@
                         data.customerName || 'Unknown',
                         data.amount || 0,
                         data.newBalance || 0,
-                        data.transactionRef || 'N/A'
+                        data.transactionRef || 'N/A',
+                        data.newRemainingLimit ?? null
                     );
                 }
             });

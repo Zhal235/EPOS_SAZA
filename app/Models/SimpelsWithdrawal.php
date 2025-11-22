@@ -30,6 +30,9 @@ class SimpelsWithdrawal extends Model
         'account_name',
         'notes',
         'receipt_path',
+        'simpels_status',
+        'simpels_updated_at',
+        'simpels_notes',
     ];
 
     protected $casts = [
@@ -40,6 +43,7 @@ class SimpelsWithdrawal extends Model
         'remaining_amount' => 'decimal:2',
         'approved_at' => 'datetime',
         'withdrawn_at' => 'datetime',
+        'simpels_updated_at' => 'datetime',
     ];
 
     // Constants
@@ -148,6 +152,36 @@ class SimpelsWithdrawal extends Model
             self::METHOD_BANK_TRANSFER => 'Transfer Bank',
             self::METHOD_CASH => 'Tunai',
             default => '-'
+        };
+    }
+
+    public function getSimpelsStatusLabelAttribute()
+    {
+        if (!$this->simpels_status) {
+            return 'Belum dikirim';
+        }
+        
+        return match($this->simpels_status) {
+            'pending' => 'Menunggu Review',
+            'approved' => 'Disetujui',
+            'rejected' => 'Ditolak',
+            'completed' => 'Selesai',
+            default => 'Unknown'
+        };
+    }
+
+    public function getSimpelsStatusColorAttribute()
+    {
+        if (!$this->simpels_status) {
+            return 'gray';
+        }
+        
+        return match($this->simpels_status) {
+            'pending' => 'yellow',
+            'approved' => 'blue',
+            'rejected' => 'red',
+            'completed' => 'green',
+            default => 'gray'
         };
     }
 

@@ -146,12 +146,13 @@ class EPOSNotificationSystem {
     }
     
     // RFID specific notifications
-    rfidSuccess(customerName, amount, newBalance, transactionRef) {
+    rfidSuccess(customerName, amount, newBalance, transactionRef, remainingLimit = null) {
         const options = {
             details: {
                 'Customer': customerName,
                 'Amount': this.formatCurrency(amount),
                 'New Balance': this.formatCurrency(newBalance),
+                    'Remaining Limit': remainingLimit !== null ? this.formatCurrency(remainingLimit) : 'N/A',
                 'Transaction': transactionRef
             },
             actions: [

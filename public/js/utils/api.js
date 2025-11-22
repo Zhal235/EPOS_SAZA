@@ -23,9 +23,15 @@ class SIMPelsAPI {
      */
     async request(endpoint, options = {}) {
         const url = `${this.baseURL}${endpoint}`;
+        
+        // For ping endpoint, don't send Authorization header
+        const headers = endpoint === '/ping' 
+            ? { 'Accept': 'application/json', 'Content-Type': 'application/json' }
+            : this.headers;
+        
         const config = {
             timeout: this.timeout,
-            headers: this.headers,
+            headers: headers,
             ...options
         };
         

@@ -1,6 +1,6 @@
 // API Configuration for SIMPels Integration
 const API_CONFIG = {
-    baseURL: window.SIMPELS_API_URL || 'http://localhost:8001/api/epos',
+    baseURL: window.SIMPELS_API_URL || 'http://localhost:8001/api/v1/wallets',
     timeout: window.SIMPELS_API_TIMEOUT ? (window.SIMPELS_API_TIMEOUT * 1000) : 30000,
     retries: 3,
     headers: {
@@ -19,9 +19,14 @@ console.log('🔧 SIMPels API Configuration Loaded:', {
     debug: API_CONFIG.debug
 });
 
-// Available API endpoints
+// Available API endpoints (SIMPELS 2.0)
 const API_ENDPOINTS = {
-    SANTRI_BY_RFID: '/santri/rfid',
+    PING: '/ping',
+    SANTRI_BY_RFID: '/rfid/uid', // GET /rfid/uid/{uid}
+    EPOS_TRANSACTION: '/epos/transaction', // POST
+    EPOS_WITHDRAWAL: '/epos/withdrawal', // POST
+    EPOS_WITHDRAWAL_STATUS: '/epos/withdrawal', // GET /{number}/status
+    // Legacy endpoints (deprecated)
     SANTRI_ALL: '/santri/all',
     SANTRI_BALANCE: '/santri/{id}/saldo',
     SANTRI_DEDUCT: '/santri/{id}/deduct',
@@ -29,7 +34,7 @@ const API_ENDPOINTS = {
     GURU_ALL: '/guru/all',
     LIMIT_CHECK: '/limit/check-rfid',
     TRANSACTION_SYNC: '/transaction/sync',
-    LIMIT_SUMMARY: '/limit/summary'
+    LIMIT_SUMMARY: '/ping' // Use ping instead
 };
 
 // Export for use in other modules

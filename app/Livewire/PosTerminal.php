@@ -795,11 +795,17 @@ class PosTerminal extends Component
                     'transaction_ref' => $transaction->transaction_number
                 ]);
                 
-                $santriId = is_array($this->selectedSantri) ? 
-                    ($this->selectedSantri['id'] ?? null) : 
-                    ($this->selectedSantri->id ?? null);
+                // support different shapes returned by SIMPels API or local objects
+                $santriId = null;
+                if (is_array($this->selectedSantri)) {
+                    $santriId = $this->selectedSantri['id'] ?? $this->selectedSantri['santri_id'] ?? null;
+                } else {
+                    $santriId = $this->selectedSantri->id ?? $this->selectedSantri->santri_id ?? null;
+                }
                 
                 if (!$santriId) {
+                    // include full selectedSantri payload for easier debugging
+                    Log::error('Selected santri missing id', ['selectedSantri' => $this->selectedSantri]);
                     throw new \Exception('Santri ID tidak ditemukan dalam data RFID');
                 }
 
@@ -809,9 +815,22 @@ class PosTerminal extends Component
                     'transaction_ref' => $transaction->transaction_number
                 ]);
 
+                // normalize rfid value (support different payload keys)
+                $rfidValue = '';
+                if (is_array($this->selectedSantri)) {
+                    $rfidValue = $this->selectedSantri['rfid_tag'] ?? $this->selectedSantri['rfid_uid'] ?? '';
+                    if (is_array($rfidValue) && isset($rfidValue['uid'])) $rfidValue = $rfidValue['uid'];
+                } else {
+                    if (is_object($this->selectedSantri->rfid_tag)) {
+                        $rfidValue = $this->selectedSantri->rfid_tag->uid ?? '';
+                    } else {
+                        $rfidValue = $this->selectedSantri->rfid_uid ?? '';
+                    }
+                }
+
                 $paymentResponse = $this->getSimpelsApi()->processPayment([
                     'santri_id' => $santriId,
-                    'rfid_tag' => $santriRfid,
+                    'rfid_tag' => $rfidValue,
                     'amount' => $this->total,
                     'transaction_ref' => $transaction->transaction_number,
                     'description' => "Transaksi EPOS #{$transaction->transaction_number} - " . count($itemsList) . " items",
@@ -829,6 +848,10 @@ class PosTerminal extends Component
                 // Get updated balance from API response
                 $newBalance = $paymentResponse['data']['new_balance'] ?? ($this->santriBalance - $this->total);
                 $newRemainingLimit = $paymentResponse['data']['remaining_limit'] ?? ($this->remainingLimit - $this->total);
+
+                // Update component state so UI reflects new values immediately
+                $this->santriBalance = $newBalance;
+                $this->remainingLimit = $newRemainingLimit;
 
                 Log::info("SIMPels Payment Success", [
                     'transaction_id' => $transaction->transaction_number,
@@ -858,10 +881,11 @@ class PosTerminal extends Component
             $this->closeRfidModal();
             
             // Show success notification
-            $this->dispatch('showRfidSuccess', [
+                $this->dispatch('showRfidSuccess', [
                 'customerName' => $santriName,
                 'amount' => $this->total,
-                'newBalance' => $newBalance,
+                    'newBalance' => $newBalance,
+                    'newRemainingLimit' => $newRemainingLimit,
                 'transactionRef' => $transactionNumber,
                 'itemCount' => $cartItemCount
             ]);
