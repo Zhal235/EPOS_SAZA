@@ -152,13 +152,22 @@ class FinancialService
     }
 
     /**
-     * Get transactions that haven't been withdrawn from SIMPels
+     * Get transactions that are available for withdrawal
+     * Includes: transactions without withdrawal_id AND transactions with rejected/pending withdrawal
      */
     public function getAvailableForWithdrawal(?Carbon $startDate = null, ?Carbon $endDate = null)
     {
         $query = FinancialTransaction::rfidPayments()
             ->completed()
-            ->whereNull('withdrawal_id'); // Transaksi yang belum masuk withdrawal manapun
+            ->where(function($q) {
+                // Transaksi yang belum masuk withdrawal manapun
+                $q->whereNull('withdrawal_id')
+                  // ATAU transaksi dalam withdrawal yang pending/rejected (bisa ditarik lagi)
+                  ->orWhereHas('withdrawal', function($subQ) {
+                      $subQ->whereIn('simpels_status', ['pending', 'rejected'])
+                           ->orWhereNull('simpels_status');
+                  });
+            });
 
         if ($startDate && $endDate) {
             $query->whereBetween('created_at', [$startDate->startOfDay(), $endDate->endOfDay()]);

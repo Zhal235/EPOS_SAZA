@@ -56,6 +56,22 @@ class Financial extends Component
         ]);
     }
 
+    // Computed property untuk check pending withdrawals (cached per request)
+    public function getHasPendingWithdrawalsProperty()
+    {
+        return $this->getPendingWithdrawalsCountProperty() > 0;
+    }
+
+    public function getPendingWithdrawalsCountProperty()
+    {
+        return SimpelsWithdrawal::where(function($query) {
+                $query->whereNull('simpels_status')
+                      ->orWhere('simpels_status', 'pending');
+            })
+            ->where('status', '!=', 'cancelled')
+            ->count();
+    }
+
     public function setTab($tab)
     {
         $this->activeTab = $tab;
@@ -145,13 +161,14 @@ class Financial extends Component
             'withdrawn_transactions' => $withdrawnTransactions
         ]);
 
-        // Total yang sudah masuk withdrawal request tapi belum approved (pending)
-        $pendingWithdrawalTransactions = DB::table('financial_transactions')
+        // Total yang sudah masuk withdrawal request tapi belum approved (pending/rejected - masih tersedia)
+        $pendingOrRejectedTransactions = DB::table('financial_transactions')
             ->join('simpels_withdrawals', 'financial_transactions.withdrawal_id', '=', 'simpels_withdrawals.id')
             ->where('financial_transactions.type', FinancialTransaction::TYPE_RFID_PAYMENT)
             ->where('financial_transactions.status', FinancialTransaction::STATUS_COMPLETED)
             ->where(function($q) {
                 $q->where('simpels_withdrawals.simpels_status', 'pending')
+                  ->orWhere('simpels_withdrawals.simpels_status', 'rejected')
                   ->orWhereNull('simpels_withdrawals.simpels_status');
             })
             ->whereBetween('financial_transactions.created_at', [
@@ -161,7 +178,7 @@ class Financial extends Component
             ->whereNull('financial_transactions.deleted_at')
             ->sum('financial_transactions.amount');
         
-        // Total yang belum masuk withdrawal request sama sekali (tersedia untuk ditarik)
+        // Total yang belum masuk withdrawal request sama sekali
         $notInWithdrawal = FinancialTransaction::rfidPayments()
             ->completed()
             ->whereNull('withdrawal_id')
@@ -171,8 +188,8 @@ class Financial extends Component
             ])
             ->sum('amount');
 
-        // Saldo tersedia = yang belum masuk withdrawal + yang pending
-        $availableForWithdrawal = $notInWithdrawal + $pendingWithdrawalTransactions;
+        // Saldo tersedia = yang belum masuk withdrawal + yang pending/rejected (dikembalikan)
+        $availableForWithdrawal = $notInWithdrawal + $pendingOrRejectedTransactions;
 
         return [
             'total_income' => (clone $query)->income()->completed()->sum('amount'),
@@ -306,21 +323,50 @@ class Financial extends Component
 
     public function createWithdrawal()
     {
-        \Log::info('createWithdrawal method called', [
+        \Log::info('=== createWithdrawal method STARTED ===', [
             'withdrawalAmount' => $this->withdrawalAmount,
             'withdrawalMethod' => $this->withdrawalMethod,
             'bankName' => $this->bankName,
+            'accountNumber' => $this->accountNumber,
+            'accountName' => $this->accountName,
         ]);
 
+        // Check if there are pending withdrawals (belum diproses di SIMPELS)
+        $pendingWithdrawals = SimpelsWithdrawal::where(function($query) {
+                $query->whereNull('simpels_status')
+                      ->orWhere('simpels_status', 'pending');
+            })
+            ->where('status', '!=', 'cancelled')
+            ->count();
+
+        if ($pendingWithdrawals > 0) {
+            $this->dispatch('showNotification', [
+                'type' => 'warning',
+                'title' => 'Tidak Dapat Membuat Penarikan',
+                'message' => 'Masih ada ' . $pendingWithdrawals . ' penarikan yang belum diproses di SIMPELS. Harap tunggu admin SIMPELS menyetujui atau menolak penarikan sebelumnya terlebih dahulu.'
+            ]);
+            return;
+        }
+
         // Get available balance
-        $availableBalance = $this->getDashboardSummary()['pending_withdrawal'];
+        try {
+            $availableBalance = $this->getDashboardSummary()['pending_withdrawal'];
+            \Log::info('Available balance retrieved', ['balance' => $availableBalance]);
+        } catch (\Exception $e) {
+            \Log::error('Failed to get available balance', ['error' => $e->getMessage()]);
+            $this->dispatch('showNotification', [
+                'type' => 'error',
+                'title' => 'Error',
+                'message' => 'Gagal mendapatkan saldo: ' . $e->getMessage()
+            ]);
+            return;
+        }
         
         \Log::info('Available balance calculated', [
             'availableBalance' => $availableBalance
         ]);
         
         $this->validate([
-            'withdrawalAmount' => 'nullable|numeric|min:1|max:' . $availableBalance,
             'withdrawalMethod' => 'required|in:bank_transfer,cash',
             'bankName' => 'required_if:withdrawalMethod,bank_transfer',
             'accountNumber' => 'required_if:withdrawalMethod,bank_transfer',
@@ -462,6 +508,55 @@ class Financial extends Component
             }
 
             $withdrawal->cancel('Dibatalkan oleh ' . auth()->user()->name);
+
+            // Send callback to SIMPELS to reject the withdrawal there too
+            try {
+                $simpelsApiUrl = config('services.simpels.api_url'); // Already includes /api/v1/wallets
+                $fullUrl = $simpelsApiUrl . '/epos/withdrawal/' . $withdrawal->withdrawal_number . '/reject';
+                
+                \Log::info('Attempting to send cancellation to SIMPELS', [
+                    'base_url' => $simpelsApiUrl,
+                    'withdrawal_number' => $withdrawal->withdrawal_number,
+                    'full_url' => $fullUrl
+                ]);
+                
+                if ($simpelsApiUrl && $withdrawal->withdrawal_number) {
+                    $response = \Illuminate\Support\Facades\Http::timeout(10)
+                        ->withHeaders([
+                            'Accept' => 'application/json',
+                            'Content-Type' => 'application/json',
+                        ])
+                        ->post($fullUrl, [
+                            'reason' => 'Dibatalkan dari ePOS oleh ' . auth()->user()->name,
+                        ]);
+
+                    \Log::info('SIMPELS response received', [
+                        'status' => $response->status(),
+                        'successful' => $response->successful(),
+                        'body' => $response->body()
+                    ]);
+
+                    if ($response->successful()) {
+                        \Log::info('Withdrawal cancellation sent to SIMPELS successfully', [
+                            'withdrawal_number' => $withdrawal->withdrawal_number,
+                            'response' => $response->json()
+                        ]);
+                    } else {
+                        \Log::warning('Failed to send cancellation to SIMPELS', [
+                            'withdrawal_number' => $withdrawal->withdrawal_number,
+                            'status' => $response->status(),
+                            'response' => $response->body()
+                        ]);
+                    }
+                }
+            } catch (\Exception $callbackError) {
+                \Log::error('Error sending cancellation callback to SIMPELS', [
+                    'withdrawal_number' => $withdrawal->withdrawal_number,
+                    'error' => $callbackError->getMessage(),
+                    'trace' => $callbackError->getTraceAsString()
+                ]);
+                // Continue - local cancellation succeeded
+            }
 
             $this->dispatch('showNotification', [
                 'type' => 'success',

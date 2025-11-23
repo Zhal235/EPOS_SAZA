@@ -92,10 +92,23 @@
             </div>
 
             @if($activeTab === 'withdrawals')
-            <button wire:click="openWithdrawalModal" 
-                    class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-                <i class="fas fa-plus mr-2"></i>Tarik Saldo RFID
-            </button>
+            @if($this->hasPendingWithdrawals)
+                <div class="flex items-center gap-3">
+                    <button disabled
+                            class="px-4 py-2 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed opacity-60">
+                        <i class="fas fa-lock mr-2"></i>Tarik Saldo RFID
+                    </button>
+                    <div class="flex items-center text-sm text-orange-600 bg-orange-50 px-3 py-2 rounded-lg border border-orange-200">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        <span>Ada {{ $this->pendingWithdrawalsCount }} penarikan menunggu approval SIMPELS</span>
+                    </div>
+                </div>
+            @else
+                <button wire:click="openWithdrawalModal" 
+                        class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                    <i class="fas fa-plus mr-2"></i>Tarik Saldo RFID
+                </button>
+            @endif
             @endif
         </div>
 
@@ -387,20 +400,16 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                                 <div class="flex justify-center space-x-2">
-                                    @if($withdrawal->status === 'pending')
-                                        <button wire:click="approveWithdrawal({{ $withdrawal->id }})" 
-                                                class="text-green-600 hover:text-green-900" title="Setujui">
-                                            <i class="fas fa-check"></i>
-                                        </button>
+                                    @if($withdrawal->status === 'pending' || $withdrawal->status === 'processing')
+                                        {{-- Hanya tombol batalkan untuk withdrawal yang belum completed --}}
                                         <button wire:click="cancelWithdrawal({{ $withdrawal->id }})" 
-                                                class="text-red-600 hover:text-red-900" title="Batalkan">
-                                            <i class="fas fa-times"></i>
+                                                wire:confirm="Yakin ingin membatalkan penarikan ini? Penarikan akan dibatalkan di SIMPELS juga."
+                                                class="px-3 py-1 text-xs bg-red-50 text-red-600 hover:bg-red-100 rounded border border-red-200 transition"
+                                                title="Batalkan Penarikan">
+                                            <i class="fas fa-times mr-1"></i> Batalkan
                                         </button>
-                                    @elseif($withdrawal->status === 'processing')
-                                        <button wire:click="completeWithdrawal({{ $withdrawal->id }})" 
-                                                class="text-blue-600 hover:text-blue-900" title="Selesaikan">
-                                            <i class="fas fa-check-double"></i>
-                                        </button>
+                                    @else
+                                        <span class="text-xs text-gray-400">-</span>
                                     @endif
                                 </div>
                             </td>
@@ -451,7 +460,7 @@
                 </button>
             </div>
 
-            <form wire:submit="createWithdrawal">
+            <div>
                 <!-- Alert untuk validation errors -->
                 @if ($errors->any())
                 <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -474,33 +483,16 @@
                 @endif
 
                 <div class="space-y-4">
-                    <!-- Info Saldo Tersedia -->
-                    <div class="p-4 bg-blue-50 rounded-lg">
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm font-medium text-blue-900">Saldo Tersedia:</span>
-                            <span class="text-lg font-bold text-blue-600">{{ $summary['pending_withdrawal_formatted'] }}</span>
+                    <!-- Info Jumlah yang Akan Ditarik -->
+                    <div class="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg">
+                        <div class="text-center">
+                            <p class="text-sm font-medium text-gray-600 mb-1">Jumlah yang Akan Ditarik</p>
+                            <p class="text-3xl font-bold text-blue-600">{{ $summary['pending_withdrawal_formatted'] ?? 'Rp 0' }}</p>
+                            <p class="text-xs text-blue-600 mt-2">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Semua saldo tersedia akan ditarik secara otomatis
+                            </p>
                         </div>
-                    </div>
-
-                    <!-- Jumlah Penarikan -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Jumlah Penarikan <span class="text-red-500">*</span>
-                        </label>
-                        <input type="number" 
-                               wire:model="withdrawalAmount" 
-                               placeholder="Kosongkan untuk tarik semua saldo"
-                               min="0"
-                               step="1000"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                        <div class="mt-2 p-2 bg-gray-50 rounded text-xs text-gray-600">
-                            <i class="fas fa-info-circle mr-1"></i>
-                            <strong>Catatan:</strong> Sistem akan mengambil transaksi RFID yang belum ditarik. 
-                            Jika nominal yang dimasukkan lebih kecil dari transaksi terkecil, 
-                            sistem akan otomatis menyesuaikan ke atas (rounded up).
-                        </div>
-                        <p class="text-xs text-gray-500 mt-1">💡 Kosongkan jika ingin menarik <strong>semua</strong> saldo tersedia</p>
-                        @error('withdrawalAmount') <span class="text-red-500 text-xs block mt-1">{{ $message }}</span> @enderror
                     </div>
 
                     <!-- Metode Penarikan -->
@@ -554,7 +546,8 @@
                             class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">
                         Batal
                     </button>
-                    <button type="submit" 
+                    <button type="button"
+                            wire:click="createWithdrawal"
                             wire:loading.attr="disabled"
                             wire:target="createWithdrawal"
                             class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
@@ -566,7 +559,7 @@
                         </span>
                     </button>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
     @endif

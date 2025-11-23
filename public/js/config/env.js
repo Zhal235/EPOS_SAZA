@@ -4,8 +4,22 @@ const isProduction = window.location.hostname !== 'localhost' &&
                      window.location.hostname !== '127.0.0.1' &&
                      !window.location.hostname.includes('local');
 
-// Global debug flag
-window.APP_DEBUG = !isProduction;
+// Global debug flag - set to false to disable all logging
+// CHANGE THIS TO false FOR PRODUCTION OR TO REDUCE CONSOLE SPAM
+window.APP_DEBUG = false; // Changed from !isProduction to always false for clean console
+
+// Helper untuk debug logging
+window.debugLog = function(...args) {
+    if (window.APP_DEBUG) {
+        console.log(...args);
+    }
+};
+
+window.debugInfo = function(...args) {
+    if (window.APP_DEBUG) {
+        console.info(...args);
+    }
+};
 
 // Override console methods in production
 if (!window.APP_DEBUG) {

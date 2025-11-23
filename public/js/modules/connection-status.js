@@ -35,10 +35,10 @@ class ConnectionStatusManager {
         // Initial check
         this.checkConnection();
         
-        // Check every 30 seconds
+        // Check every 2 minutes (reduced frequency to save resources)
         this.checkInterval = setInterval(() => {
             this.checkConnection();
-        }, 30000);
+        }, 120000);
         
         // Also check when page becomes visible again
         document.addEventListener('visibilitychange', () => {
@@ -52,7 +52,8 @@ class ConnectionStatusManager {
         if (this.isChecking) return;
         
         this.isChecking = true;
-        this.setStatus('checking', 'Checking...', 'Testing connection to SIMPels API...');
+        // Reduced logging for better performance
+        this.setStatus('checking', 'Checking...', 'Testing connection to SIMPels API...', false);
         
         try {
             // Use the ping endpoint for connection test (no auth required)

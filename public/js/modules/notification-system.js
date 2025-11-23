@@ -14,7 +14,7 @@ class EPOSNotificationSystem {
         this.createContainer();
         this.loadSounds();
         this.setupKeyboardHandlers();
-        console.log('EPOS Notification System initialized');
+        if (window.EPOS_CONFIG?.debug) console.log('EPOS Notification System initialized');
     }
     
     setupKeyboardHandlers() {
@@ -505,4 +505,4 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = EPOSNotificationSystem;
 }
 
-console.log('EPOS Notification System loaded successfully');
+if (window.EPOS_CONFIG?.debug) console.log('EPOS Notification System loaded successfully');
