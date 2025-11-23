@@ -256,7 +256,10 @@ class ProductSeeder extends Seeder
         ];
 
         foreach ($products as $product) {
-            \App\Models\Product::create($product);
+            \App\Models\Product::updateOrCreate(
+                ['sku' => $product['sku']],
+                $product
+            );
         }
     }
 }

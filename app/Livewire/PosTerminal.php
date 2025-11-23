@@ -860,6 +860,7 @@ class PosTerminal extends Component
                 $newRemainingLimit = $paymentResponse['data']['remaining_limit'] ?? ($this->remainingLimit - $this->total);
 
                 // Update component state AND selectedSantri data so UI reflects new values immediately
+                $previousBalance = $this->santriBalance;
                 $this->santriBalance = $newBalance;
                 $this->remainingLimit = $newRemainingLimit;
                 
@@ -867,6 +868,22 @@ class PosTerminal extends Component
                 if ($this->selectedSantri) {
                     $this->selectedSantri['saldo'] = $newBalance;
                     $this->selectedSantri['sisa_limit_hari_ini'] = $newRemainingLimit;
+                }
+
+                // Record a FinancialTransaction for this RFID payment so the finance dashboard shows values
+                try {
+                    $financialService = app(\App\Services\FinancialService::class);
+                    $financialService->recordRfidPayment($transaction, [
+                        'id' => $santriId,
+                        'name' => $santriName,
+                        'rfid' => $rfidValue,
+                        'previous_balance' => $previousBalance,
+                        'new_balance' => $newBalance,
+                    ]);
+
+                    Log::info('Recorded FinancialTransaction for RFID payment', ['transaction' => $transaction->transaction_number]);
+                } catch (\Exception $e) {
+                    Log::error('Failed to save FinancialTransaction for RFID payment', ['error' => $e->getMessage(), 'transaction' => $transaction->transaction_number]);
                 }
 
                 Log::info("SIMPels Payment Success", [

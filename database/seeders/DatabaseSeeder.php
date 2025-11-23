@@ -13,11 +13,24 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // ensure test user exists (idempotent)
+        User::updateOrCreate(
+            ['email' => 'test@example.com'],
+            [
+                'name' => 'Test User',
+                'email' => 'test@example.com',
+                'password' => bcrypt('password'),
+                'email_verified_at' => now(),
+            ]
+        );
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        // run other seeders (keeps seed flow consistent)
+        $this->call([
+            AdminUserSeeder::class,
+            SampleDataSeeder::class,
+            CategorySeeder::class,
+            SupplierSeeder::class,
+            ProductSeeder::class,
         ]);
     }
 }

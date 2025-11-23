@@ -76,7 +76,10 @@ class SupplierSeeder extends Seeder
         ];
 
         foreach ($suppliers as $supplier) {
-            \App\Models\Supplier::create($supplier);
+            \App\Models\Supplier::updateOrCreate(
+                ['email' => $supplier['email']],
+                $supplier
+            );
         }
     }
 }
