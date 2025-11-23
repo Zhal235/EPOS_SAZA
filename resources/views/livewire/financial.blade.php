@@ -442,16 +442,37 @@
 
     <!-- Modal Penarikan Saldo RFID -->
     @if($showWithdrawalModal)
-    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" wire:click.self="closeWithdrawalModal">
         <div class="bg-white rounded-xl p-6 w-full max-w-md mx-4">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-lg font-semibold text-gray-900">Tarik Saldo RFID</h3>
-                <button wire:click="closeWithdrawalModal" class="text-gray-400 hover:text-gray-600">
+                <button type="button" wire:click="closeWithdrawalModal" class="text-gray-400 hover:text-gray-600">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
 
-            <form wire:submit.prevent="createWithdrawal">
+            <form wire:submit="createWithdrawal">
+                <!-- Alert untuk validation errors -->
+                @if ($errors->any())
+                <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-circle text-red-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-red-800">Ada kesalahan pada form:</h3>
+                            <div class="mt-2 text-sm text-red-700">
+                                <ul class="list-disc list-inside space-y-1">
+                                    @foreach ($errors->all() as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                @endif
+
                 <div class="space-y-4">
                     <!-- Info Saldo Tersedia -->
                     <div class="p-4 bg-blue-50 rounded-lg">
@@ -466,11 +487,20 @@
                         <label class="block text-sm font-medium text-gray-700 mb-2">
                             Jumlah Penarikan <span class="text-red-500">*</span>
                         </label>
-                        <input type="number" wire:model="withdrawalAmount" 
+                        <input type="number" 
+                               wire:model="withdrawalAmount" 
                                placeholder="Kosongkan untuk tarik semua saldo"
+                               min="0"
+                               step="1000"
                                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                        <p class="text-xs text-gray-500 mt-1">Kosongkan jika ingin menarik semua saldo tersedia</p>
-                        @error('withdrawalAmount') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                        <div class="mt-2 p-2 bg-gray-50 rounded text-xs text-gray-600">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            <strong>Catatan:</strong> Sistem akan mengambil transaksi RFID yang belum ditarik. 
+                            Jika nominal yang dimasukkan lebih kecil dari transaksi terkecil, 
+                            sistem akan otomatis menyesuaikan ke atas (rounded up).
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">💡 Kosongkan jika ingin menarik <strong>semua</strong> saldo tersedia</p>
+                        @error('withdrawalAmount') <span class="text-red-500 text-xs block mt-1">{{ $message }}</span> @enderror
                     </div>
 
                     <!-- Metode Penarikan -->
@@ -521,12 +551,19 @@
 
                 <div class="flex space-x-3 mt-6">
                     <button type="button" wire:click="closeWithdrawalModal" 
-                            class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+                            class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">
                         Batal
                     </button>
                     <button type="submit" 
-                            class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
-                        <i class="fas fa-hand-holding-usd mr-2"></i>Buat Penarikan
+                            wire:loading.attr="disabled"
+                            wire:target="createWithdrawal"
+                            class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span wire:loading.remove wire:target="createWithdrawal">
+                            <i class="fas fa-hand-holding-usd mr-2"></i>Buat Penarikan
+                        </span>
+                        <span wire:loading wire:target="createWithdrawal">
+                            <i class="fas fa-spinner fa-spin mr-2"></i>Memproses...
+                        </span>
                     </button>
                 </div>
             </form>

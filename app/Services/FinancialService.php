@@ -193,25 +193,38 @@ class FinancialService
                 : null;
 
             if ($requestedAmount) {
-                // Validasi: cek apakah ada transaksi yang pas atau bisa dipenuhi
+                // Ambil transaksi sebanyak mungkin sampai mendekati atau melebihi requested amount
                 $transactions = collect();
                 $currentTotal = 0;
                 
-                foreach ($allTransactions as $transaction) {
+                // Sort transactions by amount ascending untuk ambil yang terkecil dulu
+                $sortedTransactions = $allTransactions->sortBy('amount');
+                
+                foreach ($sortedTransactions as $transaction) {
+                    // Tambahkan transaksi sampai total >= requested atau tidak ada lagi
+                    $transactions->push($transaction);
+                    $currentTotal += $transaction->amount;
+                    
+                    // Jika sudah mencapai atau melebihi target, stop
                     if ($currentTotal >= $requestedAmount) {
                         break;
                     }
-                    $transactions->push($transaction);
-                    $currentTotal += $transaction->amount;
                 }
                 
                 $totalAmount = $transactions->sum('amount');
                 
-                // Jika total amount melebihi requested amount, berarti transaksi terkecil lebih besar dari request
-                if ($totalAmount > $requestedAmount && $transactions->count() == 1) {
-                    throw new \Exception("Tidak bisa menarik Rp " . number_format($requestedAmount, 0, ',', '.') . 
-                                       ". Transaksi terkecil yang tersedia adalah Rp " . number_format($totalAmount, 0, ',', '.') . 
-                                       ". Silakan kosongkan nominal atau sesuaikan dengan transaksi yang tersedia.");
+                // Validasi: pastikan ada transaksi
+                if ($transactions->isEmpty()) {
+                    throw new \Exception("Tidak ada transaksi yang tersedia untuk ditarik.");
+                }
+                
+                // Info: jika total lebih besar dari requested, beri info
+                if ($totalAmount > $requestedAmount) {
+                    Log::info("Withdrawal amount adjusted", [
+                        'requested' => $requestedAmount,
+                        'actual' => $totalAmount,
+                        'reason' => 'Rounded up to cover full transactions'
+                    ]);
                 }
             } else {
                 // Take all available transactions
@@ -245,16 +258,24 @@ class FinancialService
             ]);
 
             // Link transactions to withdrawal and mark them
+            $transactionIds = $transactions->pluck('id')->toArray();
+            
             foreach ($transactions as $transaction) {
                 $withdrawal->transactions()->attach($transaction->id, [
                     'amount' => $transaction->amount
                 ]);
-                
-                // Mark transaction with withdrawal_id
-                $transaction->update([
-                    'withdrawal_id' => $withdrawal->id
-                ]);
             }
+            
+            // Mark all transactions with withdrawal_id using direct DB update
+            DB::table('financial_transactions')
+                ->whereIn('id', $transactionIds)
+                ->update(['withdrawal_id' => $withdrawal->id]);
+                
+            Log::info('Transactions linked to withdrawal', [
+                'withdrawal_id' => $withdrawal->id,
+                'transaction_ids' => $transactionIds,
+                'count' => count($transactionIds)
+            ]);
 
             // Send request to SIMPels API
             try {
@@ -272,15 +293,15 @@ class FinancialService
 
                 $simpelsResponse = $simpelsApi->createWithdrawalRequest([
                     'withdrawal_number' => $withdrawal->withdrawal_number,
+                    'amount' => $totalAmount, // SIMPELS expects 'amount' not 'total_amount'
                     'period_start' => $startDate->format('Y-m-d'),
                     'period_end' => $endDate->format('Y-m-d'),
                     'total_transactions' => $transactions->count(),
-                    'total_amount' => $totalAmount,
                     'withdrawal_method' => $withdrawal->withdrawal_method,
                     'bank_name' => $withdrawal->bank_name,
                     'account_number' => $withdrawal->account_number,
                     'account_name' => $withdrawal->account_name,
-                    'requested_by' => auth()->user()->name,
+                    'requested_by' => auth()->user()->name ?? 'Admin EPOS',
                     'notes' => $withdrawal->notes,
                     'transactions' => $transactionsData,
                 ]);

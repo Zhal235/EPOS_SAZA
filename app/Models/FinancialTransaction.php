@@ -91,6 +91,11 @@ class FinancialTransaction extends Model
         return $this->belongsTo(User::class, 'withdrawn_by');
     }
 
+    public function withdrawal(): BelongsTo
+    {
+        return $this->belongsTo(SimpelsWithdrawal::class, 'withdrawal_id');
+    }
+
     public function withdrawals(): BelongsToMany
     {
         return $this->belongsToMany(
