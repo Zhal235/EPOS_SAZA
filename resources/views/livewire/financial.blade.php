@@ -352,21 +352,19 @@
                                 @endif
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-center">
-                                @if($withdrawal->status === 'pending')
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                        Menunggu
-                                    </span>
-                                @elseif($withdrawal->status === 'processing')
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                        Diproses
-                                    </span>
-                                @elseif($withdrawal->status === 'completed')
+                                @if($withdrawal->simpels_status === 'approved' || $withdrawal->simpels_status === 'completed')
+                                    {{-- Jika sudah approved/completed di SIMPELS, tampilkan Sukses --}}
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                        Selesai
+                                        <i class="fas fa-check-circle mr-1"></i>
+                                        Sukses
                                     </span>
-                                @else
+                                @elseif($withdrawal->status === 'cancelled')
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
                                         Dibatalkan
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                        Menunggu
                                     </span>
                                 @endif
                             </td>
@@ -400,16 +398,20 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                                 <div class="flex justify-center space-x-2">
-                                    @if($withdrawal->status === 'pending' || $withdrawal->status === 'processing')
-                                        {{-- Hanya tombol batalkan untuk withdrawal yang belum completed --}}
+                                    @if(in_array($withdrawal->simpels_status, ['approved', 'completed']))
+                                        {{-- Jika sudah approved/completed di SIMPELS, tidak bisa dibatalkan --}}
+                                        <span class="text-xs text-gray-400">-</span>
+                                    @elseif($withdrawal->status === 'cancelled')
+                                        {{-- Jika sudah dibatalkan --}}
+                                        <span class="text-xs text-gray-400">-</span>
+                                    @else
+                                        {{-- Tampilkan tombol batalkan hanya jika masih pending --}}
                                         <button wire:click="cancelWithdrawal({{ $withdrawal->id }})" 
                                                 wire:confirm="Yakin ingin membatalkan penarikan ini? Penarikan akan dibatalkan di SIMPELS juga."
                                                 class="px-3 py-1 text-xs bg-red-50 text-red-600 hover:bg-red-100 rounded border border-red-200 transition"
                                                 title="Batalkan Penarikan">
                                             <i class="fas fa-times mr-1"></i> Batalkan
                                         </button>
-                                    @else
-                                        <span class="text-xs text-gray-400">-</span>
                                     @endif
                                 </div>
                             </td>
