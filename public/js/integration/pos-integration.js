@@ -602,7 +602,8 @@ function printReceipt(transactionRef, cart, total, customer) {
  * Connection status is now handled only on-demand during actual transactions
  */
 async function testAPIConnection() {
-    console.log('ℹ️ API Connection Test DISABLED - connections tested only during actual transactions');
+    console.warn('🚫 API Connection Test DISABLED - connections tested only during actual transactions');
+    console.trace('testAPIConnection called from:'); // Show where it's called from
     return { success: true, message: 'Connection testing disabled' };
 }
 

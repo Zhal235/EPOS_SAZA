@@ -133,12 +133,12 @@
 
             <!-- Cart & Checkout -->
             <div class="lg:col-span-1">
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 h-full flex flex-col">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 h-full flex flex-col" style="max-height: calc(100vh - 120px);">
                     <!-- Customer Selection -->
                     @if($paymentMethod !== 'rfid')
-                    <div class="mb-6">
+                    <div class="mb-4 flex-shrink-0">
                         <label class="block text-sm font-medium text-gray-700 mb-2">Pelanggan</label>
-                        <select wire:model="customer" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                        <select wire:model="customer" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm">
                             <option value="walk-in">Pelanggan Biasa</option>
                             @foreach(\App\Models\User::regularCustomers()->get() as $regularCustomer)
                                 <option value="{{ $regularCustomer->id }}">{{ $regularCustomer->name }} - {{ $regularCustomer->email }}</option>
@@ -146,14 +146,14 @@
                         </select>
                     </div>
                     @else
-                    <div class="mb-6">
-                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div class="mb-4 flex-shrink-0">
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center">
-                                    <i class="fas fa-id-card text-blue-600 mr-3"></i>
+                                    <i class="fas fa-id-card text-blue-600 mr-2 text-sm"></i>
                                     <div>
-                                        <h4 class="text-sm font-medium text-blue-900">🔴 RFID Payment AKTIF</h4>
-                                        <p class="text-sm text-blue-700">Sistem pembayaran RFID terintegrasi dengan SIMPels</p>
+                                        <h4 class="text-xs font-medium text-blue-900">🔴 RFID Payment AKTIF</h4>
+                                        <p class="text-xs text-blue-700">Sistem pembayaran RFID terintegrasi dengan SIMPels</p>
                                     </div>
                                 </div>
                                 <button 
@@ -167,48 +167,54 @@
                     </div>
                     @endif
 
-                    <!-- Cart Items -->
-                    <div class="flex-1 mb-6">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Item Keranjang</h3>
-                        
+                    <!-- Cart Items - Fixed Height with Scroll -->
+                    <div class="flex-shrink-0 mb-4">
+                        <h3 class="text-base md:text-lg font-semibold text-gray-900 mb-3">Item Keranjang</h3>
+                    </div>
+                    
+                    <div class="flex-1 mb-4 overflow-hidden cart-items-container">
                         @if(count($cart) > 0)
-                            <div class="space-y-3">
-                                @foreach($cart as $item)
-                                    <div class="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                                        <div class="flex-1">
-                                            <h4 class="font-medium text-gray-900 text-sm">{{ $item['name'] }}</h4>
-                                            <p class="text-xs text-gray-500">{{ 'Rp ' . number_format($item['price'], 0, ',', '.') }} per item</p>
+                            <div class="h-full overflow-y-auto scrollbar-thin pr-2">
+                                <div class="space-y-2">
+                                    @foreach($cart as $item)
+                                        <div class="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-gray-50 cart-item">
+                                            <div class="flex-1 min-w-0">
+                                                <h4 class="font-medium text-gray-900 text-sm truncate cart-item-name">{{ $item['name'] }}</h4>
+                                                <p class="text-xs text-gray-500 cart-item-price">{{ 'Rp ' . number_format($item['price'], 0, ',', '.') }} per item</p>
+                                            </div>
+                                            <div class="flex items-center space-x-2 mx-2">
+                                                <button wire:click="updateQuantity({{ $item['id'] }}, {{ $item['quantity'] - 1 }})" class="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 flex-shrink-0">
+                                                    <i class="fas fa-minus text-xs"></i>
+                                                </button>
+                                                <span class="w-6 text-center text-sm font-medium">{{ $item['quantity'] }}</span>
+                                                <button wire:click="updateQuantity({{ $item['id'] }}, {{ $item['quantity'] + 1 }})" class="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 flex-shrink-0">
+                                                    <i class="fas fa-plus text-xs"></i>
+                                                </button>
+                                            </div>
+                                            <div class="text-right flex-shrink-0">
+                                                <p class="font-medium text-gray-900 text-sm">{{ 'Rp ' . number_format($item['total'], 0, ',', '.') }}</p>
+                                                <button wire:click="removeFromCart({{ $item['id'] }})" class="text-red-500 text-xs hover:text-red-700">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
                                         </div>
-                                        <div class="flex items-center space-x-2">
-                                            <button wire:click="updateQuantity({{ $item['id'] }}, {{ $item['quantity'] - 1 }})" class="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200">
-                                                <i class="fas fa-minus text-xs"></i>
-                                            </button>
-                                            <span class="w-8 text-center">{{ $item['quantity'] }}</span>
-                                            <button wire:click="updateQuantity({{ $item['id'] }}, {{ $item['quantity'] + 1 }})" class="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200">
-                                                <i class="fas fa-plus text-xs"></i>
-                                            </button>
-                                        </div>
-                                        <div class="ml-3 text-right">
-                                            <p class="font-medium text-gray-900">{{ 'Rp ' . number_format($item['total'], 0, ',', '.') }}</p>
-                                            <button wire:click="removeFromCart({{ $item['id'] }})" class="text-red-500 text-xs hover:text-red-700">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                @endforeach
+                                    @endforeach
+                                </div>
                             </div>
                         @else
-                            <div class="text-center py-8">
-                                <i class="fas fa-shopping-cart text-gray-400 text-4xl mb-2"></i>
-                                <p class="text-gray-500 text-sm">Keranjang Anda kosong</p>
-                                <p class="text-gray-400 text-xs">Tambahkan produk untuk mulai</p>
+                            <div class="h-full flex items-center justify-center">
+                                <div class="text-center">
+                                    <i class="fas fa-shopping-cart text-gray-400 text-3xl mb-2"></i>
+                                    <p class="text-gray-500 text-sm">Keranjang Anda kosong</p>
+                                    <p class="text-gray-400 text-xs">Tambahkan produk untuk mulai</p>
+                                </div>
                             </div>
                         @endif
                     </div>
 
                     <!-- Order Summary -->
-                    <div class="border-t border-gray-200 pt-4 mb-6">
-                        <div class="space-y-2">
+                    <div class="border-t border-gray-200 pt-3 mb-4 flex-shrink-0">
+                        <div class="space-y-1">
                             <div class="flex justify-between text-sm">
                                 <span class="text-gray-600">Subtotal ({{ $this->totalItems }} item)</span>
                                 <span class="text-gray-900">{{ 'Rp ' . number_format($this->subtotal, 0, ',', '.') }}</span>
@@ -226,72 +232,73 @@
                     </div>
 
                     <!-- Payment Methods -->
-                    <div class="mb-6">
-                        <label class="block text-sm font-medium text-gray-700 mb-3">Metode Pembayaran</label>
-                        <div class="grid grid-cols-2 gap-3">
-                            <button wire:click="selectPaymentMethod('cash')" class="flex flex-col items-center p-3 border-2 {{ $paymentMethod == 'cash' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300' }} rounded-lg">
-                                <i class="fas fa-money-bill-wave {{ $paymentMethod == 'cash' ? 'text-indigo-600' : 'text-gray-600' }} mb-1"></i>
+                    <div class="mb-4 flex-shrink-0">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Metode Pembayaran</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button wire:click="selectPaymentMethod('cash')" class="flex flex-col items-center p-2 border-2 {{ $paymentMethod == 'cash' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300' }} rounded-lg">
+                                <i class="fas fa-money-bill-wave {{ $paymentMethod == 'cash' ? 'text-indigo-600' : 'text-gray-600' }} mb-1 text-sm"></i>
                                 <span class="text-xs font-medium {{ $paymentMethod == 'cash' ? 'text-indigo-600' : 'text-gray-600' }}">Tunai</span>
                             </button>
-                            <button wire:click="selectPaymentMethod('qris')" class="flex flex-col items-center p-3 border-2 {{ $paymentMethod == 'qris' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300' }} rounded-lg">
-                                <i class="fas fa-qrcode {{ $paymentMethod == 'qris' ? 'text-indigo-600' : 'text-gray-600' }} mb-1"></i>
+                            <button wire:click="selectPaymentMethod('qris')" class="flex flex-col items-center p-2 border-2 {{ $paymentMethod == 'qris' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300' }} rounded-lg">
+                                <i class="fas fa-qrcode {{ $paymentMethod == 'qris' ? 'text-indigo-600' : 'text-gray-600' }} mb-1 text-sm"></i>
                                 <span class="text-xs font-medium {{ $paymentMethod == 'qris' ? 'text-indigo-600' : 'text-gray-600' }}">QRIS</span>
                             </button>
-                            <button wire:click="selectPaymentMethod('rfid')" class="flex flex-col items-center p-3 border-2 {{ $paymentMethod == 'rfid' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300' }} rounded-lg">
-                                <i class="fas fa-wifi {{ $paymentMethod == 'rfid' ? 'text-indigo-600' : 'text-gray-600' }} mb-1"></i>
+                            <button wire:click="selectPaymentMethod('rfid')" class="flex flex-col items-center p-2 border-2 {{ $paymentMethod == 'rfid' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300' }} rounded-lg">
+                                <i class="fas fa-wifi {{ $paymentMethod == 'rfid' ? 'text-indigo-600' : 'text-gray-600' }} mb-1 text-sm"></i>
                                 <span class="text-xs font-medium {{ $paymentMethod == 'rfid' ? 'text-indigo-600' : 'text-gray-600' }}">RFID</span>
                             </button>
-                            <button wire:click="selectPaymentMethod('card')" class="flex flex-col items-center p-3 border-2 {{ $paymentMethod == 'card' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300' }} rounded-lg">
-                                <i class="fas fa-credit-card {{ $paymentMethod == 'card' ? 'text-indigo-600' : 'text-gray-600' }} mb-1"></i>
+                            <button wire:click="selectPaymentMethod('card')" class="flex flex-col items-center p-2 border-2 {{ $paymentMethod == 'card' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300' }} rounded-lg">
+                                <i class="fas fa-credit-card {{ $paymentMethod == 'card' ? 'text-indigo-600' : 'text-gray-600' }} mb-1 text-sm"></i>
                                 <span class="text-xs font-medium {{ $paymentMethod == 'card' ? 'text-indigo-600' : 'text-gray-600' }}">Kartu</span>
                             </button>
                         </div>
                     </div>
 
                     <!-- Action Buttons -->
-                    <div class="space-y-3">
+                    <div class="space-y-2 flex-shrink-0">
                         <button wire:click="processPayment" 
                                 @if(count($cart) == 0) disabled @endif
-                                class="w-full py-3 {{ count($cart) > 0 ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800' : 'bg-gray-300 cursor-not-allowed' }} text-white rounded-lg font-medium transition-all">
+                                class="w-full py-3 {{ count($cart) > 0 ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800' : 'bg-gray-300 cursor-not-allowed' }} text-white rounded-lg font-medium transition-all text-sm">
                             <i class="fas fa-credit-card mr-2"></i>Proses Pembayaran
                         </button>
-                        <div class="grid grid-cols-2 gap-3">
+                        <div class="grid grid-cols-2 gap-2">
                             <button wire:click="holdTransaction" 
                                     @if(count($cart) == 0) disabled @endif
-                                    class="py-2 {{ count($cart) > 0 ? 'border-gray-300 text-gray-700 hover:bg-gray-50' : 'border-gray-200 text-gray-400 cursor-not-allowed' }} border rounded-lg text-sm">
+                                    class="py-2 {{ count($cart) > 0 ? 'border-gray-300 text-gray-700 hover:bg-gray-50' : 'border-gray-200 text-gray-400 cursor-not-allowed' }} border rounded-lg text-xs">
                                 <i class="fas fa-save mr-1"></i>Tahan
                             </button>
                             <button wire:click="clearCart" 
                                     @if(count($cart) == 0) disabled @endif
-                                    class="py-2 {{ count($cart) > 0 ? 'border-gray-300 text-gray-700 hover:bg-gray-50' : 'border-gray-200 text-gray-400 cursor-not-allowed' }} border rounded-lg text-sm">
+                                    class="py-2 {{ count($cart) > 0 ? 'border-gray-300 text-gray-700 hover:bg-gray-50' : 'border-gray-200 text-gray-400 cursor-not-allowed' }} border rounded-lg text-xs">
                                 <i class="fas fa-trash mr-1"></i>Kosongkan
                             </button>
                         </div>
                         
-                        <!-- Held Transactions -->
+                        <!-- Held Transactions - Collapsible for space -->
                         @if(count($holdTransactions) > 0)
-                            <div class="mt-4 pt-4 border-t border-gray-200">
-                                <h4 class="text-sm font-medium text-gray-700 mb-2">Transaksi Tertahan</h4>
-                                <div class="space-y-2">
+                            <details class="mt-3 pt-3 border-t border-gray-200">
+                                <summary class="text-sm font-medium text-gray-700 cursor-pointer hover:text-gray-900">
+                                    Transaksi Tertahan ({{ count($holdTransactions) }})
+                                </summary>
+                                <div class="mt-2 space-y-1 max-h-20 overflow-y-auto">
                                     @foreach($holdTransactions as $holdId => $held)
                                         <button wire:click="loadHeldTransaction('{{ $holdId }}')" 
                                                 class="w-full text-left p-2 text-xs border border-gray-200 rounded hover:bg-gray-50">
                                             <div class="flex justify-between">
-                                                <span>{{ $holdId }}</span>
+                                                <span class="truncate">{{ $holdId }}</span>
                                                 <span>{{ 'Rp ' . number_format($held['total'], 0, ',', '.') }}</span>
                                             </div>
-                                            <div class="text-gray-500">{{ $held['created_at'] }}</div>
+                                            <div class="text-gray-500 truncate">{{ $held['created_at'] }}</div>
                                         </button>
                                     @endforeach
                                 </div>
-                            </div>
+                            </details>
                         @endif
 
                         <!-- Quick Access -->
-                        <div class="mt-4 pt-4 border-t border-gray-200">
-                            <h4 class="text-sm font-medium text-gray-700 mb-2">Quick Access</h4>
-                            <a href="{{ route('transactions') }}" class="w-full flex items-center justify-center py-2 text-sm text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors">
-                                <i class="fas fa-history mr-2"></i>View Transaction History
+                        <div class="mt-3 pt-3 border-t border-gray-200">
+                            <a href="{{ route('transactions') }}" class="w-full flex items-center justify-center py-2 text-xs text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors">
+                                <i class="fas fa-history mr-1"></i>Transaction History
                             </a>
                         </div>
                     </div>
@@ -510,7 +517,6 @@
                 </div>
             </div>
         @endif
-    </div>
 
     <!-- RFID Integration Script -->
     <script>
@@ -791,13 +797,6 @@
                 setTimeout(setupLivewireEvents, 1000);
                 return;
             }
-
-            // Prevent multiple listener setup
-            if (window.livewireListenersSetup) {
-                console.log('Livewire listeners already setup, skipping...');
-                return;
-            }
-            window.livewireListenersSetup = true;
             
             // Debounce tracking for notifications
             let lastSuccessTime = 0;
@@ -831,7 +830,27 @@
                     );
                 }
             });
-
+            
+            // Error notification from backend
+            Livewire.on('showRfidError', (event) => {
+                const now = Date.now();
+                if (now - lastErrorTime < NOTIFICATION_DEBOUNCE) {
+                    console.log('Error notification debounced');
+                    return;
+                }
+                lastErrorTime = now;
+                
+                console.log('RFID Error event received:', event);
+                // Livewire v3 wraps data in array
+                const data = Array.isArray(event) ? event[0] : event;
+                
+                window.notificationSystem.rfidError(
+                    data.errorMessage || 'Unknown error',
+                    data.customerName || 'Unknown',
+                    data.amount || 0
+                );
+            });
+            
             // Success modal handler
             Livewire.on('showSuccessModal', (data) => {
                 console.log('Success modal event received:', data);
@@ -950,4 +969,126 @@
     }
     </script>
 
+    <!-- Custom CSS untuk Tablet POS Terminal -->
+    <style>
+        /* Custom scrollbar styling */
+        .scrollbar-thin {
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e0 #f7fafc;
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar-track {
+            background: #f7fafc;
+            border-radius: 3px;
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 3px;
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+            background: #a0aec0;
+        }
+        
+        /* Tablet optimizations */
+        @media screen and (min-width: 768px) and (max-width: 1024px) {
+            /* Panel kanan max height di tablet */
+            .lg\\:col-span-1 > div {
+                max-height: calc(100vh - 140px) !important;
+            }
+            
+            /* Keranjang area di tablet - tinggi tetap dan scrollable */
+            .cart-container {
+                max-height: 250px !important;
+                min-height: 200px !important;
+            }
+        }
+        
+        /* Tablet landscape - lebih pendek */
+        @media screen and (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
+            .lg\\:col-span-1 > div {
+                max-height: calc(100vh - 120px) !important;
+            }
+            
+            .cart-container {
+                max-height: 180px !important;
+                min-height: 150px !important;
+            }
+        }
+        
+        /* Mobile optimizations */
+        @media screen and (max-width: 767px) {
+            .lg\\:col-span-1 > div {
+                max-height: calc(100vh - 100px) !important;
+            }
+            
+            .cart-container {
+                max-height: 200px !important;
+                min-height: 150px !important;
+            }
+        }
+        
+        /* Smooth scrolling */
+        .smooth-scroll {
+            scroll-behavior: smooth;
+        }
+        
+        /* Hide scrollbar on mobile but keep functionality */
+        @media screen and (max-width: 767px) {
+            .scrollbar-thin {
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+            }
+            
+            .scrollbar-thin::-webkit-scrollbar {
+                display: none;
+            }
+        }
+        
+        /* Ensure proper spacing on all devices */
+        .pos-cart-panel {
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Force fixed height for cart items container */
+        .cart-items-container {
+            height: 300px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        /* Responsive adjustments for cart height */
+        @media screen and (max-width: 1024px) {
+            .cart-items-container {
+                height: 250px !important;
+                max-height: 250px !important;
+            }
+        }
+        
+        @media screen and (max-width: 768px) {
+            .cart-items-container {
+                height: 200px !important;
+                max-height: 200px !important;
+            }
+        }
+        
+        /* Responsive text sizing */
+        @media screen and (max-width: 640px) {
+            .cart-item-name {
+                font-size: 0.75rem;
+                line-height: 1rem;
+            }
+            
+            .cart-item-price {
+                font-size: 0.625rem;
+            }
+        }
+    </style>
 </div>
