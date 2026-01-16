@@ -156,7 +156,8 @@
 
                         <!-- Header Actions -->
                         <div class="flex items-center space-x-4">
-                            <!-- SIMPels API Connection Status -->
+                            <!-- SIMPels API Connection Status - HIDDEN -->
+                            <!--
                             <div class="relative group">
                                 <div id="api-connection-status" class="flex items-center space-x-2 px-3 py-2 rounded-lg transition-all cursor-pointer">
                                     <div class="flex items-center space-x-2">
@@ -165,7 +166,6 @@
                                     </div>
                                 </div>
                                 
-                                <!-- Tooltip -->
                                 <div class="absolute right-0 top-full mt-2 w-64 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
                                     <div class="p-3">
                                         <div class="font-semibold mb-1">SIMPels API Status</div>
@@ -179,6 +179,7 @@
                                     <div class="absolute top-0 right-4 transform -translate-y-1 w-2 h-2 bg-gray-900 rotate-45"></div>
                                 </div>
                             </div>
+                            -->
 
                             <!-- Notifications -->
                             <div class="relative">
@@ -278,7 +279,7 @@
         <!-- SIMPels API Integration Scripts -->
         <script src="/js/config/api.js"></script>
         <script src="/js/utils/api.js"></script>
-        <script src="/js/modules/connection-status.js"></script>
+        <!-- <script src="/js/modules/connection-status.js"></script> DISABLED: Connection status widget hidden -->
         <script src="/js/modules/transaction-logger.js"></script>
         
         @php
