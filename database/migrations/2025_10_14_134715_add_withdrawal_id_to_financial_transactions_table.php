@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('financial_transactions', function (Blueprint $table) {
-            $table->foreignId('withdrawal_id')->nullable()->after('user_id')->constrained('simpels_withdrawals')->onDelete('set null');
+            $table->unsignedBigInteger('withdrawal_id')->nullable()->after('user_id');
+            $table->foreign('withdrawal_id', 'fk_financial_transactions_withdrawal_id')
+                  ->references('id')->on('simpels_withdrawals')->onDelete('set null');
         });
     }
 
@@ -22,7 +24,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('financial_transactions', function (Blueprint $table) {
-            $table->dropForeign(['withdrawal_id']);
+            $table->dropForeign('fk_financial_transactions_withdrawal_id');
             $table->dropColumn('withdrawal_id');
         });
     }

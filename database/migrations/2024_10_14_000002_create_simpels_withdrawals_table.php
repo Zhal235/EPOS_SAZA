@@ -53,10 +53,16 @@ return new class extends Migration
         // Pivot table untuk link financial transactions dengan withdrawal
         Schema::create('financial_transaction_withdrawal', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('financial_transaction_id')->constrained()->onDelete('cascade');
-            $table->foreignId('simpels_withdrawal_id')->constrained()->onDelete('cascade');
+            $table->unsignedBigInteger('financial_transaction_id');
+            $table->unsignedBigInteger('simpels_withdrawal_id');
             $table->decimal('amount', 15, 2); // Amount yang ditarik dari transaksi ini
             $table->timestamps();
+            
+            // Custom constraint names to avoid MySQL 64-character limit
+            $table->foreign('financial_transaction_id', 'fk_ft_withdrawal_ft_id')
+                  ->references('id')->on('financial_transactions')->onDelete('cascade');
+            $table->foreign('simpels_withdrawal_id', 'fk_ft_withdrawal_sw_id')
+                  ->references('id')->on('simpels_withdrawals')->onDelete('cascade');
             
             $table->unique(['financial_transaction_id', 'simpels_withdrawal_id'], 'ft_sw_unique');
         });
