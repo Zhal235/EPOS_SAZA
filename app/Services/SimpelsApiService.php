@@ -124,13 +124,51 @@ class SimpelsApiService
     /**
      * Get santri by RFID tag (UID)
      */
-    public function getSantriByRfid($rfidTag)
+    public function getSantriByRfid($uid)
     {
-        // Use new SIMPELS 2.0 endpoint: GET /api/v1/wallets/rfid/uid/{uid}
-        // This endpoint already returns spent_today and sisa_limit_hari_ini calculated by backend
-        $response = $this->makeRequest('GET', $this->endpoints['rfid_lookup'] . '/' . $rfidTag);
-        
-        return $response;
+        try {
+            // Use new SIMPELS 2.0 endpoint: GET /api/v1/wallets/rfid/uid/{uid}
+            // This endpoint already returns spent_today and sisa_limit_hari_ini calculated by backend
+            $response = $this->makeRequest('GET', $this->endpoints['rfid_lookup'] . '/' . $uid);
+            
+            // Log successful lookup
+            Log::info('SIMPELS getSantriByRfid success', [
+                'uid' => $uid,
+                'santri_found' => isset($response['success']) && $response['success']
+            ]);
+            
+            return $response;
+        } catch (\Exception $e) {
+            Log::error('SIMPELS getSantriByRfid failed', [
+                'uid' => $uid,
+                'error' => $e->getMessage()
+            ]);
+            
+            return [
+                'success' => false,
+                'message' => 'Failed to lookup santri: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    public function getSampleSantri()
+    {
+        try {
+            $response = $this->makeRequest('GET', '/epos/sample-santri');
+            
+            Log::info('SIMPELS getSampleSantri success');
+            
+            return $response;
+        } catch (\Exception $e) {
+            Log::error('SIMPELS getSampleSantri failed', [
+                'error' => $e->getMessage()
+            ]);
+            
+            return [
+                'success' => false,
+                'message' => 'Failed to get sample santri: ' . $e->getMessage()
+            ];
+        }
     }
 
     /**
@@ -153,44 +191,78 @@ class SimpelsApiService
     }
 
     /**
+     * Process transaction (alias for processPayment - more intuitive naming)
+     */
+    public function postTransaction($data)
+    {
+        try {
+            // Validate required fields
+            if (!isset($data['santri_id']) || !isset($data['amount'])) {
+                throw new \Exception('Missing required fields: santri_id and amount are required');
+            }
+
+            // Format data for SIMPELS EPOS endpoint
+            $transactionData = [
+                'santri_id' => $data['santri_id'],
+                'amount' => (float) $data['amount'],
+                'epos_txn_id' => $data['transaction_ref'] ?? 'EPOS-' . now()->format('YmdHis') . '-' . uniqid(),
+                'meta' => [
+                    'items' => $data['items'] ?? [],
+                    'description' => $data['description'] ?? 'EPOS Transaction',
+                    'cashier' => $data['cashier'] ?? auth()->user()->name ?? 'EPOS System',
+                    'terminal_id' => $data['terminal_id'] ?? gethostname(),
+                    'timestamp' => now()->timezone('Asia/Jakarta')->toDateTimeString()
+                ]
+            ];
+
+            Log::info("SIMPELS postTransaction request", $transactionData);
+            
+            $result = $this->makeRequest('POST', $this->endpoints['epos_transaction'], $transactionData);
+            
+            if (!$result || !isset($result['success']) || !$result['success']) {
+                $errorMsg = $result['message'] ?? 'Unknown error from SIMPELS';
+                Log::error('SIMPELS transaction rejected', ['result' => $result]);
+                throw new \Exception('Transaction failed: ' . $errorMsg);
+            }
+
+            Log::info("SIMPELS postTransaction success", [
+                'transaction_id' => $transactionData['epos_txn_id'],
+                'new_balance' => $result['data']['wallet_balance'] ?? null
+            ]);
+
+            return [
+                'success' => true,
+                'data' => [
+                    'transaction_id' => $transactionData['epos_txn_id'],
+                    'wallet_transaction_id' => $result['data']['transaction']['id'] ?? null,
+                    'new_balance' => $result['data']['wallet_balance'] ?? null,
+                    'remaining_limit' => $result['data']['remaining_limit'] ?? null,
+                    'spent_today' => $result['data']['spent_today'] ?? null,
+                    'limit_harian' => $result['data']['limit_harian'] ?? null,
+                    'simpels_response' => $result
+                ]
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('SIMPELS postTransaction failed', [
+                'data' => $data,
+                'error' => $e->getMessage()
+            ]);
+            
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
      * Process payment and deduct balance from santri account via SIMPELS 2.0 EPOS endpoint
      */
     public function processPayment($paymentData)
     {
-        // Use SIMPELS 2.0 EPOS transaction endpoint: POST /api/v1/wallets/epos/transaction
-        $eposData = [
-            'santri_id' => $paymentData['santri_id'],
-            'amount' => $paymentData['amount'],
-            'epos_txn_id' => $paymentData['transaction_ref'],
-            'meta' => [
-                'items' => $paymentData['items'] ?? [],
-                'description' => $paymentData['description'] ?? 'EPOS Transaction',
-                'cashier' => auth()->user()->name ?? 'EPOS System',
-                'terminal_id' => gethostname(),
-            ]
-        ];
-
-        Log::info("Processing EPOS payment through SIMPELS 2.0 API", $eposData);
-        
-        $result = $this->makeRequest('POST', $this->endpoints['epos_transaction'], $eposData);
-        
-        if (!$result || !isset($result['success']) || !$result['success']) {
-            $errorMsg = $result['message'] ?? 'Unknown error';
-            Log::error('SIMPELS payment rejected', ['result' => $result]);
-            throw new \Exception('Failed to process payment: ' . $errorMsg);
-        }
-
-        return [
-            'success' => true,
-            'data' => [
-                'new_balance' => $result['data']['wallet_balance'] ?? $result['data']['balance_after'] ?? null,
-                'remaining_limit' => $result['data']['remaining_limit'] ?? null,
-                'santri_name' => $result['data']['santri_name'] ?? null,
-                'transaction_id' => $paymentData['transaction_ref'],
-                'wallet_transaction_id' => $result['data']['transaction']['id'] ?? $result['data']['transaction_id'] ?? null,
-                'simpels_response' => $result
-            ]
-        ];
+        // Use the new postTransaction method for consistency
+        return $this->postTransaction($paymentData);
     }
 
     /**

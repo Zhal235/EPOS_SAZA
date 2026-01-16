@@ -6,6 +6,7 @@ use App\Livewire\Products;
 use App\Livewire\Dashboard;
 use App\Livewire\TransactionHistory;
 use App\Livewire\SalesReport;
+use App\Http\Controllers\SimpelsTestController;
 
 // Root route - redirect based on authentication status
 Route::get('/', function () {
@@ -55,3 +56,13 @@ Route::middleware(['auth'])->group(function () {
 
 // Auth routes
 require __DIR__.'/auth.php';
+
+// SIMPELS Integration Test Routes (Development Only)
+Route::prefix('simpels')->group(function () {
+    Route::get('test-connection', [SimpelsTestController::class, 'testConnection'])->name('simpels.test.connection');
+    Route::get('test-santri/{uid}', [SimpelsTestController::class, 'testSantriLookup'])->name('simpels.test.santri');
+    Route::post('test-transaction', [SimpelsTestController::class, 'testTransaction'])->name('simpels.test.transaction');
+    Route::get('test-all-santri', [SimpelsTestController::class, 'testAllSantri'])->name('simpels.test.all-santri');
+    Route::get('get-sample-santri', [SimpelsTestController::class, 'getSampleSantri'])->name('simpels.get.sample-santri');
+    Route::get('dashboard', [SimpelsTestController::class, 'dashboard'])->name('simpels.dashboard');
+});
