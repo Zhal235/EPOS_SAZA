@@ -590,7 +590,7 @@ class PosTerminal extends Component
                     'success' => $apiResponse['success'] ?? false,
                     'has_data' => isset($apiResponse['data'])
                 ]);
-            } catch (\Exception $apiError) {
+            } catch \Exception $apiError) {
                 Log::error('SIMPels API error', [
                     'rfid' => $rfidNumber,
                     'error' => $apiError->getMessage()
@@ -600,7 +600,20 @@ class PosTerminal extends Component
                 if (str_contains($apiError->getMessage(), '404') || str_contains($apiError->getMessage(), 'tidak ditemukan')) {
                     throw new \Exception("RFID '{$rfidNumber}' tidak terdaftar atau tidak aktif!\n\nGunakan RFID yang valid seperti:\n• 2488698539\n• 2491081819\n• 2664790299");
                 } else {
-                    throw new \Exception('Koneksi ke SIMPels API gagal!\n\nPastikan:\n1. Server SIMPels berjalan di port 8000\n2. Database SIMPels terkoneksi\n3. Endpoint API dapat diakses');
+                    // API Connection Error - Show specific alert
+                    $this->dispatch('showSimpelsConnectionError', [
+                        'title' => '🔌 Koneksi Server SIMPels Terputus',
+                        'message' => 'Tidak dapat terhubung ke server SIMPels untuk memproses pembayaran RFID.',
+                        'details' => [
+                            'Server SIMPels mungkin sedang offline',
+                            'Periksa koneksi jaringan',
+                            'Hubungi administrator untuk restart server',
+                            'Gunakan pembayaran tunai sebagai alternatif'
+                        ],
+                        'error' => $apiError->getMessage()
+                    ]);
+                    
+                    throw new \Exception('Koneksi ke Server SIMPels Gagal.\n\nPastikan server aktif atau hubungi admin.\n\nSilakan gunakan pembayaran TUNAI sebagai alternatif.');
                 }
             }
             
@@ -899,12 +912,33 @@ class PosTerminal extends Component
                     'rfid' => $santriRfid
                 ]);
                 
-                // Simplify error message - extract only the core message
-                $errorMsg = $apiError->getMessage();
-                // Remove "Payment processing failed: " prefix if exists
-                $errorMsg = str_replace('Payment processing failed: ', '', $errorMsg);
-                
-                throw new \Exception($errorMsg);
+                // Check for connection vs payment errors
+                if (str_contains($apiError->getMessage(), 'Connection') || 
+                    str_contains($apiError->getMessage(), 'timeout') ||
+                    str_contains($apiError->getMessage(), 'network') ||
+                    str_contains($apiError->getMessage(), 'unavailable')) {
+                    
+                    // Connection Error - Show specific alert
+                    $this->dispatch('showSimpelsConnectionError', [
+                        'title' => '🔌 Server SIMPels Tidak Dapat Diakses',
+                        'message' => 'Koneksi ke server SIMPels terputus saat memproses pembayaran.',
+                        'details' => [
+                            'Transaksi dibatalkan untuk keamanan data',
+                            'Tidak ada saldo yang terpotong',
+                            'Silakan coba lagi setelah server aktif',
+                            'Gunakan pembayaran TUNAI jika mendesak'
+                        ],
+                        'error' => $apiError->getMessage()
+                    ]);
+                    
+                    throw new \Exception('Server SIMPels Tidak Tersedia.\n\nTransaksi DIBATALKAN untuk mencegah kesalahan saldo.\n\nGunakan pembayaran TUNAI atau tunggu hingga server kembali aktif.');
+                } else {
+                    // Payment/Business Logic Error
+                    $errorMsg = $apiError->getMessage();
+                    $errorMsg = str_replace('Payment processing failed: ', '', $errorMsg);
+                    
+                    throw new \Exception($errorMsg);
+                }
             }
 
             DB::commit();

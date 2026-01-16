@@ -148,6 +148,11 @@ class TransactionProcessor {
             // Validate transaction
             await this.validateTransaction(customer, cart, totalAmount);
             
+            // For RFID payments, validate API connection BEFORE processing
+            if (paymentMethod === 'rfid') {
+                await this.validateApiConnection();
+            }
+            
             // Create transaction description
             const description = cart.map(item => 
                 `${item.name} (${item.quantity}x)`
@@ -162,7 +167,8 @@ class TransactionProcessor {
             );
             
             if (!deductResponse.success) {
-                throw new Error(deductResponse.message || 'Pembayaran gagal');
+                // API rejected the transaction - this is a business rule rejection, not a connection error
+                throw new Error(deductResponse.message || 'Pembayaran ditolak oleh sistem');
             }
             
             // Update transaction status
@@ -196,6 +202,18 @@ class TransactionProcessor {
             }
             
             this.logTransactionError(this.currentTransaction, error);
+            
+            // Check if this is a connection error vs business logic error
+            if (this.isConnectionError(error)) {
+                // Trigger connection error alert
+                if (window.simpelsConnectionAlert) {
+                    window.simpelsConnectionAlert.showQuickAlert(
+                        'Server SIMPels tidak dapat diakses. Transaksi DIBATALKAN untuk keamanan data.',
+                        'error'
+                    );
+                }
+            }
+            
             throw error;
         } finally {
             this.isProcessing = false;
@@ -445,6 +463,48 @@ class TransactionProcessor {
         this.offlineQueue = [];
         this.saveOfflineQueue();
         console.log('Offline queue cleared');
+    }
+    
+    /**
+     * Validate API connection before processing RFID transactions
+     */
+    async validateApiConnection() {
+        try {
+            // Quick ping to ensure API is available
+            if (typeof simpelsAPI === 'undefined' || !simpelsAPI.testConnection) {
+                throw new Error('SIMPels API service not available');
+            }
+            
+            const connectionTest = await simpelsAPI.testConnection();
+            
+            if (!connectionTest || !connectionTest.success) {
+                throw new Error('SIMPels API connection test failed');
+            }
+            
+            return true;
+        } catch (error) {
+            console.error('API Connection validation failed:', error.message);
+            throw new Error(`Koneksi ke server SIMPels gagal: ${error.message}`);
+        }
+    }
+    
+    /**
+     * Check if error is connection related vs business logic
+     */
+    isConnectionError(error) {
+        const connectionKeywords = [
+            'connection',
+            'timeout',
+            'network',
+            'unreachable',
+            'failed to fetch',
+            'server tidak dapat diakses',
+            'koneksi gagal',
+            'tidak tersedia'
+        ];
+        
+        const errorMessage = error.message.toLowerCase();
+        return connectionKeywords.some(keyword => errorMessage.includes(keyword));
     }
 }
 
