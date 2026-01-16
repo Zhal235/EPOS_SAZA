@@ -258,12 +258,18 @@ class TransactionLogger {
     }
     
     /**
-     * Start periodic log sync
+     * Start periodic log sync (optimized)
      */
     startPeriodicSync() {
-        setInterval(() => {
-            this.flushLogs();
-        }, this.autoSyncInterval);
+        // Only sync when there are logs and page is visible
+        const smartSync = () => {
+            if (this.logBuffer.length > 0 && !document.hidden) {
+                this.flushLogs();
+            }
+        };
+        
+        // Sync every 10 minutes (increased from default to reduce load)
+        setInterval(smartSync, 10 * 60 * 1000);
         
         // Flush on page unload
         window.addEventListener('beforeunload', () => {
@@ -272,7 +278,7 @@ class TransactionLogger {
         
         // Flush on visibility change (user switches tabs)
         document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
+            if (document.hidden && this.logBuffer.length > 0) {
                 this.flushLogs();
             }
         });

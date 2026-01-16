@@ -590,7 +590,7 @@ class PosTerminal extends Component
                     'success' => $apiResponse['success'] ?? false,
                     'has_data' => isset($apiResponse['data'])
                 ]);
-            } catch \Exception $apiError) {
+            } catch (\Exception $apiError) {
                 Log::error('SIMPels API error', [
                     'rfid' => $rfidNumber,
                     'error' => $apiError->getMessage()
@@ -674,13 +674,25 @@ class PosTerminal extends Component
             // Reset RFID state completely on error
             $this->resetRfidState();
             
-            // Show error notification
+            // Show error notification with proper dispatch
             $this->dispatch('showNotification', [
                 'type' => 'error',
                 'title' => '❌ RFID Error',
                 'message' => $e->getMessage(),
-                'options' => ['duration' => 5000]
+                'options' => ['duration' => 6000, 'sound' => true]
             ]);
+            
+            // Also dispatch SweetAlert modal for critical connection errors
+            if (str_contains($e->getMessage(), 'Koneksi ke Server SIMPels Gagal')) {
+                $this->dispatch('swal:modal', [
+                    'type' => 'error',
+                    'title' => '🔌 Koneksi Server Terputus',
+                    'text' => 'Server SIMPels tidak dapat diakses. Pastikan server aktif atau gunakan pembayaran TUNAI.',
+                    'confirmButtonText' => 'Mengerti',
+                    'showCancelButton' => true,
+                    'cancelButtonText' => 'Coba Lagi'
+                ]);
+            }
             
             Log::error('RFID Scan failed', ['rfid' => $rfidNumber, 'error' => $e->getMessage()]);
             
@@ -978,6 +990,26 @@ class PosTerminal extends Component
                 'amount' => $this->total,
                 'trace' => $e->getTraceAsString()
             ]);
+            
+            // Enhanced error notification with SweetAlert for critical errors
+            if (str_contains($e->getMessage(), 'Server SIMPels Tidak Tersedia')) {
+                $this->dispatch('swal:modal', [
+                    'type' => 'error',
+                    'title' => '🔌 Server SIMPels Offline',
+                    'text' => 'Koneksi ke server SIMPels terputus. Transaksi dibatalkan untuk keamanan data.',
+                    'footer' => 'Gunakan pembayaran TUNAI atau tunggu server kembali aktif.',
+                    'confirmButtonText' => 'Gunakan Tunai',
+                    'showCancelButton' => true,
+                    'cancelButtonText' => 'Tutup'
+                ]);
+            } else {
+                $this->dispatch('swal:modal', [
+                    'type' => 'error',
+                    'title' => '❌ Pembayaran Gagal',
+                    'text' => $e->getMessage(),
+                    'confirmButtonText' => 'OK'
+                ]);
+            }
             
             $this->dispatch('showRfidError', [
                 'errorMessage' => $e->getMessage(),

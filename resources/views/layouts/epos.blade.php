@@ -11,6 +11,9 @@
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700&display=swap" rel="stylesheet" />
         <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
+        
+        <!-- SweetAlert2 for Enhanced Modal Alerts -->
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -281,6 +284,7 @@
         <script src="/js/utils/api.js"></script>
         <!-- <script src="/js/modules/connection-status.js"></script> DISABLED: Connection status widget hidden -->
         <script src="/js/modules/simpels-connection-alert.js"></script>
+        <script src="/js/modules/epos-sweetalert.js"></script>
         <script src="/js/modules/transaction-logger.js"></script>
         
         @php
@@ -317,12 +321,31 @@
             });
         });
         
-        // Auto-update time
-        setInterval(() => {
-            document.querySelectorAll('[data-time]').forEach(el => {
-                el.textContent = new Date().toLocaleTimeString();
-            });
-        }, 1000);
+        // Auto-update time (optimized - only update visible elements)
+        let timeUpdateInterval;
+        function startTimeUpdater() {
+            // Only start if there are time elements to update
+            if (document.querySelectorAll('[data-time]').length > 0) {
+                timeUpdateInterval = setInterval(() => {
+                    document.querySelectorAll('[data-time]').forEach(el => {
+                        el.textContent = new Date().toLocaleTimeString();
+                    });
+                }, 1000);
+            }
+        }
+        
+        // Start time updater only when needed
+        document.addEventListener('DOMContentLoaded', startTimeUpdater);
+        
+        // Stop interval when page becomes hidden
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && timeUpdateInterval) {
+                clearInterval(timeUpdateInterval);
+                timeUpdateInterval = null;
+            } else if (!document.hidden && !timeUpdateInterval) {
+                startTimeUpdater();
+            }
+        });
         
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {

@@ -307,15 +307,29 @@ class TransactionProcessor {
      * Start periodic offline sync
      */
     startOfflineSync() {
-        // Sync every 5 minutes
-        setInterval(() => {
-            this.syncOfflineTransactions();
-        }, 5 * 60 * 1000);
+        // Only sync if there are items in queue and page is visible
+        const syncInterval = () => {
+            if (this.offlineQueue.length > 0 && !document.hidden) {
+                this.syncOfflineTransactions();
+            }
+        };
         
-        // Initial sync after 10 seconds
+        // Sync every 10 minutes (increased from 5 minutes to reduce load)
+        setInterval(syncInterval, 10 * 60 * 1000);
+        
+        // Initial sync after 30 seconds (increased from 10 seconds)
         setTimeout(() => {
-            this.syncOfflineTransactions();
-        }, 10000);
+            if (this.offlineQueue.length > 0) {
+                this.syncOfflineTransactions();
+            }
+        }, 30000);
+        
+        // Sync when page becomes visible again
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && this.offlineQueue.length > 0) {
+                setTimeout(syncInterval, 5000); // Delayed sync when page becomes active
+            }
+        });
     }
     
     /**

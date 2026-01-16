@@ -1,17 +1,28 @@
-// EPOS Connection Status Manager
-class ConnectionStatusManager {
+// EPOS Connection Status Manager - DISABLED
+// This module has been disabled to prevent constant API pinging
+// Connection status is now handled on-demand during transactions only
+
+console.log('Connection Status Manager DISABLED - no background checking');
+
+// Export empty objects to prevent errors if other code references this
+window.ConnectionStatusManager = class {
     constructor() {
-        this.indicator = null;
-        this.statusText = null;
-        this.statusContainer = null;
-        this.detailsElement = null;
-        this.lastCheckElement = null;
-        this.checkInterval = null;
-        this.isChecking = false;
-        this.lastStatus = null;
-        
-        this.init();
+        console.warn('ConnectionStatusManager is disabled');
     }
+    
+    init() { /* disabled */ }
+    startMonitoring() { /* disabled */ }
+    checkConnection() { return Promise.resolve(); }
+    forceCheck() { /* disabled */ }
+    getStatus() { return 'disabled'; }
+    isConnected() { return true; } // Always return true to avoid blocking
+    stop() { /* disabled */ }
+};
+
+window.connectionStatus = new window.ConnectionStatusManager();
+
+// Prevent initialization
+if (false) { // Never execute the old code
     
     init() {
         // Get DOM elements
