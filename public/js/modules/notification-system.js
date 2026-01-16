@@ -227,6 +227,17 @@ class EPOSNotificationSystem {
         if (!type) type = 'info';
         if (!title) title = 'Notification';
         if (!message) message = '';
+
+        // Duplicate protection - check if same notification already exists
+        const duplicateKey = `${type}-${title}-${message}`;
+        const existingNotification = this.notifications.find(n => 
+            n.duplicateKey === duplicateKey
+        );
+        
+        if (existingNotification) {
+            console.log('Duplicate notification prevented:', duplicateKey);
+            return existingNotification; // Return existing instead of creating new
+        }
         
         // If this is a session message, clear previous session messages first
         if (options.sessionMessage) {
@@ -234,6 +245,7 @@ class EPOSNotificationSystem {
         }
         
         const notification = this.createNotification(type, title, message, options);
+        notification.duplicateKey = duplicateKey; // Store duplicate key
         
         // Remove oldest notification if we have too many (but keep modal notifications)
         if (this.notifications.length >= this.maxNotifications) {

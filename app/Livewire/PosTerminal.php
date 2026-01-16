@@ -668,15 +668,15 @@ class PosTerminal extends Component
         } catch (\Exception $e) {
             // Reset RFID state completely on error
             $this->resetRfidState();
-            
-            // Show error notification with proper dispatch
+
+            // Show single error notification via showNotification only
             $this->dispatch('showNotification', [
                 'type' => 'error',
                 'title' => '❌ RFID Error',
                 'message' => $e->getMessage(),
                 'options' => ['duration' => 6000, 'sound' => true]
             ]);
-            
+
             // Also dispatch SweetAlert modal for critical connection errors
             if (str_contains($e->getMessage(), 'Koneksi ke Server SIMPels Gagal')) {
                 $this->dispatch('swal:modal', [
@@ -688,9 +688,9 @@ class PosTerminal extends Component
                     'cancelButtonText' => 'Coba Lagi'
                 ]);
             }
-            
+
             Log::error('RFID Scan failed', ['rfid' => $rfidNumber, 'error' => $e->getMessage()]);
-            
+
             // Dispatch event to close modal in frontend
             $this->dispatch('rfidScanCompleted');
         }
@@ -993,6 +993,7 @@ class PosTerminal extends Component
                     'cancelButtonText' => 'Tutup'
                 ]);
             } else {
+                // Show simple error modal
                 $this->dispatch('swal:modal', [
                     'type' => 'error',
                     'title' => '❌ Pembayaran Gagal',
@@ -1000,19 +1001,7 @@ class PosTerminal extends Component
                     'confirmButtonText' => 'OK'
                 ]);
             }
-            
-            $this->dispatch('showRfidError', [
-                'errorMessage' => $e->getMessage(),
-                'customerName' => $santriName ?? 'Unknown',
-                'amount' => $this->total ?? 0,
-                'suggestions' => [
-                    'Periksa koneksi internet',
-                    'Pastikan saldo santri mencukupi', 
-                    'Coba scan ulang RFID',
-                    'Gunakan pembayaran tunai sebagai alternatif'
-                ]
-            ]);
-            
+
             return false;
         }
     }

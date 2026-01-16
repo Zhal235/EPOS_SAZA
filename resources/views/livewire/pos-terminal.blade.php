@@ -791,6 +791,13 @@
                 setTimeout(setupLivewireEvents, 1000);
                 return;
             }
+
+            // Prevent multiple listener setup
+            if (window.livewireListenersSetup) {
+                console.log('Livewire listeners already setup, skipping...');
+                return;
+            }
+            window.livewireListenersSetup = true;
             
             // Debounce tracking for notifications
             let lastSuccessTime = 0;
@@ -824,27 +831,7 @@
                     );
                 }
             });
-            
-            // Error notification from backend
-            Livewire.on('showRfidError', (event) => {
-                const now = Date.now();
-                if (now - lastErrorTime < NOTIFICATION_DEBOUNCE) {
-                    console.log('Error notification debounced');
-                    return;
-                }
-                lastErrorTime = now;
-                
-                console.log('RFID Error event received:', event);
-                // Livewire v3 wraps data in array
-                const data = Array.isArray(event) ? event[0] : event;
-                
-                window.notificationSystem.rfidError(
-                    data.errorMessage || 'Unknown error',
-                    data.customerName || 'Unknown',
-                    data.amount || 0
-                );
-            });
-            
+
             // Success modal handler
             Livewire.on('showSuccessModal', (data) => {
                 console.log('Success modal event received:', data);
