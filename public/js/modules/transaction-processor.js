@@ -480,26 +480,12 @@ class TransactionProcessor {
     }
     
     /**
-     * Validate API connection before processing RFID transactions
+     * Validate API connection (DISABLED)
+     * Connection validation is now done only during actual transaction processing
      */
     async validateApiConnection() {
-        try {
-            // Quick ping to ensure API is available
-            if (typeof simpelsAPI === 'undefined' || !simpelsAPI.testConnection) {
-                throw new Error('SIMPels API service not available');
-            }
-            
-            const connectionTest = await simpelsAPI.testConnection();
-            
-            if (!connectionTest || !connectionTest.success) {
-                throw new Error('SIMPels API connection test failed');
-            }
-            
-            return true;
-        } catch (error) {
-            console.error('API Connection validation failed:', error.message);
-            throw new Error(`Koneksi ke server SIMPels gagal: ${error.message}`);
-        }
+        console.log('API connection validation DISABLED - validated only during transaction processing');
+        return true; // Always return true to avoid blocking transactions
     }
     
     /**

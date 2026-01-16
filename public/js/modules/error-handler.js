@@ -4,9 +4,6 @@ class ErrorHandler {
         this.errorCache = new Map();
         this.notificationDebounceTime = 3000; // 3 seconds between same error notifications
         this.maxSameErrorCount = 3; // Maximum same error notifications per session
-        this.connectionErrorFlag = false;
-        this.connectionErrorCooldown = 30000; // 30 seconds cooldown for connection errors
-        this.lastConnectionErrorTime = 0;
         
         this.init();
     }
@@ -22,11 +19,6 @@ class ErrorHandler {
         const errorKey = this.generateErrorKey(error, context);
         const now = Date.now();
         
-        // Check if this is a connection error
-        if (this.isConnectionError(error)) {
-            return this.handleConnectionError(error, context);
-        }
-        
         // Check if we should show this error
         if (this.shouldShowError(errorKey, now)) {
             this.trackError(errorKey, now);
@@ -37,33 +29,6 @@ class ErrorHandler {
             console.warn(`[ErrorHandler] Suppressed duplicate error:`, error.message, context);
             return false;
         }
-    }
-    
-    /**
-     * Handle connection-specific errors with special logic
-     */
-    handleConnectionError(error, context = {}) {
-        const now = Date.now();
-        
-        // If we're in connection error cooldown, don't show notification
-        if (this.connectionErrorFlag && (now - this.lastConnectionErrorTime) < this.connectionErrorCooldown) {
-            console.warn(`[ErrorHandler] Connection error suppressed (cooldown active):`, error.message);
-            return false;
-        }
-        
-        // Show connection error notification
-        this.connectionErrorFlag = true;
-        this.lastConnectionErrorTime = now;
-        
-        this.showConnectionError(error, context);
-        
-        // Clear connection error flag after cooldown
-        setTimeout(() => {
-            this.connectionErrorFlag = false;
-            console.log('[ErrorHandler] Connection error cooldown ended');
-        }, this.connectionErrorCooldown);
-        
-        return true;
     }
     
     /**
@@ -127,23 +92,6 @@ class ErrorHandler {
     /**
      * Check if error is connection-related
      */
-    isConnectionError(error) {
-        const connectionKeywords = [
-            'network',
-            'connection',
-            'timeout',
-            'fetch',
-            'cors',
-            'refused',
-            'unreachable',
-            'offline',
-            'abort'
-        ];
-        
-        const errorString = error.message.toLowerCase();
-        return connectionKeywords.some(keyword => errorString.includes(keyword));
-    }
-    
     /**
      * Show regular error notification
      */
@@ -161,43 +109,6 @@ class ErrorHandler {
         }
         
         this.logError(error, context);
-    }
-    
-    /**
-     * Show connection error notification with special handling
-     */
-    showConnectionError(error, context = {}) {
-        const title = '🌐 Koneksi API Terputus';
-        const message = 'Tidak dapat terhubung ke server SIMPels. Sistem akan mencoba kembali secara otomatis.';
-        
-        const options = {
-            duration: 8000,
-            details: {
-                'Error': error.message,
-                'Time': new Date().toLocaleTimeString(),
-                'Next Retry': 'Automatic in 30 seconds'
-            },
-            actions: [
-                {
-                    text: 'Test Connection',
-                    class: 'primary',
-                    callback: () => this.testConnection()
-                },
-                {
-                    text: 'Refresh Page',
-                    callback: () => window.location.reload()
-                }
-            ]
-        };
-        
-        if (window.notificationSystem) {
-            window.notificationSystem.error(title, message, options);
-        } else {
-            console.error(`${title}: ${message}`);
-            alert(`${title}\n${message}`);
-        }
-        
-        this.logConnectionError(error, context);
     }
     
     /**
@@ -310,7 +221,6 @@ class ErrorHandler {
     getErrorStatistics() {
         const stats = {
             totalUniqueErrors: this.errorCache.size,
-            connectionErrorActive: this.connectionErrorFlag,
             errors: []
         };
         
@@ -336,16 +246,6 @@ class ErrorHandler {
             context: context,
             timestamp: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }),
             stack: error.stack
-        });
-    }
-    
-    logConnectionError(error, context) {
-        console.error('[ErrorHandler] Connection error:', {
-            message: error.message,
-            context: context,
-            timestamp: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }),
-            connectionErrorFlag: this.connectionErrorFlag,
-            lastConnectionErrorTime: this.lastConnectionErrorTime
         });
     }
     

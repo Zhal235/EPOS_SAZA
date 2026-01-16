@@ -51,14 +51,7 @@ class TransactionLogger {
             });
         });
         
-        // Catch network errors
-        window.addEventListener('offline', () => {
-            this.warn('Network connection lost');
-        });
-        
-        window.addEventListener('online', () => {
-            this.info('Network connection restored');
-        });
+        // Network event listeners removed - connection status no longer monitored automatically
     }
     
     /**

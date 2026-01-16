@@ -598,38 +598,12 @@ function printReceipt(transactionRef, cart, total, customer) {
 }
 
 /**
- * Test API connection
+ * Test API connection (DISABLED - no longer performs automatic testing)
+ * Connection status is now handled only on-demand during actual transactions
  */
 async function testAPIConnection() {
-    // Only test if simpelsAPI is available
-    if (typeof window.simpelsAPI === 'undefined') {
-        console.log('ℹ️ SIMPels API module not loaded, skipping connection test');
-        return;
-    }
-    
-    try {
-        // Don't show loading on non-POS pages
-        const isPosPage = document.querySelector('[wire\\:click*="processPayment"]');
-        if (isPosPage) {
-            showLoading('Testing SIMPels API connection...');
-        }
-        
-        const result = await window.simpelsAPI.testConnection();
-        
-        // Connection status is now handled by ConnectionStatusManager
-        // No need to show notifications for API connection status
-        if (result && result.success) {
-            console.log('✅ SIMPels API connection successful');
-        } else {
-            console.log('ℹ️ SIMPels API connection test:', result ? result.message : 'No response');
-        }
-    } catch (error) {
-        console.log('ℹ️ SIMPels API connection test failed:', error.message);
-    } finally {
-        if (document.querySelector('[wire\\:click*="processPayment"]')) {
-            hideLoading();
-        }
-    }
+    console.log('ℹ️ API Connection Test DISABLED - connections tested only during actual transactions');
+    return { success: true, message: 'Connection testing disabled' };
 }
 
 /**

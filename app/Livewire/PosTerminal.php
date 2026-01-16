@@ -600,20 +600,15 @@ class PosTerminal extends Component
                 if (str_contains($apiError->getMessage(), '404') || str_contains($apiError->getMessage(), 'tidak ditemukan')) {
                     throw new \Exception("RFID '{$rfidNumber}' tidak terdaftar atau tidak aktif!\n\nGunakan RFID yang valid seperti:\n• 2488698539\n• 2491081819\n• 2664790299");
                 } else {
-                    // API Connection Error - Show specific alert
-                    $this->dispatch('showSimpelsConnectionError', [
-                        'title' => '🔌 Koneksi Server SIMPels Terputus',
-                        'message' => 'Tidak dapat terhubung ke server SIMPels untuk memproses pembayaran RFID.',
-                        'details' => [
-                            'Server SIMPels mungkin sedang offline',
-                            'Periksa koneksi jaringan',
-                            'Hubungi administrator untuk restart server',
-                            'Gunakan pembayaran tunai sebagai alternatif'
-                        ],
-                        'error' => $apiError->getMessage()
+                    // API Connection Error - Show simple notification
+                    $this->dispatch('showNotification', [
+                        'type' => 'error',
+                        'title' => '❌ Koneksi Server SIMPels Gagal',
+                        'message' => 'Koneksi ke Server SIMPels Gagal! Pastikan server aktif atau hubungi admin.',
+                        'options' => ['duration' => 6000]
                     ]);
                     
-                    throw new \Exception('Koneksi ke Server SIMPels Gagal.\n\nPastikan server aktif atau hubungi admin.\n\nSilakan gunakan pembayaran TUNAI sebagai alternatif.');
+                    throw new \Exception('Koneksi ke Server SIMPels Gagal! Pastikan server aktif atau hubungi admin.');
                 }
             }
             
@@ -930,20 +925,15 @@ class PosTerminal extends Component
                     str_contains($apiError->getMessage(), 'network') ||
                     str_contains($apiError->getMessage(), 'unavailable')) {
                     
-                    // Connection Error - Show specific alert
-                    $this->dispatch('showSimpelsConnectionError', [
-                        'title' => '🔌 Server SIMPels Tidak Dapat Diakses',
-                        'message' => 'Koneksi ke server SIMPels terputus saat memproses pembayaran.',
-                        'details' => [
-                            'Transaksi dibatalkan untuk keamanan data',
-                            'Tidak ada saldo yang terpotong',
-                            'Silakan coba lagi setelah server aktif',
-                            'Gunakan pembayaran TUNAI jika mendesak'
-                        ],
-                        'error' => $apiError->getMessage()
+                    // Connection Error - Show simple notification
+                    $this->dispatch('showNotification', [
+                        'type' => 'error',
+                        'title' => '❌ Koneksi Server SIMPels Gagal',
+                        'message' => 'Koneksi ke Server SIMPels Gagal! Pastikan server aktif atau hubungi admin.',
+                        'options' => ['duration' => 6000]
                     ]);
                     
-                    throw new \Exception('Server SIMPels Tidak Tersedia.\n\nTransaksi DIBATALKAN untuk mencegah kesalahan saldo.\n\nGunakan pembayaran TUNAI atau tunggu hingga server kembali aktif.');
+                    throw new \Exception('Koneksi ke Server SIMPels Gagal! Pastikan server aktif atau hubungi admin.');
                 } else {
                     // Payment/Business Logic Error
                     $errorMsg = $apiError->getMessage();

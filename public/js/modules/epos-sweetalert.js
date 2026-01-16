@@ -161,61 +161,19 @@ class EposSweetAlertHandler {
     }
 
     /**
-     * Retry connection test
+     * Retry connection test (DISABLED)
      */
     async retryConnection() {
-        console.log('Retrying connection...');
+        console.log('Connection retry DISABLED - connections tested only during transactions');
         
-        // Show loading alert
+        // Show simple alert instead
         if (typeof Swal !== 'undefined') {
             Swal.fire({
-                title: 'Testing Connection...',
-                text: 'Please wait while we test the SIMPels server connection.',
+                title: 'Connection Test Disabled',
+                text: 'Automatic connection testing has been disabled. Connection status is now checked only during actual transactions.',
                 icon: 'info',
-                showConfirmButton: false,
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
+                confirmButtonText: 'OK'
             });
-        }
-        
-        try {
-            // Test connection using global API function if available
-            if (window.testAPIConnection && typeof window.testAPIConnection === 'function') {
-                await window.testAPIConnection();
-                
-                // Connection successful
-                if (typeof Swal !== 'undefined') {
-                    Swal.fire({
-                        title: 'Connection Restored!',
-                        text: 'SIMPels server is now accessible. You can try RFID payment again.',
-                        icon: 'success',
-                        confirmButtonText: 'OK',
-                        timer: 3000,
-                        timerProgressBar: true
-                    });
-                }
-            } else {
-                throw new Error('Connection test function not available');
-            }
-        } catch (error) {
-            console.log('Connection retry failed:', error.message);
-            
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    title: 'Still Offline',
-                    text: 'SIMPels server is still not accessible. Please contact the administrator or use cash payment.',
-                    icon: 'error',
-                    confirmButtonText: 'Use Cash',
-                    showCancelButton: true,
-                    cancelButtonText: 'Close'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        this.suggestCashPayment();
-                    }
-                });
-            }
         }
     }
 

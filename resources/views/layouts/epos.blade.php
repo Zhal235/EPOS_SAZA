@@ -282,7 +282,7 @@
         <!-- SIMPels API Integration Scripts -->
         <script src="/js/config/api.js"></script>
         <script src="/js/utils/api.js"></script>
-        <!-- <script src="/js/modules/connection-status.js"></script> DISABLED: Connection status widget hidden -->
+        <!-- Connection monitoring completely disabled for performance -->
         <script src="/js/modules/simpels-connection-alert.js"></script>
         <script src="/js/modules/epos-sweetalert.js"></script>
         <script src="/js/modules/transaction-logger.js"></script>

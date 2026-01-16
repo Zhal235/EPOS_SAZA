@@ -202,23 +202,16 @@ class SIMPelsAPI {
     }
     
     /**
-     * Test API connection
+     * Test API connection (DISABLED)
+     * Connection testing is now only done during actual transactions
      */
     async testConnection() {
-        try {
-            const response = await this.request(API_ENDPOINTS.LIMIT_SUMMARY);
-            return {
-                success: true,
-                message: 'Connection successful',
-                data: response
-            };
-        } catch (error) {
-            return {
-                success: false,
-                message: error.message,
-                data: null
-            };
-        }
+        console.log('SIMPels API Connection Test DISABLED - testing only during transactions');
+        return {
+            success: true,
+            message: 'Connection testing disabled for performance',
+            data: null
+        };
     }
     
     /**
@@ -325,21 +318,10 @@ window.SIMPelsDebug = {
         console.log('SIMPels API performance log cleared');
     },
     
-    // Test API connection
+    // Test API connection (DISABLED)
     testConnection: async () => {
-        const start = performance.now();
-        try {
-            const result = await window.simpelsAPI.testConnection();
-            const time = Math.round(performance.now() - start);
-            console.log(`✅ API Connection Test: ${result.success ? 'SUCCESS' : 'FAILED'} (${time}ms)`);
-            console.log('Response:', result);
-            return result;
-        } catch (error) {
-            const time = Math.round(performance.now() - start);
-            console.error(`❌ API Connection Test: FAILED (${time}ms)`);
-            console.error('Error:', error);
-            return { success: false, error: error.message };
-        }
+        console.log('SIMPels API Connection Test DISABLED - testing only during transactions');
+        return { success: true, message: 'Connection testing disabled for performance' };
     },
     
     // Show recent API logs
