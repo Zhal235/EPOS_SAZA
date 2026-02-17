@@ -438,17 +438,113 @@
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div class="flex items-center justify-between mb-6">
                 <h3 class="text-lg font-semibold text-gray-900">Pengeluaran & Pembelian Stok</h3>
-                <button class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                <button wire:click="openExpenseModal" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
                     <i class="fas fa-plus mr-2"></i>Catat Pengeluaran
                 </button>
             </div>
             
-            <div class="text-center py-12 text-gray-500">
-                <i class="fas fa-shopping-cart text-4xl mb-4"></i>
-                <p class="text-lg mb-2">Fitur Pengeluaran</p>
-                <p class="text-sm">Akan segera tersedia untuk mencatat pembelian stok dan pengeluaran lainnya</p>
-            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deskripsi</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kategori</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Jumlah</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        @forelse($transactions->where('category', 'expense') as $expense)
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {{ $expense->created_at->format('d/m/Y H:i') }}
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-900">
+                                {{ $expense->description }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                <span class="px-2 py-1 text-xs bg-gray-100 rounded-full">{{ ucfirst($expense->category) }}</span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-red-600">
+                                Rp {{ number_format($expense->amount, 0, ',', '.') }}
+                            </td>
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="4" class="px-6 py-12 text-center text-gray-500">
+                                <i class="fas fa-shopping-cart text-4xl mb-4"></i>
+                                <p>Belum ada pengeluaran tercatat periode ini</p>
+                            </td>
+                        </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+             </div>
         </div>
+    @endif
+
+    <!-- Modal Catat Pengeluaran -->
+    @if($showExpenseModal)
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" wire:click.self="closeExpenseModal">
+        <div class="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-semibold text-gray-900">Catat Pengeluaran Baru</h3>
+                <button type="button" wire:click="closeExpenseModal" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <form wire:submit.prevent="saveExpense">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Jumlah Pengeluaran</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-gray-500 sm:text-sm">Rp</span>
+                            </div>
+                            <input type="number" wire:model="expenseAmount" 
+                                class="w-full pl-10 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500" placeholder="0">
+                        </div>
+                        @error('expenseAmount') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
+                        <select wire:model="expenseCategory" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+                            <option value="operational">Operasional</option>
+                            <option value="stock_purchase">Belanja Stok</option>
+                            <option value="maintenance">Perawatan/Maintenance</option>
+                            <option value="salary">Gaji Karyawan</option>
+                            <option value="other">Lainnya</option>
+                        </select>
+                        @error('expenseCategory') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
+                        <input type="text" wire:model="expenseDescription" 
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500" placeholder="Contoh: Beli kertas struk">
+                        @error('expenseDescription') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Catatan (Opsional)</label>
+                        <textarea wire:model="expenseNotes" rows="3" 
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500"></textarea>
+                    </div>
+                </div>
+
+                <div class="flex space-x-3 mt-6">
+                    <button type="button" wire:click="closeExpenseModal" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+                        Batal
+                    </button>
+                    <button type="submit" class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                        Simpan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
     @endif
 
     <!-- Modal Penarikan Saldo RFID -->

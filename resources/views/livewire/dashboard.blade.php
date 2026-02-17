@@ -5,10 +5,10 @@
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm font-medium text-gray-600 mb-1">Penjualan Hari Ini</p>
-                    <p class="text-2xl font-bold text-gray-900">Rp 2,450,000</p>
-                    <p class="text-sm text-green-600 mt-1">
-                        <i class="fas fa-arrow-up"></i> +12.5% dari kemarin
+                    <p class="text-sm font-medium text-gray-600 mb-1">Penjualan {{ $stats['label'] }}</p>
+                    <p class="text-2xl font-bold text-gray-900">Rp {{ number_format($stats['revenue'], 0, ',', '.') }}</p>
+                    <p class="text-sm {{ $stats['growth'] >= 0 ? 'text-green-600' : 'text-red-600' }} mt-1">
+                        <i class="fas fa-arrow-{{ $stats['growth'] >= 0 ? 'up' : 'down' }}"></i> {{ $stats['growth'] }}% dari periode lalu
                     </p>
                 </div>
                 <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -22,9 +22,9 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-gray-600 mb-1">Total Produk</p>
-                    <p class="text-2xl font-bold text-gray-900">1,234</p>
-                    <p class="text-sm text-red-600 mt-1">
-                        <i class="fas fa-exclamation-triangle"></i> 12 stok menipis
+                    <p class="text-2xl font-bold text-gray-900">{{ number_format($totalProducts) }}</p>
+                    <p class="text-sm {{ $lowStockCount > 0 ? 'text-red-600' : 'text-green-600' }} mt-1">
+                        <i class="fas fa-exclamation-triangle"></i> {{ $lowStockCount }} stok menipis
                     </p>
                 </div>
                 <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -38,9 +38,9 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-gray-600 mb-1">Pelanggan Aktif</p>
-                    <p class="text-2xl font-bold text-gray-900">567</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ number_format($activeCustomers['total']) }}</p>
                     <p class="text-sm text-blue-600 mt-1">
-                        <i class="fas fa-user-plus"></i> 23 baru minggu ini
+                        <i class="fas fa-user-plus"></i> {{ $activeCustomers['new_this_week'] }} baru minggu ini
                     </p>
                 </div>
                 <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
@@ -49,18 +49,18 @@
             </div>
         </div>
 
-        <!-- Monthly Revenue -->
+        <!-- Transaction Count -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm font-medium text-gray-600 mb-1">Pendapatan Bulanan</p>
-                    <p class="text-2xl font-bold text-gray-900">Rp 89,750,000</p>
-                    <p class="text-sm text-green-600 mt-1">
-                        <i class="fas fa-chart-line"></i> +8.2% vs bulan lalu
+                    <p class="text-sm font-medium text-gray-600 mb-1">Transaksi {{ $stats['label'] }}</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ number_format($stats['total_transactions']) }}</p>
+                    <p class="text-sm text-gray-500 mt-1">
+                        <i class="fas fa-receipt"></i> Total transaksi
                     </p>
                 </div>
                 <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <i class="fas fa-chart-line text-purple-600 text-xl"></i>
+                    <i class="fas fa-receipt text-purple-600 text-xl"></i>
                 </div>
             </div>
         </div>
@@ -74,9 +74,9 @@
                 <div class="flex items-center justify-between mb-6">
                     <h3 class="text-lg font-semibold text-gray-900">Ringkasan Penjualan</h3>
                     <div class="flex space-x-2">
-                        <button class="px-3 py-1 text-sm text-indigo-600 bg-indigo-100 rounded-lg">Harian</button>
-                        <button class="px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Mingguan</button>
-                        <button class="px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Bulanan</button>
+                        <button wire:click="setTimeFrame('daily')" class="px-3 py-1 text-sm {{ $timeFrame === 'daily' ? 'text-indigo-600 bg-indigo-100' : 'text-gray-600 hover:bg-gray-100' }} rounded-lg">Harian</button>
+                        <button wire:click="setTimeFrame('weekly')" class="px-3 py-1 text-sm {{ $timeFrame === 'weekly' ? 'text-indigo-600 bg-indigo-100' : 'text-gray-600 hover:bg-gray-100' }} rounded-lg">Mingguan</button>
+                        <button wire:click="setTimeFrame('monthly')" class="px-3 py-1 text-sm {{ $timeFrame === 'monthly' ? 'text-indigo-600 bg-indigo-100' : 'text-gray-600 hover:bg-gray-100' }} rounded-lg">Bulanan</button>
                     </div>
                 </div>
                 <!-- Chart Placeholder -->
@@ -106,7 +106,7 @@
                         </div>
                     </a>
                     
-                    <button class="w-full flex items-center p-3 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                    <a href="{{ route('products') }}" class="w-full flex items-center p-3 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                         <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
                             <i class="fas fa-box-open text-blue-600"></i>
                         </div>
@@ -114,9 +114,9 @@
                             <p class="font-medium text-gray-900">Tambah Produk</p>
                             <p class="text-sm text-gray-500">Tambah item inventori baru</p>
                         </div>
-                    </button>
+                    </a>
                     
-                    <button class="w-full flex items-center p-3 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                    <a href="{{ route('sales.report') }}" class="w-full flex items-center p-3 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                         <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
                             <i class="fas fa-chart-bar text-purple-600"></i>
                         </div>
@@ -124,7 +124,7 @@
                             <p class="font-medium text-gray-900">Lihat Laporan</p>
                             <p class="text-sm text-gray-500">Periksa analitik penjualan</p>
                         </div>
-                    </button>
+                    </a>
                 </div>
             </div>
 
@@ -132,56 +132,30 @@
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-lg font-semibold text-gray-900">Transaksi Terbaru</h3>
-                    <a href="#" class="text-sm text-indigo-600 hover:text-indigo-500">Lihat Semua</a>
+                    <a href="{{ route('transactions') }}" class="text-sm text-indigo-600 hover:text-indigo-500">Lihat Semua</a>
                 </div>
                 <div class="space-y-3">
+                    @forelse($recentTransactions as $transaction)
                     <div class="flex items-center justify-between p-3 border border-gray-100 rounded-lg">
                         <div class="flex items-center">
-                            <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                                <i class="fas fa-check text-green-600 text-sm"></i>
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center mr-3 {{ $transaction->status === 'completed' ? 'bg-green-100' : 'bg-gray-100' }}">
+                                <i class="fas {{ $transaction->status === 'completed' ? 'fa-check text-green-600' : 'fa-clock text-gray-600' }} text-sm"></i>
                             </div>
                             <div>
-                                <p class="font-medium text-gray-900">#TXN-001234</p>
-                                <p class="text-sm text-gray-500">2 item - Tunai</p>
+                                <p class="font-medium text-gray-900">{{ $transaction->transaction_number }}</p>
+                                <p class="text-sm text-gray-500">{{ $transaction->total_items }} item - {{ ucfirst($transaction->payment_method) }}</p>
                             </div>
                         </div>
                         <div class="text-right">
-                            <p class="font-medium text-gray-900">Rp 125,000</p>
-                            <p class="text-xs text-gray-500">2 menit lalu</p>
+                            <p class="font-medium text-gray-900">Rp {{ number_format($transaction->total_amount, 0, ',', '.') }}</p>
+                            <p class="text-xs text-gray-500">{{ $transaction->created_at->diffForHumans() }}</p>
                         </div>
                     </div>
-                    
-                    <div class="flex items-center justify-between p-3 border border-gray-100 rounded-lg">
-                        <div class="flex items-center">
-                            <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                                <i class="fas fa-qrcode text-blue-600 text-sm"></i>
-                            </div>
-                            <div>
-                                <p class="font-medium text-gray-900">#TXN-001233</p>
-                                <p class="text-sm text-gray-500">5 item - QRIS</p>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                            <p class="font-medium text-gray-900">Rp 350,000</p>
-                            <p class="text-xs text-gray-500">5 menit lalu</p>
-                        </div>
+                    @empty
+                    <div class="text-center py-4 text-gray-500">
+                        <p>Belum ada transaksi</p>
                     </div>
-                    
-                    <div class="flex items-center justify-between p-3 border border-gray-100 rounded-lg">
-                        <div class="flex items-center">
-                            <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mr-3">
-                                <i class="fas fa-credit-card text-purple-600 text-sm"></i>
-                            </div>
-                            <div>
-                                <p class="font-medium text-gray-900">#TXN-001232</p>
-                                <p class="text-sm text-gray-500">1 item - Kartu</p>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                            <p class="font-medium text-gray-900">Rp 75,000</p>
-                            <p class="text-xs text-gray-500">8 menit lalu</p>
-                        </div>
-                    </div>
+                    @endforelse
                 </div>
             </div>
         </div>
@@ -193,30 +167,27 @@
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-semibold text-gray-900">Peringatan Stok Menipis</h3>
-                <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">12 item</span>
+                @if($lowStockCount > 0)
+                <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">{{ $lowStockCount }} item</span>
+                @endif
             </div>
             <div class="space-y-3">
-                <div class="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-lg">
+                @forelse($lowStockProducts as $product)
+                <div class="flex items-center justify-between p-3 {{ $product->stock_quantity <= 0 ? 'bg-red-50 border-red-200' : 'bg-yellow-50 border-yellow-200' }} border rounded-lg">
                     <div>
-                        <p class="font-medium text-gray-900">Coca Cola 330ml</p>
-                        <p class="text-sm text-gray-500">SKU: CC001</p>
+                        <p class="font-medium text-gray-900">{{ $product->name }}</p>
+                        <p class="text-sm text-gray-500">SKU: {{ $product->sku }}</p>
                     </div>
                     <div class="text-right">
-                        <p class="text-sm font-medium text-red-600">5 tersisa</p>
-                        <p class="text-xs text-gray-500">Min: 20</p>
+                        <p class="text-sm font-medium {{ $product->stock_quantity <= 0 ? 'text-red-600' : 'text-yellow-600' }}">{{ $product->stock_quantity }} tersisa</p>
+                        <p class="text-xs text-gray-500">Min: {{ $product->min_stock }}</p>
                     </div>
                 </div>
-                
-                <div class="flex items-center justify-between p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <div>
-                        <p class="font-medium text-gray-900">Indomie Goreng</p>
-                        <p class="text-sm text-gray-500">SKU: IG001</p>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-sm font-medium text-yellow-600">15 tersisa</p>
-                        <p class="text-xs text-gray-500">Min: 50</p>
-                    </div>
+                @empty
+                <div class="text-center py-4 text-gray-500">
+                    <p class="text-green-600"><i class="fas fa-check-circle mr-2"></i>Semua stok aman</p>
                 </div>
+                @endforelse
             </div>
         </div>
 

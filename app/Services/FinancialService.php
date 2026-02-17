@@ -108,6 +108,41 @@ class FinancialService
     }
 
     /**
+     * Record general expense
+     */
+    public function recordExpense(float $amount, string $description, string $category = 'operational', ?string $notes = null): FinancialTransaction
+    {
+        try {
+            $transaction = FinancialTransaction::create([
+                'type' => FinancialTransaction::TYPE_EXPENSE ?? 'expense', // Fallback if constant missing
+                'category' => FinancialTransaction::CATEGORY_EXPENSE ?? 'expense',
+                'amount' => $amount,
+                'description' => $description,
+                'payment_method' => 'cash',
+                'status' => FinancialTransaction::STATUS_COMPLETED ?? 'completed',
+                'user_id' => auth()->id(),
+                'notes' => $notes,
+                // 'transaction_date' => now(), // Assuming created_at covers this
+            ]);
+
+            Log::info('General expense recorded', [
+                'transaction_id' => $transaction->id,
+                'amount' => $amount,
+                'category' => $category
+            ]);
+
+            return $transaction;
+
+        } catch (\Exception $e) {
+            Log::error('Failed to record expense', [
+                'error' => $e->getMessage(),
+                'amount' => $amount
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
      * Get financial summary for a period
      */
     public function getSummary(?Carbon $startDate = null, ?Carbon $endDate = null): array

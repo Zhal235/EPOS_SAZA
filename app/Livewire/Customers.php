@@ -20,6 +20,8 @@ class Customers extends Component
     // Modal states
     public $showAddModal = false;
     public $showEditModal = false;
+    public $isEditing = false;
+    public $editingCustomerId = null;
     public $isSyncing = false;
     
     // Form properties
@@ -36,6 +38,7 @@ class Customers extends Component
     public $rfid_number = '';
     public $balance = 0;
     public $spending_limit = 50000;
+    public $password = '';
 
     protected $queryString = [
         'search' => ['except' => ''],
@@ -44,21 +47,25 @@ class Customers extends Component
         'activeTab' => ['except' => 'umum'],
     ];
     
-    protected $rules = [
-        'name' => 'required|string|max:255',
-        'email' => 'nullable|email|unique:users,email',
-        'phone' => 'nullable|string|max:20',
-        'customer_type' => 'required|in:regular,umum,santri,guru',
-        'is_active' => 'boolean',
-        'nis' => 'nullable|string|max:20',
-        'nip' => 'nullable|string|max:20',
-        'subject' => 'nullable|string|max:100',
-        'experience' => 'nullable|integer|min:0',
-        'class' => 'nullable|string|max:50',
-        'rfid_number' => 'nullable|string|max:50',
-        'balance' => 'nullable|numeric|min:0',
-        'spending_limit' => 'nullable|numeric|min:0',
-    ];
+    public function rules()
+    {
+        return [
+            'name' => 'required|string|max:255',
+            'email' => ['nullable', 'email', \Illuminate\Validation\Rule::unique('users', 'email')->ignore($this->editingCustomerId)],
+            'phone' => 'nullable|string|max:20',
+            'customer_type' => 'required|in:regular,umum,santri,guru',
+            'is_active' => 'boolean',
+            'nis' => 'nullable|string|max:20',
+            'nip' => 'nullable|string|max:20',
+            'subject' => 'nullable|string|max:100',
+            'experience' => 'nullable|integer|min:0',
+            'class' => 'nullable|string|max:50',
+            'rfid_number' => 'nullable|string|max:50',
+            'balance' => 'nullable|numeric|min:0',
+            'spending_limit' => 'nullable|numeric|min:0',
+            'password' => $this->isEditing ? 'nullable|min:6' : 'required|min:6', // Password required only on create
+        ];
+    }
 
     public function updatingActiveTab()
     {
@@ -331,6 +338,7 @@ class Customers extends Component
     public function openAddModal()
     {
         $this->resetForm();
+        $this->isEditing = false;
         $this->showAddModal = true;
         
         // Set customer type based on active tab
@@ -346,6 +354,43 @@ class Customers extends Component
                 $this->customer_type = 'regular';
                 break;
         }
+    }
+
+    public function editCustomer($id)
+    {
+        $this->resetForm();
+        $this->isEditing = true;
+        $this->editingCustomerId = $id;
+        
+        $customer = User::findOrFail($id);
+        
+        $this->name = $customer->name;
+        $this->email = $customer->email;
+        $this->phone = $customer->phone;
+        $this->customer_type = $customer->customer_type;
+        $this->is_active = (bool) $customer->is_active;
+        $this->nis = $customer->nis;
+        $this->nip = $customer->nip;
+        $this->subject = $customer->subject;
+        $this->experience = $customer->experience;
+        $this->class = $customer->class;
+        $this->rfid_number = $customer->rfid_number;
+        $this->balance = $customer->balance;
+        $this->spending_limit = $customer->spending_limit;
+        
+        $this->showAddModal = true;
+    }
+
+    public function deleteCustomer($id)
+    {
+        $customer = User::findOrFail($id);
+        $customer->delete();
+        session()->flash('message', 'Pelanggan berhasil dihapus.');
+        $this->dispatch('showNotification', [
+            'type' => 'success',
+            'title' => 'Berhasil',
+            'message' => 'Pelanggan berhasil dihapus'
+        ]);
     }
     
     public function closeAddModal()
@@ -369,6 +414,9 @@ class Customers extends Component
         $this->rfid_number = '';
         $this->balance = 0;
         $this->spending_limit = 50000;
+        $this->password = '';
+        $this->isEditing = false;
+        $this->editingCustomerId = null;
         $this->resetErrorBag();
     }
     
@@ -381,7 +429,6 @@ class Customers extends Component
             'name' => $this->name,
             'email' => $this->email ?: ($this->nis ?: $this->nip) . '@customer.local', // Generate email if empty
             'phone' => $this->phone,
-            'password' => bcrypt('customer-no-login-' . rand(1000000, 9999999)), // Random password (customer can't login)
             'customer_type' => $this->customer_type,
             'is_active' => $this->is_active,
             'role' => 'customer', // Customer role - TIDAK BISA LOGIN
@@ -389,6 +436,13 @@ class Customers extends Component
             'balance' => $this->balance ?? 0,
             'spending_limit' => $this->spending_limit ?? 50000,
         ];
+
+        // Handle password
+        if ($this->password) {
+            $data['password'] = bcrypt($this->password);
+        } elseif (!$this->isEditing) {
+            $data['password'] = bcrypt('customer-no-login-' . rand(1000000, 9999999));
+        }
         
         // Add specific fields based on customer type
         if ($this->customer_type === 'santri') {
@@ -400,9 +454,15 @@ class Customers extends Component
             $data['experience'] = $this->experience;
         }
         
-        User::create($data);
+        if ($this->isEditing) {
+            User::where('id', $this->editingCustomerId)->update($data);
+            $message = ucfirst($this->activeTab) . ' berhasil diperbarui!';
+        } else {
+            User::create($data);
+            $message = ucfirst($this->activeTab) . ' berhasil ditambahkan sebagai pelanggan!';
+        }
         
-        session()->flash('message', ucfirst($this->activeTab) . ' berhasil ditambahkan sebagai pelanggan!');
+        session()->flash('message', $message);
         $this->closeAddModal();
     }
 

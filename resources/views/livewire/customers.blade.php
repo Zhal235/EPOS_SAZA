@@ -249,10 +249,10 @@
                                     @endif
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    <button class="text-indigo-600 hover:text-indigo-900 mr-3">
+                                    <button wire:click="editCustomer({{ $customer->id }})" class="text-indigo-600 hover:text-indigo-900 mr-3">
                                         <i class="fas fa-edit"></i>
                                     </button>
-                                    <button class="text-red-600 hover:text-red-900">
+                                    <button wire:click="deleteCustomer({{ $customer->id }})" wire:confirm="Are you sure you want to delete this customer?" class="text-red-600 hover:text-red-900">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </td>
@@ -293,7 +293,7 @@
             <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
                 <div class="px-6 py-4 border-b border-gray-200">
                     <h3 class="text-lg font-medium text-gray-900">
-                        Add {{ ucfirst($activeTab) }}
+                        {{ $isEditing ? 'Edit' : 'Add' }} {{ ucfirst($activeTab) }}
                     </h3>
                 </div>
                 
@@ -332,12 +332,12 @@
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Password {{ $isEditing ? '(Leave blank to keep)' : '' }}</label>
                             <input 
                                 type="password" 
                                 wire:model="password" 
                                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                required
+                                {{ !$isEditing ? 'required' : '' }}
                             >
                             @error('password') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                         </div>
@@ -417,7 +417,7 @@
                             type="submit"
                             class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
                         >
-                            Save {{ ucfirst($activeTab) }}
+                            {{ $isEditing ? 'Update' : 'Save' }} {{ ucfirst($activeTab) }}
                         </button>
                     </div>
                 </form>

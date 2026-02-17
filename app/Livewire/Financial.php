@@ -32,6 +32,13 @@ class Financial extends Component
     public $accountName = '';
     public $withdrawalNotes = '';
     
+    // Expense modal
+    public $showExpenseModal = false;
+    public $expenseAmount;
+    public $expenseDescription = '';
+    public $expenseCategory = 'operational';
+    public $expenseNotes = '';
+
     public $refreshKey = 0;
 
     protected $queryString = ['activeTab', 'dateFrom', 'dateTo'];
@@ -573,13 +580,86 @@ class Financial extends Component
         }
     }
 
+    public function openExpenseModal()
+    {
+        $this->reset(['expenseAmount', 'expenseDescription', 'expenseCategory', 'expenseNotes']);
+        $this->showExpenseModal = true;
+    }
+
+    public function closeExpenseModal()
+    {
+        $this->showExpenseModal = false;
+        $this->reset(['expenseAmount', 'expenseDescription', 'expenseCategory', 'expenseNotes']);
+    }
+
+    public function saveExpense()
+    {
+        $this->validate([
+            'expenseAmount' => 'required|numeric|min:1',
+            'expenseDescription' => 'required|string|max:255',
+            'expenseCategory' => 'required|string',
+        ]);
+
+        try {
+            $service = app(\App\Services\FinancialService::class);
+            $service->recordExpense(
+                (float) $this->expenseAmount,
+                $this->expenseDescription,
+                $this->expenseCategory,
+                $this->expenseNotes
+            );
+
+            $this->dispatch('showNotification', [
+                'type' => 'success',
+                'title' => 'Berhasil',
+                'message' => 'Pengeluaran berhasil dicatat'
+            ]);
+
+            $this->closeExpenseModal();
+            $this->setTab('expenses'); // Switch to expenses tab if not already
+
+        } catch (\Exception $e) {
+            $this->dispatch('showNotification', [
+                'type' => 'error',
+                'title' => 'Gagal',
+                'message' => 'Gagal mencatat pengeluaran: ' . $e->getMessage()
+            ]);
+        }
+    }
+
     public function exportTransactions()
     {
-        // TODO: Implement export functionality
-        $this->dispatch('showNotification', [
-            'type' => 'info',
-            'title' => 'Coming Soon',
-            'message' => 'Fitur export akan segera tersedia'
+        $transactions = FinancialTransaction::with(['user', 'transaction'])
+            ->whereBetween('created_at', [
+                Carbon::parse($this->dateFrom)->startOfDay(),
+                Carbon::parse($this->dateTo)->endOfDay()
+            ])
+            ->get();
+
+        $callback = function() use ($transactions) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, ['Date', 'Transaction Number', 'Type', 'Category', 'Amount', 'Status', 'Description']);
+
+            foreach ($transactions as $transaction) {
+                fputcsv($file, [
+                    $transaction->created_at->format('Y-m-d H:i:s'),
+                    $transaction->transaction_number,
+                    $transaction->type,
+                    $transaction->category,
+                    $transaction->amount,
+                    $transaction->status,
+                    $transaction->description
+                ]);
+            }
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, [
+            "Content-type" => "text/csv",
+            "Content-Disposition" => "attachment; filename=financial_transactions_" . date('Y-m-d') . ".csv",
+            "Pragma" => "no-cache",
+            "Cache-Control" => "must-revalidate, post-check=0, pre-check=0",
+            "Expires" => "0"
         ]);
     }
 
