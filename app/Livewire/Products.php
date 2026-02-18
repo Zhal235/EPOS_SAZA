@@ -8,6 +8,7 @@ use App\Models\Supplier;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\WithFileUploads;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Laravel Livewire component for managing products in EPOS.
@@ -46,6 +47,7 @@ class Products extends Component
     public $showViewModal = false;
     public $showImportModal = false;
     public $showDeleteModal = false;
+    public $showRestockModal = false;
 
     // Form Data
     public $productForm = [
@@ -65,6 +67,15 @@ class Products extends Component
         'stock_quantity' => 0,
         'min_stock' => 5,
         'is_active' => true
+    ];
+
+    public $restockForm = [
+        'product_id' => null,
+        'quantity' => 1,
+        'unit_cost' => 0,
+        'total_cost' => 0,
+        'supplier_id' => '',
+        'notes' => ''
     ];
 
     public $selectedProduct = null;
@@ -302,6 +313,93 @@ class Products extends Component
         $this->productToDelete = null;
     }
 
+    // ==================== RESTOCK METHODS ====================
+    
+    public function openRestockModal($productId)
+    {
+        $product = Product::findOrFail($productId);
+        $this->selectedProduct = $product;
+        
+        $this->restockForm = [
+            'product_id' => $product->id,
+            'quantity' => 1,
+            'unit_cost' => $product->cost_price,
+            'total_cost' => $product->cost_price * 1,
+            'supplier_id' => $product->supplier_id,
+            'notes' => ''
+        ];
+        
+        $this->showRestockModal = true;
+    }
+
+    public function closeRestockModal()
+    {
+        $this->showRestockModal = false;
+        $this->selectedProduct = null;
+        $this->restockForm = [
+            'product_id' => null,
+            'quantity' => 1,
+            'unit_cost' => 0,
+            'total_cost' => 0,
+            'supplier_id' => '',
+            'notes' => ''
+        ];
+    }
+    
+    public function updated($property)
+    {
+        if ($property === 'restockForm.quantity' || $property === 'restockForm.unit_cost') {
+            $qty = (int) ($this->restockForm['quantity'] ?? 0);
+            $cost = (float) ($this->restockForm['unit_cost'] ?? 0);
+            $this->restockForm['total_cost'] = $qty * $cost;
+        }
+    }
+
+    public function saveRestock()
+    {
+        $this->validate([
+            'restockForm.product_id' => 'required|exists:products,id',
+            'restockForm.quantity' => 'required|integer|min:1',
+            'restockForm.unit_cost' => 'required|numeric|min:0',
+            'restockForm.supplier_id' => 'required|exists:suppliers,id',
+        ]);
+
+        try {
+            $product = Product::findOrFail($this->restockForm['product_id']);
+            $qty = (int) $this->restockForm['quantity'];
+            $unitCost = (float) $this->restockForm['unit_cost'];
+            $totalCost = $qty * $unitCost; // Recalculate to be safe
+            
+            // 1. Update Product Stock and Cost Price
+            $product->stock_quantity += $qty;
+            $product->cost_price = $unitCost; // Update latest cost price
+            $product->supplier_id = $this->restockForm['supplier_id']; // Update supplier if changed
+            $product->save();
+            
+            // 2. Record Expense automatically
+            $description = "Restock: {$product->name} (Qty: {$qty})";
+            if (!empty($this->restockForm['notes'])) {
+                $description .= " - " . $this->restockForm['notes'];
+            }
+            
+            $financialService = app(\App\Services\FinancialService::class);
+            $financialService->recordExpense(
+                $totalCost,
+                $description,
+                'restock', // Category
+                "Product ID: {$product->id}, Supplier ID: {$this->restockForm['supplier_id']}"
+            );
+
+            session()->flash('message', "Berhasil restock {$qty} {$product->unit} '{$product->name}' dan mencatat pengeluaran Rp " . number_format($totalCost, 0, ',', '.'));
+            $this->closeRestockModal();
+            $this->resetPage(); // Refresh list
+
+        } catch (\Exception $e) {
+            session()->flash('error', 'Gagal melakukan restock: ' . $e->getMessage());
+        }
+    }
+
+
     // ==================== CRUD METHODS ====================
 
     /**
@@ -391,17 +489,15 @@ class Products extends Component
             'importFile' => 'required|file|mimes:xlsx,xls|max:2048'
         ]);
 
+        $fullPath = null;
+
         try {
-            $path = $this->importFile->store('imports', 'local');
-            $fullPath = storage_path('app/' . $path);
+            $path = $this->importFile->store('imports');
+            // Get absolute path correctly based on default disk driver
+            $fullPath = Storage::path($path);
             
             // Process Excel file only
             $result = $this->processExcelImport($fullPath);
-            
-            // Clean up temporary file
-            if (file_exists($fullPath)) {
-                unlink($fullPath);
-            }
             
             if ($result['success']) {
                 session()->flash('message', "Berhasil mengimpor {$result['imported']} produk!");
@@ -418,6 +514,11 @@ class Products extends Component
         } catch (\Exception $e) {
             session()->flash('error', 'Import gagal: ' . $e->getMessage());
             $this->closeImportModal();
+        } finally {
+            // Clean up temporary file
+            if ($fullPath && file_exists($fullPath)) {
+                unlink($fullPath);
+            }
         }
     }
 
@@ -465,21 +566,28 @@ class Products extends Component
                     continue;
                 }
 
-                // Find category
-                $category = Category::where('name', 'LIKE', $productData['category_name'])->first();
-                if (!$category) {
-                    $errors++;
-                    $errorMessages[] = "Row " . ($imported + $errors) . ": Category '{$productData['category_name']}' not found";
-                    continue;
-                }
+                // Find or Create category
+                $category = Category::firstOrCreate(
+                    ['name' => $productData['category_name']],
+                    [
+                        'slug' => \Illuminate\Support\Str::slug($productData['category_name']),
+                        'description' => 'Imported Category',
+                        'is_active' => true
+                    ]
+                );
                 
-                // Find supplier
-                $supplier = Supplier::where('name', 'LIKE', $productData['supplier_name'])->first();
-                if (!$supplier) {
-                    $errors++;
-                    $errorMessages[] = "Row " . ($imported + $errors) . ": Supplier '{$productData['supplier_name']}' not found";
-                    continue;
-                }
+                // Find or Create supplier
+                $supplier = Supplier::firstOrCreate(
+                    ['name' => $productData['supplier_name']],
+                    [
+                        'code' => strtoupper(substr($productData['supplier_name'], 0, 3)) . rand(100, 999), 
+                        'contact_person' => '-',
+                        'phone' => '-',
+                        'email' => null,
+                        'address' => '-',
+                        'is_active' => true
+                    ]
+                );
 
                 // Validate prices
                 if ($productData['cost_price'] <= 0 || $productData['selling_price'] <= 0) {
@@ -566,21 +674,26 @@ class Products extends Component
                         continue;
                     }
 
-                    // Find category
-                    $category = Category::where('name', 'LIKE', $productData['category_name'])->first();
-                    if (!$category) {
-                        $errors++;
-                        $errorMessages[] = "Row " . ($rowIndex + 2) . ": Category '{$productData['category_name']}' not found";
-                        continue;
-                    }
-                    
-                    // Find supplier
-                    $supplier = Supplier::where('name', 'LIKE', $productData['supplier_name'])->first();
-                    if (!$supplier) {
-                        $errors++;
-                        $errorMessages[] = "Row " . ($rowIndex + 2) . ": Supplier '{$productData['supplier_name']}' not found";
-                        continue;
-                    }
+                    // Find or Create category
+                    $category = Category::firstOrCreate(
+                        ['name' => $productData['category_name']],
+                        [
+                            'slug' => \Illuminate\Support\Str::slug($productData['category_name']),
+                            'description' => 'Imported Category',
+                            'is_active' => true
+                        ]
+                    );
+
+                    // Find or Create supplier
+                    $supplier = Supplier::firstOrCreate(
+                        ['name' => $productData['supplier_name']],
+                        [
+                            'code' => strtoupper(substr($productData['supplier_name'], 0, 3)) . rand(100, 999), 
+                            'contact_person' => '-',
+                            'phone' => '-',
+                            'is_active' => true
+                        ]
+                    );
 
                     // Validate prices
                     if ($productData['cost_price'] <= 0 || $productData['selling_price'] <= 0) {

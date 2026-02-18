@@ -104,33 +104,23 @@
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             @forelse($products as $product)
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
-                    <!-- Product Image -->
-                    <div class="h-48 bg-gray-100 flex items-center justify-center relative">
-                        @if($product->image_url)
-                            <img src="{{ $product->image_url }}" alt="{{ $product->name }}" class="w-full h-full object-cover">
-                        @else
-                            <i class="{{ $product->category->icon ?? 'fas fa-box' }} text-4xl" style="color: {{ $product->category->color ?? '#6366F1' }}"></i>
-                        @endif
-                        
-                        <!-- Stock Status Badge -->
-                        <div class="absolute top-2 right-2">
-                            @if($product->stock_quantity <= 0)
-                                <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">Out of Stock</span>
-                            @elseif($product->is_low_stock)
-                                <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">Low Stock</span>
-                            @else
-                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">In Stock</span>
-                            @endif
-                        </div>
-                    </div>
-
-                    <div class="p-4">
-                        <!-- Product Name & Brand -->
-                        <div class="mb-2">
-                            <h3 class="font-semibold text-gray-900 line-clamp-2">{{ $product->name }}</h3>
-                            @if($product->brand)
-                                <p class="text-sm text-gray-500">{{ $product->brand }}</p>
-                            @endif
+                    <div class="p-5">
+                        <div class="flex justify-between items-start mb-3">
+                            <div class="max-w-[70%]">
+                                <h3 class="font-bold text-gray-900 text-lg line-clamp-2 leading-tight">{{ $product->name }}</h3>
+                                @if($product->brand)
+                                    <p class="text-sm text-gray-500 mt-1">{{ $product->brand }}</p>
+                                @endif
+                            </div>
+                            <div class="flex-shrink-0">
+                                @if($product->stock_quantity <= 0)
+                                    <span class="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-1 rounded-full border border-red-200">Out of Stock</span>
+                                @elseif($product->is_low_stock)
+                                    <span class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-1 rounded-full border border-yellow-200">Low Stock</span>
+                                @else
+                                    <span class="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-1 rounded-full border border-green-200">In Stock</span>
+                                @endif
+                            </div>
                         </div>
 
                         <!-- SKU & Category -->
@@ -172,6 +162,9 @@
 
                         <!-- Action Buttons -->
                         <div class="flex space-x-2">
+                             <button wire:click.prevent="openRestockModal({{ $product->id }})" type="button" class="px-3 py-2 text-sm bg-orange-50 text-orange-700 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors" title="Restock / Tambah Stok">
+                                <i class="fas fa-cubes"></i>
+                            </button>
                             <button wire:click.prevent="openEditModal({{ $product->id }})" type="button" class="flex-1 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
                                 <i class="fas fa-edit mr-1"></i>Edit
                             </button>
@@ -252,15 +245,21 @@
 
     <!-- Add Product Modal - Simple Version -->
     @if($showAddModal)
-    <div class="fixed inset-0 z-50 overflow-y-auto">
+    <div class="fixed inset-0 z-50 overflow-y-auto" 
+         x-data 
+         x-init="document.body.classList.add('overflow-y-hidden')"
+         x-on:keydown.escape.window="$wire.closeAddModal()"
+         x-on:click.self="$wire.closeAddModal()"
+    >
         <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <!-- Background overlay -->
-            <div class="fixed inset-0 transition-opacity" aria-hidden="true">
-                <div class="absolute inset-0 bg-gray-500 opacity-75" wire:click="closeAddModal"></div>
+            <div class="fixed inset-0 transition-opacity" aria-hidden="true" x-on:click="$wire.closeAddModal()">
+                <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
             </div>
 
             <!-- Modal panel -->
-            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full"
+                 x-on:click.stop>
                 <div class="p-6">
                     <h2 class="text-lg font-medium text-gray-900 mb-4">
                         <i class="fas fa-plus-circle mr-2 text-green-600"></i>Add New Product
@@ -452,15 +451,15 @@
     <x-modal name="edit-product" :show="$showEditModal" focusable>
         <div class="p-6">
             <h2 class="text-lg font-medium text-gray-900 mb-4">
-                <i class="fas fa-edit mr-2 text-indigo-600"></i>Edit Product
+                <i class="fas fa-edit mr-2 text-indigo-600"></i>Edit Produk
             </h2>
             
             <form wire:submit="updateProduct" class="space-y-4">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <!-- Product Name -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Product Name *</label>
-                        <input wire:model="productForm.name" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="Enter product name">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nama Produk *</label>
+                        <input wire:model="productForm.name" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="Masukkan nama produk">
                         @error('productForm.name') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
 
@@ -472,9 +471,9 @@
 
                     <!-- Category -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Category *</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Kategori *</label>
                         <select wire:model="productForm.category_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                            <option value="">Select Category</option>
+                            <option value="">Pilih Kategori</option>
                             @foreach($categories as $category)
                                 <option value="{{ $category->id }}">{{ $category->name }}</option>
                             @endforeach
@@ -484,9 +483,9 @@
 
                     <!-- Supplier -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Supplier *</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Pemasok *</label>
                         <select wire:model="productForm.supplier_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                            <option value="">Select Supplier</option>
+                            <option value="">Pilih Pemasok</option>
                             @foreach(\App\Models\Supplier::active()->get() as $supplier)
                                 <option value="{{ $supplier->id }}">{{ $supplier->name }}</option>
                             @endforeach
@@ -496,13 +495,13 @@
 
                     <!-- Brand -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Brand</label>
-                        <input wire:model="productForm.brand" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="Enter brand name">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Merek</label>
+                        <input wire:model="productForm.brand" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="Masukkan nama merek">
                     </div>
 
                     <!-- Unit -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Unit</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Satuan</label>
                         <select wire:model="productForm.unit" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
                             <option value="pcs">Pieces (pcs)</option>
                             <option value="kg">Kilogram (kg)</option>
@@ -516,28 +515,28 @@
 
                     <!-- Cost Price -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Cost Price *</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Harga Beli *</label>
                         <input wire:model="productForm.cost_price" type="number" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="0.00">
                         @error('productForm.cost_price') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
 
                     <!-- Selling Price -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Selling Price *</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Harga Jual *</label>
                         <input wire:model="productForm.selling_price" type="number" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="0.00">
                         @error('productForm.selling_price') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
 
                     <!-- Stock Quantity -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Stock Quantity *</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Jumlah Stok *</label>
                         <input wire:model="productForm.stock_quantity" type="number" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="0">
                         @error('productForm.stock_quantity') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
 
                     <!-- Min Stock -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Minimum Stock *</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Stok Minimum *</label>
                         <input wire:model="productForm.min_stock" type="number" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="5">
                         @error('productForm.min_stock') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
@@ -546,7 +545,7 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Barcode</label>
                         <div class="flex space-x-2">
-                            <input wire:model="productForm.barcode" type="text" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="Enter or generate barcode">
+                            <input wire:model="productForm.barcode" type="text" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="Masukkan atau buat barcode">
                             <button type="button" wire:click="generateBarcode" class="px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
                                 <i class="fas fa-barcode"></i>
                             </button>
@@ -555,29 +554,29 @@
 
                     <!-- Size -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Size</label>
-                        <input wire:model="productForm.size" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="Enter size">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Ukuran</label>
+                        <input wire:model="productForm.size" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="Masukkan ukuran">
                     </div>
                 </div>
 
                 <!-- Description -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                    <textarea wire:model="productForm.description" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="Enter product description"></textarea>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
+                    <textarea wire:model="productForm.description" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="Masukkan deskripsi produk"></textarea>
                 </div>
 
                 <!-- Active Status -->
                 <div class="flex items-center">
                     <input wire:model="productForm.is_active" type="checkbox" id="is_active" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                    <label for="is_active" class="ml-2 block text-sm text-gray-900">Active Product</label>
+                    <label for="is_active" class="ml-2 block text-sm text-gray-900">Produk Aktif</label>
                 </div>
 
                 <div class="flex justify-end space-x-3 pt-4">
                     <button type="button" wire:click="closeEditModal" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
-                        Cancel
+                        Batal
                     </button>
                     <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
-                        <i class="fas fa-save mr-2"></i>Update Product
+                        <i class="fas fa-save mr-2"></i>Simpan Perubahan
                     </button>
                 </div>
             </form>
@@ -587,15 +586,21 @@
 
     <!-- Import Modal - Simple Version -->
     @if($showImportModal)
-    <div class="fixed inset-0 z-50 overflow-y-auto">
+    <div class="fixed inset-0 z-50 overflow-y-auto"
+         x-data 
+         x-init="document.body.classList.add('overflow-y-hidden')"
+         x-on:keydown.escape.window="$wire.closeImportModal()"
+         x-on:click.self="$wire.closeImportModal()"
+    >
         <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <!-- Background overlay -->
-            <div class="fixed inset-0 transition-opacity" aria-hidden="true">
-                <div class="absolute inset-0 bg-gray-500 opacity-75" wire:click="closeImportModal"></div>
+            <div class="fixed inset-0 transition-opacity" aria-hidden="true" x-on:click="$wire.closeImportModal()">
+                <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
             </div>
 
             <!-- Modal panel -->
-            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full"
+                 x-on:click.stop>
                 <div class="p-6">
                     <h2 class="text-lg font-medium text-gray-900 mb-4">
                         <i class="fas fa-upload mr-2 text-blue-600"></i>Import Products
@@ -667,19 +672,118 @@
     </div>
     @endif
 
+    <!-- Restock Modal -->
+    @if($restockForm['product_id'] && $showRestockModal)
+    <div class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true"
+         x-data
+         x-init="document.body.classList.add('overflow-y-hidden')"
+         x-on:keydown.escape.window="$wire.closeRestockModal()"
+         x-on:click.self="$wire.closeRestockModal()"
+    >
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <!-- Background overlay -->
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" 
+                 aria-hidden="true" 
+                 x-on:click="$wire.closeRestockModal()"></div>
+
+            <!-- Modal panel -->
+            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full"
+                 x-on:click.stop>
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="sm:flex sm:items-start">
+                        <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-orange-100 sm:mx-0 sm:h-10 sm:w-10">
+                            <i class="fas fa-cubes text-orange-600"></i>
+                        </div>
+                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                                Restock Product
+                            </h3>
+                            <div class="mt-4">
+                                <form wire:submit.prevent="saveRestock">
+                                    <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                                        <h3 class="font-medium text-gray-900">{{ $selectedProduct->name }}</h3>
+                                        <p class="text-sm text-gray-500">Current Stock: {{ $selectedProduct->stock_quantity }} {{ $selectedProduct->unit }}</p>
+                                    </div>
+                    
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <!-- Quantity to Add -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Quantity to Add *</label>
+                                            <input wire:model.live="restockForm.quantity" type="number" min="1" class="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-blue-50" required>
+                                            @error('restockForm.quantity') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                                        </div>
+                    
+                                        <!-- Unit Cost (Buying Price) -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Unit Cost (Buying Price) *</label>
+                                            <input wire:model.live="restockForm.unit_cost" type="number" step="0.01" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" required>
+                                            @error('restockForm.unit_cost') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                                        </div>
+                    
+                                        <!-- Total Cost (Calculated) -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Total Cost (Auto)</label>
+                                            <input wire:model="restockForm.total_cost" type="number" step="0.01" class="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed" readonly>
+                                        </div>
+                    
+                                        <!-- Supplier -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Supplier *</label>
+                                            <select wire:model="restockForm.supplier_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" required>
+                                                <option value="">Select Supplier</option>
+                                                @foreach(\App\Models\Supplier::active()->get() as $supplier)
+                                                    <option value="{{ $supplier->id }}">{{ $supplier->name }}</option>
+                                                @endforeach
+                                            </select>
+                                            @error('restockForm.supplier_id') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                                        </div>
+                                    </div>
+                    
+                                    <!-- Notes -->
+                                    <div class="mt-4">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Notes (Optional)</label>
+                                        <textarea wire:model="restockForm.notes" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="e.g. Invoice #12345"></textarea>
+                                    </div>
+                    
+                                    <div class="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800 mb-4">
+                                        <i class="fas fa-info-circle mr-1"></i>
+                                        This will increase stock and automatically record an expense transaction.
+                                    </div>
+                    
+                                    <div class="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200 mt-4">
+                                        <button type="button" wire:click="closeRestockModal" class="px-4 py-2 bg-gray-200 text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                                            Cancel
+                                        </button>
+                                        <button type="button" wire:click="saveRestock" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 shadow-md">
+                                            <i class="fas fa-save mr-2"></i>Confirm Restock
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
     <!-- Delete Confirmation Modal -->
-    <div x-show="showDeleteModal" 
-         x-cloak
-         class="fixed inset-0 z-50 overflow-y-auto" 
-         style="display: none;">
+    @if($showDeleteModal)
+    <div class="fixed inset-0 z-50 overflow-y-auto" 
+         x-data
+         x-init="document.body.classList.add('overflow-y-hidden')"
+         x-on:keydown.escape.window="$wire.cancelDelete()"
+         x-on:click.self="$wire.cancelDelete()"
+    >
         <!-- Backdrop -->
         <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
-             @click="showDeleteModal = false"></div>
+             x-on:click="$wire.cancelDelete()"></div>
         
         <!-- Modal Content -->
-        <div class="flex items-center justify-center min-h-screen px-4 py-6">
-            <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-auto"
-                 @click.stop>
+        <div class="flex items-center justify-center min-h-screen px-4 py-6"
+             x-on:click.stop>
+            <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-auto">
                 <div class="p-6">
                     <div class="flex items-center mb-4">
                         <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mr-4">
@@ -719,6 +823,7 @@
             </div>
         </div>
     </div>
+    @endif
 
     <style>
         [x-cloak] { display: none !important; }

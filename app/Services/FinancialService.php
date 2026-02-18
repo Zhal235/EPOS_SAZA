@@ -114,15 +114,14 @@ class FinancialService
     {
         try {
             $transaction = FinancialTransaction::create([
-                'type' => FinancialTransaction::TYPE_EXPENSE ?? 'expense', // Fallback if constant missing
-                'category' => FinancialTransaction::CATEGORY_EXPENSE ?? 'expense',
+                'type' => 'expense',
+                'category' => 'expense',
                 'amount' => $amount,
                 'description' => $description,
                 'payment_method' => 'cash',
-                'status' => FinancialTransaction::STATUS_COMPLETED ?? 'completed',
+                'status' => 'completed',
                 'user_id' => auth()->id(),
                 'notes' => $notes,
-                // 'transaction_date' => now(), // Assuming created_at covers this
             ]);
 
             Log::info('General expense recorded', [
@@ -134,7 +133,7 @@ class FinancialService
             return $transaction;
 
         } catch (\Exception $e) {
-            Log::error('Failed to record expense', [
+            Log::error('Failed to Record expense', [
                 'error' => $e->getMessage(),
                 'amount' => $amount
             ]);

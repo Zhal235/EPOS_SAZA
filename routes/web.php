@@ -33,9 +33,6 @@ Route::middleware(['auth'])->group(function () {
     // Financial routes (Admin only)
     Route::get('financial', \App\Livewire\Financial::class)->name('financial')->middleware('can:access-admin');
     
-    // Customer routes
-    Route::get('customers', \App\Livewire\Customers::class)->name('customers');
-    
     // Staff Management routes (Admin only)
     Route::get('staff', \App\Livewire\StaffManagement::class)->name('staff')->middleware('can:access-admin');
     

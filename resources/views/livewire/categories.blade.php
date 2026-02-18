@@ -161,9 +161,6 @@
                                     <tr class="hover:bg-gray-50">
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="flex items-center">
-                                                <div class="w-10 h-10 rounded-lg flex items-center justify-center mr-3" style="background-color: {{ $category->color }}20;">
-                                                    <i class="{{ $category->icon }} text-lg" style="color: {{ $category->color }}"></i>
-                                                </div>
                                                 <div>
                                                     <div class="text-sm font-medium text-gray-900">{{ $category->name }}</div>
                                                 </div>
@@ -318,12 +315,7 @@
                             @error('categoryForm.description') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Icon</label>
-                            <input wire:model="categoryForm.icon" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="e.g., fas fa-tag" required>
-                            @error('categoryForm.icon') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
-                            <p class="text-xs text-gray-500 mt-1">Use FontAwesome classes like: fas fa-tag, fas fa-laptop, fas fa-coffee</p>
-                        </div>
+                        {{-- Icon input removed --}}
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Color</label>
@@ -446,12 +438,7 @@
                             @error('categoryForm.description') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Icon</label>
-                            <input wire:model="categoryForm.icon" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="e.g., fas fa-tag" required>
-                            @error('categoryForm.icon') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
-                            <p class="text-xs text-gray-500 mt-1">Use FontAwesome classes like: fas fa-tag, fas fa-laptop, fas fa-coffee</p>
-                        </div>
+                        {{-- Icon input removed --}}
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Color</label>

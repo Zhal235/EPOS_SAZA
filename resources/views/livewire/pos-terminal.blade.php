@@ -90,17 +90,12 @@
                     <!-- Products Grid -->
                     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         @forelse($products as $product)
-                            <div wire:click="addToCart({{ $product->id }})" class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer">
-                                <div class="w-full h-24 bg-gray-100 rounded-lg mb-3 flex items-center justify-center">
-                                    @if($product->image_url)
-                                        <img src="{{ $product->image_url }}" alt="{{ $product->name }}" class="w-full h-full object-cover rounded-lg">
-                                    @else
-                                        <i class="{{ $product->category->icon ?? 'fas fa-box' }} text-2xl" style="color: {{ $product->category->color ?? '#6366F1' }}"></i>
-                                    @endif
+                            <div wire:click="addToCart({{ $product->id }})" class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer flex flex-col justify-between min-h-[120px]">
+                                <div>
+                                    <h4 class="font-bold text-gray-900 text-base mb-2 line-clamp-2">{{ $product->name }}</h4>
+                                    <p class="text-xs text-gray-500 mb-2">SKU: {{ $product->sku }}</p>
                                 </div>
-                                <h4 class="font-medium text-gray-900 text-sm mb-1">{{ $product->name }}</h4>
-                                <p class="text-xs text-gray-500 mb-2">SKU: {{ $product->sku }}</p>
-                                <div class="flex items-center justify-between">
+                                <div class="flex items-center justify-between mt-auto">
                                     <span class="text-lg font-bold text-indigo-600">{{ $product->formatted_selling_price }}</span>
                                     <span class="text-xs {{ $product->is_low_stock ? 'text-red-500' : 'text-gray-500' }}">
                                         Stock: {{ $product->stock_quantity }}

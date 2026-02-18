@@ -89,10 +89,7 @@
             <i class="fas fa-users w-5 text-center"></i>
             <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Manajemen Staf</span>
         </a>
-        @endif        <a href="{{ route('customers') }}" class="menu-item flex items-center px-4 py-3 text-white rounded-lg {{ request()->routeIs('customers') ? 'active' : '' }}">
-            <i class="fas fa-user-friends w-5 text-center"></i>
-            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Pelanggan</span>
-        </a>
+        @endif
         
         <a href="#" class="menu-item flex items-center px-4 py-3 text-white rounded-lg">
             <i class="fas fa-credit-card w-5 text-center"></i>
