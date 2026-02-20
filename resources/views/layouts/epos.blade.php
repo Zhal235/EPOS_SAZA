@@ -294,7 +294,8 @@
         @endphp
         
         @if($isPosPage)
-        <!-- POS-specific scripts (only load on POS pages) -->
+        <!-- POS-specific styles and scripts (only load on POS pages) -->
+        <link rel="stylesheet" href="/css/pos-terminal.css">
         <script>if(window.APP_DEBUG) console.log('🏪 Loading POS-specific scripts for:', '{{ $header ?? 'POS' }}');</script>
         <script src="/js/modules/customer-scanner.js"></script>
         <script src="/js/modules/transaction-processor.js"></script>

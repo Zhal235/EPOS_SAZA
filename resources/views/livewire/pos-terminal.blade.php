@@ -513,8 +513,205 @@
             </div>
         @endif
 
-    <!-- RFID Integration Script -->
-    <script>
+        <!-- Cash Payment Modal -->
+        @if($showCashModal)
+            <div class="fixed inset-0 overflow-y-auto h-full w-full z-50 flex items-center justify-center" wire:click="closeCashModal">
+                <div class="relative mx-auto p-6 border w-96 max-w-lg shadow-xl rounded-lg bg-white" @click.stop>
+                    <div class="mt-3">
+                        <!-- Modal Header -->
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-gray-900">
+                                <i class="fas fa-money-bill-wave text-green-600 mr-2"></i>
+                                Pembayaran Tunai
+                            </h3>
+                            <button wire:click="closeCashModal" class="text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+
+                        <!-- Order Summary in Modal -->
+                        <div class="bg-gray-50 rounded-lg p-4 mb-4">
+                            <h4 class="font-medium text-gray-800 mb-3">Ringkasan Pesanan</h4>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span>Subtotal ({{ $this->totalItems }} item)</span>
+                                    <span class="font-medium">{{ 'Rp ' . number_format($this->subtotal, 0, ',', '.') }}</span>
+                                </div>
+                                @if($discount > 0)
+                                <div class="flex justify-between text-green-600">
+                                    <span>Diskon</span>
+                                    <span>-{{ 'Rp ' . number_format($discount, 0, ',', '.') }}</span>
+                                </div>
+                                @endif
+                                <hr class="my-2">
+                                <div class="flex justify-between text-lg font-bold">
+                                    <span>TOTAL</span>
+                                    <span class="text-green-600">{{ 'Rp ' . number_format($this->total, 0, ',', '.') }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cash Input -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-hand-holding-usd mr-1"></i>Uang Diterima
+                            </label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">Rp</span>
+                                <input 
+                                    type="text" 
+                                    wire:model.live="cashReceived" 
+                                    class="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-lg font-medium"
+                                    placeholder="0"
+                                    autofocus
+                                >
+                            </div>
+                        </div>
+
+                        <!-- Change Calculation -->
+                        @if($cashReceived && (float)str_replace([',', '.'], ['', ''], $cashReceived) >= $this->total)
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-blue-700 font-medium">
+                                        <i class="fas fa-exchange-alt mr-1"></i>Kembalian
+                                    </span>
+                                    <span class="text-blue-800 text-xl font-bold">
+                                        {{ 'Rp ' . number_format($calculateChange, 0, ',', '.') }}
+                                    </span>
+                                </div>
+                            </div>
+                        @elseif($cashReceived)
+                            <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                                <div class="flex items-center">
+                                    <i class="fas fa-exclamation-triangle text-red-600 mr-2"></i>
+                                    <span class="text-red-700 text-sm">
+                                        Uang kurang {{ 'Rp ' . number_format($this->total - (float)str_replace([',', '.'], ['', ''], $cashReceived), 0, ',', '.') }}
+                                    </span>
+                                </div>
+                            </div>
+                        @endif
+
+                        <!-- Action Buttons -->
+                        <div class="flex space-x-3">
+                            <button 
+                                wire:click="closeCashModal" 
+                                class="flex-1 px-4 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors">
+                                <i class="fas fa-times mr-2"></i>Batal
+                            </button>
+                            <button 
+                                wire:click="processCashPayment" 
+                                @if(!$cashReceived || (float)str_replace([',', '.'], ['', ''], $cashReceived) < $this->total) disabled @endif
+                                class="flex-1 px-4 py-3 rounded-lg font-medium transition-colors
+                                {{ $cashReceived && (float)str_replace([',', '.'], ['', ''], $cashReceived) >= $this->total 
+                                    ? 'bg-green-600 hover:bg-green-700 text-white' 
+                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed' }}">
+                                <i class="fas fa-check mr-2"></i>Konfirmasi Bayar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        <!-- Receipt Modal -->
+        @if($showReceiptModal && $lastTransaction)
+            <div class="fixed inset-0 overflow-y-auto h-full w-full z-50 flex items-center justify-center" style="background: rgba(0,0,0,0.8);">
+                <div class="relative mx-auto p-6 border w-80 max-w-sm shadow-xl rounded-lg bg-white" @click.stop>
+                    <div class="mt-3">
+                        <!-- Receipt Header -->
+                        <div class="text-center mb-6">
+                            <h3 class="text-lg font-bold text-gray-900 mb-2">
+                                <i class="fas fa-receipt text-green-600 mr-2"></i>
+                                Struk Belanja
+                            </h3>
+                            <div class="text-xs text-gray-600">
+                                <div>{{ config('app.name', 'EPOS SAZA') }}</div>
+                                <div>{{ now()->format('d/m/Y H:i:s') }}</div>
+                                <div>Kasir: {{ Auth::user()->name ?? 'Admin' }}</div>
+                            </div>
+                        </div>
+
+                        <!-- Receipt Content -->
+                        <div class="border-t border-b border-gray-300 py-4 mb-4 text-xs">
+                            <!-- Transaction Info -->
+                            <div class="mb-3">
+                                <div class="flex justify-between">
+                                    <span>No. Transaksi:</span>
+                                    <span class="font-medium">{{ $lastTransaction->transaction_number }}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Pelanggan:</span>
+                                    <span>{{ $lastTransaction->customer_name }}</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Items -->
+                            <div class="space-y-1 mb-3">
+                                @foreach($lastTransaction->items as $item)
+                                    <div>
+                                        <div class="flex justify-between">
+                                            <span class="font-medium">{{ $item->product_name }}</span>
+                                        </div>
+                                        <div class="flex justify-between text-gray-600 ml-2">
+                                            <span>{{ $item->quantity }}x {{ number_format($item->unit_price, 0, ',', '.') }}</span>
+                                            <span>{{ number_format($item->total_price, 0, ',', '.') }}</span>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+
+                            <!-- Totals -->
+                            <div class="space-y-1">
+                                <div class="flex justify-between">
+                                    <span>Subtotal:</span>
+                                    <span>{{ number_format($lastTransaction->subtotal, 0, ',', '.') }}</span>
+                                </div>
+                                @if($lastTransaction->discount_amount > 0)
+                                <div class="flex justify-between">
+                                    <span>Diskon:</span>
+                                    <span>-{{ number_format($lastTransaction->discount_amount, 0, ',', '.') }}</span>
+                                </div>
+                                @endif
+                                <div class="flex justify-between font-bold text-sm border-t pt-1">
+                                    <span>TOTAL:</span>
+                                    <span>{{ number_format($lastTransaction->total_amount, 0, ',', '.') }}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Tunai:</span>
+                                    <span>{{ number_format($lastTransaction->paid_amount, 0, ',', '.') }}</span>
+                                </div>
+                                <div class="flex justify-between font-bold">
+                                    <span>Kembalian:</span>
+                                    <span>{{ number_format($lastTransaction->change_amount, 0, ',', '.') }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="text-center text-xs text-gray-600 mb-4">
+                            Terima kasih atas kunjungan Anda!
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="space-y-2">
+                            <button 
+                                wire:click="printReceipt" 
+                                class="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors">
+                                <i class="fas fa-print mr-2"></i>Cetak Struk (58mm)
+                            </button>
+                            <button 
+                                wire:click="closeReceiptModal" 
+                                class="w-full px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg transition-colors">
+                                <i class="fas fa-times mr-2"></i>Tutup
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        <!-- RFID Integration Script -->
+        <script>
     // Wait for all scripts to load
     document.addEventListener('DOMContentLoaded', function() {
         console.log('POS Terminal RFID Integration initializing...');
@@ -962,128 +1159,196 @@
             @this.call('testLivewireConnection');
         };
     }
-    </script>
+    
+    // Receipt printing functionality
+    document.addEventListener('livewire:init', function() {
+        Livewire.on('printReceipt', (data) => {
+            console.log('Print receipt event received:', data);
+            
+            // Extract transaction data
+            const receiptData = Array.isArray(data) ? data[0] : data;
+            const transaction = receiptData.transaction;
+            
+            // Generate ESC/POS commands for 58mm thermal printer
+            const receiptContent = generateReceiptContent(transaction, receiptData);
+            
+            // Try to print using different methods
+            if (window.printReceipt58mm) {
+                // Use dedicated printer function if available
+                window.printReceipt58mm(receiptContent);
+            } else if (navigator.bluetooth) {
+                // Use Web Bluetooth API for thermal printers
+                printViaBluetooth(receiptContent);
+            } else {
+                // Fallback to browser print with thermal format
+                printToThermalPrinter(receiptContent);
+            }
+        });
+    });
+    
+    // Generate 58mm thermal receipt content
+    function generateReceiptContent(transaction, receiptData) {
+        const storeName = "{{ config('app.name', 'EPOS SAZA') }}";
+        const cashierName = "{{ Auth::user()->name ?? 'Admin' }}";
+        const currentDate = new Date().toLocaleString('id-ID', {
+            day: '2-digit',
+            month: '2-digit', 
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+        
+        let receipt = '';
+        
+        // ESC/POS Initialize printer
+        receipt += '\x1B\x40'; // Initialize
+        receipt += '\x1B\x61\x01'; // Center alignment
+        
+        // Store header
+        receipt += '\x1B\x21\x20'; // Double height
+        receipt += storeName + '\n';
+        receipt += '\x1B\x21\x00'; // Normal text
+        receipt += '================================\n';
+        receipt += 'TGL: ' + currentDate + '\n';
+        receipt += 'NO : ' + transaction.transaction_number + '\n';
+        receipt += 'KASIR: ' + cashierName + '\n';
+        receipt += 'PELANGGAN: ' + transaction.customer_name + '\n';
+        receipt += '================================\n';
+        
+        // Items
+        receipt += '\x1B\x61\x00'; // Left alignment
+        if (transaction.items && transaction.items.length > 0) {
+            transaction.items.forEach(item => {
+                const name = item.product_name.substring(0, 20); // Truncate long names
+                const qty = item.quantity.toString();
+                const price = formatPrice(item.unit_price);
+                const total = formatPrice(item.total_price);
+                
+                receipt += name + '\n';
+                receipt += ' ' + qty + ' x ' + price + ' = ' + total + '\n';
+            });
+        }
+        
+        receipt += '--------------------------------\n';
+        
+        // Totals
+        receipt += 'SUBTOTAL' + ' '.repeat(15) + formatPrice(transaction.subtotal) + '\n';
+        if (transaction.discount_amount > 0) {
+            receipt += 'DISKON' + ' '.repeat(17) + '- ' + formatPrice(transaction.discount_amount) + '\n';
+        }
+        
+        receipt += '\x1B\x21\x20'; // Double height
+        receipt += 'TOTAL' + ' '.repeat(19) + formatPrice(transaction.total_amount) + '\n';
+        receipt += '\x1B\x21\x00'; // Normal text
+        
+        receipt += 'TUNAI' + ' '.repeat(19) + formatPrice(receiptData.cashReceived) + '\n';
+        receipt += 'KEMBALIAN' + ' '.repeat(15) + formatPrice(receiptData.change) + '\n';
+        
+        receipt += '================================\n';
+        receipt += '\x1B\x61\x01'; // Center alignment
+        receipt += 'Terima kasih atas kunjungan Anda\n';
+        receipt += '================================\n';
+        
+        // Cut paper
+        receipt += '\x1D\x56\x41\x10'; // Partial cut
+        receipt += '\n\n\n'; // Feed paper
+        
+        return receipt;
+    }
+    
+    // Format price for receipt
+    function formatPrice(amount) {
+        return new Intl.NumberFormat('id-ID').format(amount);
+    }
+    
+    // Print via Web Bluetooth (modern thermal printers)
+    async function printViaBluetooth(content) {
+        try {
+            console.log('Attempting Bluetooth print...');
+            
+            const device = await navigator.bluetooth.requestDevice({
+                filters: [
+                    { services: ['000018f0-0000-1000-8000-00805f9b34fb'] }, // Thermal printer service
+                ],
+                optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
+            });
+            
+            const server = await device.gatt.connect();
+            const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+            const characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+            
+            // Convert string to array buffer
+            const encoder = new TextEncoder();
+            const data = encoder.encode(content);
+            
+            await characteristic.writeValue(data);
+            
+            console.log('Receipt sent to Bluetooth printer successfully');
+            
+        } catch (error) {
+            console.error('Bluetooth print failed:', error);
+            // Fallback to thermal print format
+            printToThermalPrinter(content);
+        }
+    }
+    
+    // Fallback thermal printer format
+    function printToThermalPrinter(content) {
+        console.log('Using thermal printer fallback...');
+        
+        // Create a hidden div with thermal receipt styling
+        const printDiv = document.createElement('div');
+        printDiv.style.position = 'fixed';
+        printDiv.style.left = '-9999px';
+        printDiv.innerHTML = `
+            <div id="thermal-receipt" style="
+                font-family: 'Courier New', monospace;
+                font-size: 10px;
+                line-height: 1.2;
+                width: 58mm;
+                max-width: 58mm;
+                margin: 0;
+                padding: 0;
+                background: white;
+                color: black;
+            ">
+                <pre style="margin: 0; padding: 0; white-space: pre-wrap;">${content.replace(/[\x1B\x1D][\x21\x40\x41\x56\x61][\x00\x01\x10\x20]?/g, '')}</pre>
+            </div>
+        `;
+        
+        document.body.appendChild(printDiv);
+        
+        // Create print styles
+        const style = document.createElement('style');
+        style.textContent = `
+            @media print {
+                body * { visibility: hidden; }
+                #thermal-receipt, #thermal-receipt * { visibility: visible; }
+                #thermal-receipt {
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    width: 58mm !important;
+                    max-width: 58mm !important;
+                }
+                @page {
+                    size: 58mm auto;
+                    margin: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // Print
+        window.print();
+        
+        // Cleanup
+        setTimeout(() => {
+            document.body.removeChild(printDiv);
+            document.head.removeChild(style);
+        }, 1000);
+    }
+        </script>
 
-    <!-- Custom CSS untuk Tablet POS Terminal -->
-    <style>
-        /* Custom scrollbar styling */
-        .scrollbar-thin {
-            scrollbar-width: thin;
-            scrollbar-color: #cbd5e0 #f7fafc;
-        }
-        
-        .scrollbar-thin::-webkit-scrollbar {
-            width: 6px;
-        }
-        
-        .scrollbar-thin::-webkit-scrollbar-track {
-            background: #f7fafc;
-            border-radius: 3px;
-        }
-        
-        .scrollbar-thin::-webkit-scrollbar-thumb {
-            background: #cbd5e0;
-            border-radius: 3px;
-        }
-        
-        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-            background: #a0aec0;
-        }
-        
-        /* Tablet optimizations */
-        @media screen and (min-width: 768px) and (max-width: 1024px) {
-            /* Panel kanan max height di tablet */
-            .lg\\:col-span-1 > div {
-                max-height: calc(100vh - 140px) !important;
-            }
-            
-            /* Keranjang area di tablet - tinggi tetap dan scrollable */
-            .cart-container {
-                max-height: 250px !important;
-                min-height: 200px !important;
-            }
-        }
-        
-        /* Tablet landscape - lebih pendek */
-        @media screen and (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
-            .lg\\:col-span-1 > div {
-                max-height: calc(100vh - 120px) !important;
-            }
-            
-            .cart-container {
-                max-height: 180px !important;
-                min-height: 150px !important;
-            }
-        }
-        
-        /* Mobile optimizations */
-        @media screen and (max-width: 767px) {
-            .lg\\:col-span-1 > div {
-                max-height: calc(100vh - 100px) !important;
-            }
-            
-            .cart-container {
-                max-height: 200px !important;
-                min-height: 150px !important;
-            }
-        }
-        
-        /* Smooth scrolling */
-        .smooth-scroll {
-            scroll-behavior: smooth;
-        }
-        
-        /* Hide scrollbar on mobile but keep functionality */
-        @media screen and (max-width: 767px) {
-            .scrollbar-thin {
-                scrollbar-width: none;
-                -ms-overflow-style: none;
-            }
-            
-            .scrollbar-thin::-webkit-scrollbar {
-                display: none;
-            }
-        }
-        
-        /* Ensure proper spacing on all devices */
-        .pos-cart-panel {
-            min-height: 0;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        /* Force fixed height for cart items container */
-        .cart-items-container {
-            height: 300px;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-        
-        /* Responsive adjustments for cart height */
-        @media screen and (max-width: 1024px) {
-            .cart-items-container {
-                height: 250px !important;
-                max-height: 250px !important;
-            }
-        }
-        
-        @media screen and (max-width: 768px) {
-            .cart-items-container {
-                height: 200px !important;
-                max-height: 200px !important;
-            }
-        }
-        
-        /* Responsive text sizing */
-        @media screen and (max-width: 640px) {
-            .cart-item-name {
-                font-size: 0.75rem;
-                line-height: 1rem;
-            }
-            
-            .cart-item-price {
-                font-size: 0.625rem;
-            }
-        }
-    </style>
 </div>

@@ -35,6 +35,13 @@ class PosTerminal extends Component
     public $dailySpendingLimit = 0;
     public $remainingLimit = 0;
     
+    // Cash payment properties
+    public $showCashModal = false;
+    public $cashReceived = '';
+    public $calculateChange = 0;
+    public $showReceiptModal = false;
+    public $lastTransaction = null;
+    
     // Development mode tracking
     public $devModeNotified = false;
     
@@ -220,11 +227,16 @@ class PosTerminal extends Component
         // Clear RFID related states after successful transaction
         $this->resetRfidState();
         
+        // Clear cash payment states
+        $this->closeCashModal();
+        $this->showReceiptModal = false;
+        $this->lastTransaction = null;
+        
         // Reset payment method to default
         $this->paymentMethod = 'cash';
         $this->customer = 'walk-in';
         
-        Log::info('Cart and RFID states cleared after successful transaction');
+        Log::info('Cart and payment states cleared after successful transaction');
     }
 
     public function selectPaymentMethod($method)
@@ -250,6 +262,154 @@ class PosTerminal extends Component
     {
         $this->resetRfidState();
         Log::info('RFID modal closed manually');
+    }
+    
+    // Cash payment methods
+    public function openCashModal()
+    {
+        $this->showCashModal = true;
+        $this->cashReceived = '';
+        $this->calculateChange = 0;
+    }
+
+    public function closeCashModal()
+    {
+        $this->showCashModal = false;
+        $this->cashReceived = '';
+        $this->calculateChange = 0;
+    }
+
+    public function updatedCashReceived()
+    {
+        $cashAmount = (float) str_replace([',', '.'], ['', ''], $this->cashReceived);
+        $this->calculateChange = max(0, $cashAmount - $this->total);
+    }
+
+    public function processCashPayment()
+    {
+        $cashAmount = (float) str_replace([',', '.'], ['', ''], $this->cashReceived);
+        
+        if ($cashAmount < $this->total) {
+            $this->dispatch('showNotification', [
+                'type' => 'error',
+                'title' => '❌ Uang Tidak Mencukupi',
+                'message' => 'Jumlah uang yang diterima kurang dari total pembayaran!',
+                'options' => ['duration' => 3000]
+            ]);
+            return;
+        }
+
+        // Process the actual payment
+        $this->confirmCashPayment();
+    }
+
+    public function confirmCashPayment()
+    {
+        if (empty($this->cart)) {
+            session()->flash('error', 'Keranjang kosong!');
+            return;
+        }
+
+        $cashAmount = (float) str_replace([',', '.'], ['', ''], $this->cashReceived);
+        $changeAmount = $cashAmount - $this->total;
+
+        try {
+            DB::beginTransaction();
+
+            // Validate stock availability again before processing
+            foreach ($this->cart as $item) {
+                $product = Product::find($item['id']);
+                if (!$product || $product->stock_quantity < $item['quantity']) {
+                    throw new \Exception("Insufficient stock for {$item['name']}!");
+                }
+            }
+
+            // Get customer name
+            $customerName = 'Walk-in Customer';
+            if ($this->customer !== 'walk-in') {
+                $customerData = User::find($this->customer);
+                $customerName = $customerData ? $customerData->name : 'Walk-in Customer';
+            }
+
+            // Create transaction
+            $transaction = Transaction::create([
+                'user_id' => Auth::id() ?? 1,
+                'customer_name' => $customerName,
+                'subtotal' => $this->subtotal,
+                'tax_amount' => 0,
+                'discount_amount' => $this->discount,
+                'total_amount' => $this->total,
+                'paid_amount' => $cashAmount,
+                'change_amount' => $changeAmount,
+                'payment_method' => $this->paymentMethod,
+                'status' => 'completed'
+            ]);
+
+            // Create transaction items and update stock
+            foreach ($this->cart as $item) {
+                $product = Product::find($item['id']);
+                
+                TransactionItem::create([
+                    'transaction_id' => $transaction->id,
+                    'product_id' => $product->id,
+                    'product_sku' => $product->sku,
+                    'product_name' => $product->name,
+                    'unit_price' => $item['price'],
+                    'quantity' => $item['quantity'],
+                    'total_price' => $item['total']
+                ]);
+
+                $product->updateStock($item['quantity'], 'subtract');
+            }
+
+            DB::commit();
+
+            // Store transaction for receipt
+            $this->lastTransaction = $transaction;
+
+            // Close cash modal and show receipt
+            $this->closeCashModal();
+            $this->showReceiptModal = true;
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            $this->dispatch('showErrorModal', [
+                'title' => '❌ Pembayaran Gagal',
+                'message' => "Terjadi kesalahan saat memproses pembayaran:\n\n" . $e->getMessage() . "\n\nSilakan coba lagi atau hubungi administrator."
+            ]);
+        }
+    }
+
+    public function closeReceiptModal()
+    {
+        $this->showReceiptModal = false;
+        $this->lastTransaction = null;
+        $this->clearCart();
+    }
+
+    public function printReceipt()
+    {
+        if (!$this->lastTransaction) {
+            return;
+        }
+
+        // Dispatch event to print receipt
+        $this->dispatch('printReceipt', [
+            'transaction' => $this->lastTransaction,
+            'change' => $this->lastTransaction->change_amount,
+            'cashReceived' => $this->lastTransaction->paid_amount
+        ]);
+
+        // Close receipt modal and clear cart
+        $this->closeReceiptModal();
+        
+        $this->dispatch('showNotification', [
+            'type' => 'success',
+            'title' => '✅ Pembayaran Berhasil',
+            'message' => 'Transaksi berhasil diproses. Struk sedang dicetak.',
+            'options' => ['duration' => 3000]
+        ]);
     }
     
     /**
@@ -1019,7 +1179,13 @@ class PosTerminal extends Component
             return;
         }
 
-        // Regular payment flow (cash, qris, card)
+        // If cash payment, open cash modal for amount input
+        if ($this->paymentMethod === 'cash') {
+            $this->openCashModal();
+            return;
+        }
+
+        // Regular payment flow for other methods (qris, card)
         try {
             DB::beginTransaction();
 
@@ -1078,8 +1244,8 @@ class PosTerminal extends Component
             // Clear cart
             $this->clearCart();
             
-            // Show simple success notification for cash payments
-            \Log::info('Dispatching success notification for cash payment');
+            // Show simple success notification for non-cash payments
+            \Log::info('Dispatching success notification for non-cash payment');
             
             $this->dispatch('showSuccessModal', [
                 'title' => '✅ Pembayaran Berhasil!',

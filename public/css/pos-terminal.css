@@ -1,0 +1,168 @@
+/* Custom scrollbar styling */
+.scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e0 #f7fafc;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+    background: #f7fafc;
+    border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: #a0aec0;
+}
+
+/* Tablet optimizations */
+@media screen and (min-width: 768px) and (max-width: 1024px) {
+    .lg\:col-span-1 > div {
+        max-height: calc(100vh - 140px) !important;
+    }
+
+    .cart-container {
+        max-height: 250px !important;
+        min-height: 200px !important;
+    }
+}
+
+/* Tablet landscape */
+@media screen and (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
+    .lg\:col-span-1 > div {
+        max-height: calc(100vh - 120px) !important;
+    }
+
+    .cart-container {
+        max-height: 180px !important;
+        min-height: 150px !important;
+    }
+}
+
+/* Mobile optimizations */
+@media screen and (max-width: 767px) {
+    .lg\:col-span-1 > div {
+        max-height: calc(100vh - 100px) !important;
+    }
+
+    .cart-container {
+        max-height: 200px !important;
+        min-height: 150px !important;
+    }
+}
+
+/* Smooth scrolling */
+.smooth-scroll {
+    scroll-behavior: smooth;
+}
+
+/* Hide scrollbar on mobile but keep functionality */
+@media screen and (max-width: 767px) {
+    .scrollbar-thin {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+/* Ensure proper spacing on all devices */
+.pos-cart-panel {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Force fixed height for cart items container */
+.cart-items-container {
+    height: 300px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+/* Responsive adjustments for cart height */
+@media screen and (max-width: 1024px) {
+    .cart-items-container {
+        height: 250px !important;
+        max-height: 250px !important;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .cart-items-container {
+        height: 200px !important;
+        max-height: 200px !important;
+    }
+}
+
+/* Responsive text sizing */
+@media screen and (max-width: 640px) {
+    .cart-item-name {
+        font-size: 0.75rem;
+        line-height: 1rem;
+    }
+
+    .cart-item-price {
+        font-size: 0.625rem;
+    }
+}
+
+/* Cash Modal Styling */
+.cash-modal-overlay {
+    backdrop-filter: blur(4px);
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+.cash-input {
+    font-size: 18px;
+    text-align: right;
+}
+
+.change-display {
+    animation: pos-pulse 2s infinite;
+}
+
+/* Receipt Modal Styling */
+.receipt-modal {
+    font-family: 'Courier New', monospace;
+}
+
+.receipt-content {
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+/* Print styles for thermal receipt */
+@media print {
+    .thermal-receipt {
+        width: 58mm !important;
+        max-width: 58mm !important;
+        font-family: 'Courier New', monospace !important;
+        font-size: 8px !important;
+        line-height: 1.1 !important;
+    }
+
+    @page {
+        size: 58mm auto;
+        margin: 0 !important;
+    }
+}
+
+/* Animation for success states */
+@keyframes pos-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+.success-highlight {
+    animation: pos-pulse 1s ease-in-out 3;
+}
