@@ -89,6 +89,10 @@
                         class="px-4 py-2 rounded-md text-sm font-medium transition-colors {{ $activeTab === 'expenses' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700' }}">
                     <i class="fas fa-shopping-cart mr-2"></i>Pengeluaran
                 </button>
+                <button wire:click="setTab('settlement')" 
+                        class="px-4 py-2 rounded-md text-sm font-medium transition-colors {{ $activeTab === 'settlement' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-700' }}">
+                    <i class="fas fa-store mr-2"></i>Settlement Tenant
+                </button>
             </div>
 
             @if($activeTab === 'withdrawals')
@@ -481,7 +485,91 @@
                 </table>
              </div>
         </div>
-    @endif
+    @elseif($activeTab === 'settlement')
+        {{-- ─── Tab Settlement per Tenant ─────────────────────────────────── --}}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900">Settlement Tenant Foodcourt</h3>
+                    <p class="text-sm text-gray-500 mt-1">Rekap penjualan & komisi per tenant periode yang dipilih</p>
+                </div>
+            </div>
+
+            @if($tenantSettlement->isEmpty())
+                <div class="text-center py-16">
+                    <i class="fas fa-store-slash text-gray-300 text-5xl mb-4 block"></i>
+                    <p class="text-gray-500 font-medium">Tidak ada data transaksi foodcourt</p>
+                    <p class="text-sm text-gray-400 mt-1">Pastikan sudah ada transaksi mode Foodcourt pada periode ini</p>
+                </div>
+            @else
+                {{-- Summary bar --}}
+                <div class="grid grid-cols-3 gap-4 mb-6">
+                    <div class="bg-orange-50 border border-orange-200 rounded-xl p-4 text-center">
+                        <p class="text-xs text-orange-600 font-semibold uppercase mb-1">Total Penjualan Foodcourt</p>
+                        <p class="text-2xl font-bold text-orange-700">
+                            Rp {{ number_format($tenantSettlement->sum('total_sales'), 0, ',', '.') }}
+                        </p>
+                    </div>
+                    <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-4 text-center">
+                        <p class="text-xs text-indigo-600 font-semibold uppercase mb-1">Total Komisi Diterima</p>
+                        <p class="text-2xl font-bold text-indigo-700">
+                            Rp {{ number_format($tenantSettlement->sum('total_commission'), 0, ',', '.') }}
+                        </p>
+                    </div>
+                    <div class="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
+                        <p class="text-xs text-green-600 font-semibold uppercase mb-1">Total Dibayarkan ke Tenant</p>
+                        <p class="text-2xl font-bold text-green-700">
+                            Rp {{ number_format($tenantSettlement->sum('tenant_payout'), 0, ',', '.') }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Booth</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nama Tenant</th>
+                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Transaksi</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total Penjualan</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Komisi</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Dibayarkan ke Tenant</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            @foreach($tenantSettlement as $row)
+                            <tr class="hover:bg-orange-50 transition">
+                                <td class="px-4 py-3 font-mono font-bold text-orange-600 text-sm">
+                                    {{ $row->booth_number ?? '-' }}
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span class="font-semibold text-gray-800">{{ $row->tenant_name }}</span>
+                                </td>
+                                <td class="px-4 py-3 text-center">
+                                    <span class="bg-gray-100 text-gray-700 text-xs px-2 py-0.5 rounded-full">{{ $row->transaction_count }}</span>
+                                </td>
+                                <td class="px-4 py-3 text-right font-medium text-gray-800">{{ $row->total_sales_formatted }}</td>
+                                <td class="px-4 py-3 text-right">
+                                    <span class="text-indigo-600 font-medium">{{ $row->total_commission_formatted }}</span>
+                                </td>
+                                <td class="px-4 py-3 text-right">
+                                    <span class="text-green-700 font-bold text-base">{{ $row->tenant_payout_formatted }}</span>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                        <tfoot class="bg-gray-50 font-semibold">
+                            <tr>
+                                <td colspan="3" class="px-4 py-3 text-sm text-gray-600">Total</td>
+                                <td class="px-4 py-3 text-right text-sm">Rp {{ number_format($tenantSettlement->sum('total_sales'), 0, ',', '.') }}</td>
+                                <td class="px-4 py-3 text-right text-sm text-indigo-600">Rp {{ number_format($tenantSettlement->sum('total_commission'), 0, ',', '.') }}</td>
+                                <td class="px-4 py-3 text-right text-sm text-green-700">Rp {{ number_format($tenantSettlement->sum('tenant_payout'), 0, ',', '.') }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            @endif
+        </div>    @endif
 
     <!-- Modal Catat Pengeluaran -->
     @if($showExpenseModal)

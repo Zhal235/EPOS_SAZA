@@ -6,6 +6,7 @@ use App\Livewire\Products;
 use App\Livewire\Dashboard;
 use App\Livewire\TransactionHistory;
 use App\Livewire\SalesReport;
+use App\Livewire\TenantManagement;
 use App\Http\Controllers\SimpelsTestController;
 
 // Root route - redirect based on authentication status
@@ -35,6 +36,9 @@ Route::middleware(['auth'])->group(function () {
     
     // Staff Management routes (Admin only)
     Route::get('staff', \App\Livewire\StaffManagement::class)->name('staff')->middleware('can:access-admin');
+
+    // Foodcourt Tenant Management routes (Admin only)
+    Route::get('tenants', TenantManagement::class)->name('tenants')->middleware('can:access-admin');
     
     
     // Profile routes

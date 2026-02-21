@@ -14,13 +14,24 @@ class TransactionItem extends Model
         'product_name',
         'unit_price',
         'quantity',
-        'total_price'
+        'total_price',
+        // Tenant fields
+        'tenant_id',
+        'tenant_name',
+        'commission_type',
+        'commission_value',
+        'commission_amount',
+        'tenant_amount',
+        'item_notes',
     ];
 
     protected $casts = [
-        'unit_price' => 'decimal:2',
-        'total_price' => 'decimal:2',
-        'quantity' => 'integer'
+        'unit_price'        => 'decimal:2',
+        'total_price'       => 'decimal:2',
+        'commission_value'  => 'decimal:2',
+        'commission_amount' => 'decimal:2',
+        'tenant_amount'     => 'decimal:2',
+        'quantity'          => 'integer',
     ];
 
     // Relationships
@@ -32,6 +43,11 @@ class TransactionItem extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class);
     }
 
     // Accessors

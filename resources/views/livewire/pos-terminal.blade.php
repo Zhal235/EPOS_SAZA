@@ -54,11 +54,30 @@
             <!-- Products Grid -->
             <div class="lg:col-span-2">
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 h-full">
+                    <!-- Outlet Mode Toggle -->
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide mr-1">Mode:</span>
+                        <button wire:click="switchOutletMode('store')"
+                                class="px-4 py-1.5 rounded-full text-sm font-medium transition {{ $outletMode === 'store' ? 'bg-indigo-600 text-white shadow' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
+                            <i class="fas fa-shopping-bag mr-1"></i> Toko
+                        </button>
+                        <button wire:click="switchOutletMode('foodcourt')"
+                                class="px-4 py-1.5 rounded-full text-sm font-medium transition {{ $outletMode === 'foodcourt' ? 'bg-orange-500 text-white shadow' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
+                            <i class="fas fa-store mr-1"></i> Foodcourt
+                        </button>
+                        @if($outletMode === 'foodcourt')
+                            <span class="ml-2 text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">
+                                {{ $tenants->count() }} tenant aktif
+                            </span>
+                        @endif
+                    </div>
+
                     <!-- Search & Categories -->
                     <div class="flex items-center justify-between mb-6">
                         <div class="flex items-center space-x-4 flex-1">
                             <div class="relative flex-1 max-w-md">
-                                <input wire:model.live.debounce.300ms="search" type="text" placeholder="Cari produk..." 
+                                <input wire:model.live.debounce.300ms="search" type="text"
+                                       placeholder="Cari produk {{ $outletMode === 'foodcourt' ? 'foodcourt' : 'toko' }}..."
                                        class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
                                 <i class="fas fa-search absolute left-3 top-4 text-gray-400"></i>
                             </div>
@@ -97,9 +116,11 @@
                                 </div>
                                 <div class="flex items-center justify-between mt-auto">
                                     <span class="text-lg font-bold text-indigo-600">{{ $product->formatted_selling_price }}</span>
-                                    <span class="text-xs {{ $product->is_low_stock ? 'text-red-500' : 'text-gray-500' }}">
-                                        Stock: {{ $product->stock_quantity }}
-                                    </span>
+                                    @if($product->track_stock)
+                                        <span class="text-xs {{ $product->is_low_stock ? 'text-red-500' : 'text-gray-500' }}">
+                                            Stock: {{ $product->stock_quantity }}
+                                        </span>
+                                    @endif
                                 </div>
                             </div>
                         @empty

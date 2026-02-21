@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
+// Tenant relationship is declared below; no extra import needed (same namespace)
+
 class Product extends Model
 {
     protected $fillable = [
@@ -14,6 +16,10 @@ class Product extends Model
         'name',
         'description',
         'category_id',
+        'outlet_type',
+        'tenant_id',
+        'commission_type',
+        'commission_value',
         'supplier_id',
         'brand',
         'unit',
@@ -50,7 +56,8 @@ class Product extends Model
         'manufacture_date' => 'date',
         'is_active' => 'boolean',
         'is_featured' => 'boolean',
-        'track_stock' => 'boolean'
+        'track_stock' => 'boolean',
+        'commission_value' => 'decimal:2',
     ];
 
     // Auto-generate SKU if not provided
@@ -76,10 +83,30 @@ class Product extends Model
         return $this->belongsTo(Supplier::class);
     }
 
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class);
+    }
+
     // Scopes
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    public function scopeStore($query)
+    {
+        return $query->where('outlet_type', 'store');
+    }
+
+    public function scopeFoodcourt($query)
+    {
+        return $query->where('outlet_type', 'foodcourt');
+    }
+
+    public function scopeByOutlet($query, string $outletType)
+    {
+        return $query->where('outlet_type', $outletType);
     }
 
     public function scopeLowStock($query)
@@ -122,6 +149,46 @@ class Product extends Model
     public function getIsLowStockAttribute()
     {
         return $this->stock_quantity <= $this->min_stock;
+    }
+
+    public function getIsFoodcourtAttribute(): bool
+    {
+        return $this->outlet_type === 'foodcourt';
+    }
+
+    /**
+     * Hitung komisi untuk item ini.
+     * Hanya menggunakan komisi yang di-set langsung di produk.
+     * Tidak ada fallback ke tenant.
+     */
+    public function calculateCommission(int $quantity): float
+    {
+        if (!$this->commission_type || $this->commission_value === null) {
+            return 0;
+        }
+
+        $unitPrice = (float) $this->selling_price;
+
+        if ($this->commission_type === 'percentage') {
+            $commissionPerUnit = round($unitPrice * (float)$this->commission_value / 100, 2);
+        } else {
+            $commissionPerUnit = (float) $this->commission_value;
+        }
+
+        return round($commissionPerUnit * $quantity, 2);
+    }
+
+    public function getEffectiveCommissionLabelAttribute(): string
+    {
+        $type  = $this->commission_type  ?? ($this->tenant?->commission_type);
+        $value = $this->commission_value ?? ($this->tenant?->commission_value);
+
+        if (!$type || $value === null) return '-';
+
+        if ($type === 'percentage') {
+            return number_format((float)$value, 2) . '%';
+        }
+        return 'Rp ' . number_format((float)$value, 0, ',', '.');
     }
 
     public function getIsOutOfStockAttribute()

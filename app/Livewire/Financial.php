@@ -6,7 +6,9 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use App\Models\FinancialTransaction;
 use App\Models\SimpelsWithdrawal;
+use App\Models\Tenant;
 use App\Models\Transaction;
+use App\Models\TransactionItem;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -666,12 +668,48 @@ class Financial extends Component
     public function render()
     {
         return view('livewire.financial', [
-            'summary' => $this->getDashboardSummary(),
-            'transactions' => $this->transactions,
-            'withdrawals' => $this->withdrawals,
-            'chartData' => $this->getChartData(),
+            'summary'          => $this->getDashboardSummary(),
+            'transactions'     => $this->transactions,
+            'withdrawals'      => $this->withdrawals,
+            'chartData'        => $this->getChartData(),
+            'tenantSettlement' => $this->getTenantSettlement(),
         ])->layout('layouts.epos', [
             'header' => 'Manajemen Keuangan'
         ]);
+    }
+
+    /**
+     * Rekap settlement per tenant untuk periode yang dipilih.
+     * Mengembalikan collection: tenant_id, tenant_name, total_sales, total_commission, tenant_payout
+     */
+    public function getTenantSettlement(): \Illuminate\Support\Collection
+    {
+        return DB::table('transaction_items')
+            ->join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
+            ->join('tenants', 'transaction_items.tenant_id', '=', 'tenants.id')
+            ->where('transactions.status', 'completed')
+            ->whereNotNull('transaction_items.tenant_id')
+            ->whereBetween('transactions.created_at', [
+                Carbon::parse($this->dateFrom)->startOfDay(),
+                Carbon::parse($this->dateTo)->endOfDay(),
+            ])
+            ->groupBy('transaction_items.tenant_id', 'tenants.name', 'tenants.booth_number')
+            ->select(
+                'transaction_items.tenant_id',
+                'tenants.name as tenant_name',
+                'tenants.booth_number',
+                DB::raw('SUM(transaction_items.total_price) as total_sales'),
+                DB::raw('SUM(transaction_items.commission_amount) as total_commission'),
+                DB::raw('SUM(transaction_items.tenant_amount) as tenant_payout'),
+                DB::raw('COUNT(DISTINCT transaction_items.transaction_id) as transaction_count')
+            )
+            ->orderBy('tenants.booth_number')
+            ->get()
+            ->map(function ($row) {
+                $row->total_sales_formatted    = 'Rp ' . number_format($row->total_sales, 0, ',', '.');
+                $row->total_commission_formatted = 'Rp ' . number_format($row->total_commission, 0, ',', '.');
+                $row->tenant_payout_formatted  = 'Rp ' . number_format($row->tenant_payout, 0, ',', '.');
+                return $row;
+            });
     }
 }

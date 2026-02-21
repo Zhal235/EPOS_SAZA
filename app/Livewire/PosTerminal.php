@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\Product;
 use App\Models\Category;
+use App\Models\Tenant;
 use App\Models\Transaction;
 use App\Models\TransactionItem;
 use App\Models\User;
@@ -20,6 +21,8 @@ class PosTerminal extends Component
 
     public $search = '';
     public $selectedCategory = '';
+    // 'store' = mode toko biasa, 'foodcourt' = mode foodcourt (hanya produk tenant)
+    public string $outletMode = 'store';
     public $cart = [];
     public $customer = 'walk-in';
     public $paymentMethod = 'cash';
@@ -120,11 +123,39 @@ class PosTerminal extends Component
         $this->resetPage();
     }
 
+    public function switchOutletMode(string $mode): void
+    {
+        if (!in_array($mode, ['store', 'foodcourt'])) return;
+
+        if (!empty($this->cart)) {
+            $this->dispatch('showNotification', [
+                'type' => 'warning',
+                'title' => '⚠️ Keranjang Tidak Kosong',
+                'message' => 'Kosongkan keranjang terlebih dahulu sebelum mengganti mode.',
+                'options' => ['duration' => 4000]
+            ]);
+            return;
+        }
+
+        $this->outletMode = $mode;
+        $this->selectedCategory = '';
+        $this->search = '';
+        $this->resetPage();
+
+        $label = $mode === 'foodcourt' ? 'Foodcourt' : 'Toko';
+        $this->dispatch('showNotification', [
+            'type' => 'info',
+            'title' => "Mode {$label}",
+            'message' => "Menampilkan produk {$label}.",
+            'options' => ['duration' => 2000]
+        ]);
+    }
+
     public function addToCart($productId)
     {
-        $product = Product::find($productId);
+        $product = Product::with('tenant')->find($productId);
         
-        if (!$product || $product->stock_quantity <= 0) {
+        if (!$product || !$product->canSell(1)) {
             $this->dispatch('showNotification', [
                 'type' => 'error',
                 'title' => '❌ Stok Habis',
@@ -144,11 +175,23 @@ class PosTerminal extends Component
             return;
         }
 
+        // Guard: jangan campur produk toko dan foodcourt
+        if ($product->outlet_type !== $this->outletMode) {
+            $label = $product->outlet_type === 'foodcourt' ? 'Foodcourt' : 'Toko';
+            $this->dispatch('showNotification', [
+                'type' => 'error',
+                'title' => '❌ Mode Tidak Sesuai',
+                'message' => "Produk ini adalah produk {$label}. Ganti mode terlebih dahulu.",
+                'options' => ['duration' => 4000]
+            ]);
+            return;
+        }
+
         $existingItem = collect($this->cart)->where('id', $productId)->first();
         
         if ($existingItem) {
             // Check if we can add more
-            if ($existingItem['quantity'] >= $product->stock_quantity) {
+            if ($product->track_stock && $existingItem['quantity'] >= $product->stock_quantity) {
                 $this->dispatch('showNotification', [
                     'type' => 'warning',
                     'title' => '⚠️ Batas Stok',
@@ -158,24 +201,38 @@ class PosTerminal extends Component
                 return;
             }
             
-            // Update quantity
-            $this->cart = collect($this->cart)->map(function ($item) use ($productId) {
+            // Update quantity and recalculate commission
+            $this->cart = collect($this->cart)->map(function ($item) use ($productId, $product) {
                 if ($item['id'] == $productId) {
                     $item['quantity']++;
-                    $item['total'] = $item['quantity'] * $item['price'];
+                    $item['total']             = $item['quantity'] * $item['price'];
+                    $item['commission_amount'] = $product->calculateCommission($item['quantity']);
+                    $item['tenant_amount']     = $item['total'] - $item['commission_amount'];
                 }
                 return $item;
             })->toArray();
         } else {
+            // Calculate commission for this product
+            $commissionAmount = $product->calculateCommission(1);
+
             // Add new item
             $this->cart[] = [
-                'id' => $product->id,
-                'name' => $product->name,
-                'sku' => $product->sku,
-                'price' => $product->selling_price,
-                'quantity' => 1,
-                'total' => $product->selling_price,
-                'stock' => $product->stock_quantity
+                'id'               => $product->id,
+                'name'             => $product->name,
+                'sku'              => $product->sku,
+                'price'            => $product->selling_price,
+                'quantity'         => 1,
+                'total'            => $product->selling_price,
+                'stock'            => $product->stock_quantity,
+                // Tenant info (null for store products)
+                'outlet_type'      => $product->outlet_type,
+                'tenant_id'        => $product->tenant_id,
+                'tenant_name'      => $product->tenant?->display_name,
+                'commission_type'  => $product->commission_type ?? $product->tenant?->commission_type,
+                'commission_value' => $product->commission_value ?? $product->tenant?->commission_value,
+                'commission_amount'=> $commissionAmount,
+                'tenant_amount'    => $product->selling_price - $commissionAmount,
+                'item_notes'       => '',
             ];
         }
 
@@ -196,7 +253,7 @@ class PosTerminal extends Component
         }
 
         $product = Product::find($productId);
-        if ($quantity > $product->stock_quantity) {
+        if ($product->track_stock && $quantity > $product->stock_quantity) {
             $this->dispatch('showNotification', [
                 'type' => 'warning',
                 'title' => '⚠️ Batas Stok',
@@ -206,10 +263,22 @@ class PosTerminal extends Component
             return;
         }
 
-        $this->cart = collect($this->cart)->map(function ($item) use ($productId, $quantity) {
+        $this->cart = collect($this->cart)->map(function ($item) use ($productId, $quantity, $product) {
             if ($item['id'] == $productId) {
-                $item['quantity'] = $quantity;
-                $item['total'] = $item['quantity'] * $item['price'];
+                $item['quantity']          = $quantity;
+                $item['total']             = $item['quantity'] * $item['price'];
+                $item['commission_amount'] = $product->calculateCommission($item['quantity']);
+                $item['tenant_amount']     = $item['total'] - $item['commission_amount'];
+            }
+            return $item;
+        })->toArray();
+    }
+
+    public function updateItemNotes($productId, $notes): void
+    {
+        $this->cart = collect($this->cart)->map(function ($item) use ($productId, $notes) {
+            if ($item['id'] == $productId) {
+                $item['item_notes'] = substr(strip_tags($notes), 0, 200);
             }
             return $item;
         })->toArray();
@@ -319,7 +388,7 @@ class PosTerminal extends Component
             // Validate stock availability again before processing
             foreach ($this->cart as $item) {
                 $product = Product::find($item['id']);
-                if (!$product || $product->stock_quantity < $item['quantity']) {
+                if (!$product || !$product->canSell($item['quantity'])) {
                     throw new \Exception("Insufficient stock for {$item['name']}!");
                 }
             }
@@ -348,15 +417,23 @@ class PosTerminal extends Component
             // Create transaction items and update stock
             foreach ($this->cart as $item) {
                 $product = Product::find($item['id']);
-                
+
                 TransactionItem::create([
-                    'transaction_id' => $transaction->id,
-                    'product_id' => $product->id,
-                    'product_sku' => $product->sku,
-                    'product_name' => $product->name,
-                    'unit_price' => $item['price'],
-                    'quantity' => $item['quantity'],
-                    'total_price' => $item['total']
+                    'transaction_id'   => $transaction->id,
+                    'product_id'       => $product->id,
+                    'product_sku'      => $product->sku,
+                    'product_name'     => $product->name,
+                    'unit_price'       => $item['price'],
+                    'quantity'         => $item['quantity'],
+                    'total_price'      => $item['total'],
+                    // Tenant & commission snapshot
+                    'tenant_id'        => $item['tenant_id'] ?? null,
+                    'tenant_name'      => $item['tenant_name'] ?? null,
+                    'commission_type'  => $item['commission_type'] ?? null,
+                    'commission_value' => $item['commission_value'] ?? 0,
+                    'commission_amount'=> $item['commission_amount'] ?? 0,
+                    'tenant_amount'    => $item['tenant_amount'] ?? $item['total'],
+                    'item_notes'       => $item['item_notes'] ?? null,
                 ]);
 
                 $product->updateStock($item['quantity'], 'subtract');
@@ -906,7 +983,7 @@ class PosTerminal extends Component
             // Validate stock availability
             foreach ($this->cart as $item) {
                 $product = Product::find($item['id']);
-                if (!$product || $product->stock_quantity < $item['quantity']) {
+                if (!$product || !$product->canSell($item['quantity'])) {
                     throw new \Exception("Stock tidak mencukupi untuk {$item['name']}! Stock tersedia: " . ($product->stock_quantity ?? 0));
                 }
             }
@@ -946,13 +1023,20 @@ class PosTerminal extends Component
                 $product = Product::find($item['id']);
                 
                 TransactionItem::create([
-                    'transaction_id' => $transaction->id,
-                    'product_id' => $product->id,
-                    'product_sku' => $product->sku,
-                    'product_name' => $product->name,
-                    'unit_price' => $item['price'],
-                    'quantity' => $item['quantity'],
-                    'total_price' => $item['total']
+                    'transaction_id'   => $transaction->id,
+                    'product_id'       => $product->id,
+                    'product_sku'      => $product->sku,
+                    'product_name'     => $product->name,
+                    'unit_price'       => $item['price'],
+                    'quantity'         => $item['quantity'],
+                    'total_price'      => $item['total'],
+                    'tenant_id'        => $item['tenant_id'] ?? null,
+                    'tenant_name'      => $item['tenant_name'] ?? null,
+                    'commission_type'  => $item['commission_type'] ?? null,
+                    'commission_value' => $item['commission_value'] ?? 0,
+                    'commission_amount'=> $item['commission_amount'] ?? 0,
+                    'tenant_amount'    => $item['tenant_amount'] ?? $item['total'],
+                    'item_notes'       => $item['item_notes'] ?? null,
                 ]);
 
                 $product->updateStock($item['quantity'], 'subtract');
@@ -1192,7 +1276,7 @@ class PosTerminal extends Component
             // Validate stock availability again before processing
             foreach ($this->cart as $item) {
                 $product = Product::find($item['id']);
-                if (!$product || $product->stock_quantity < $item['quantity']) {
+                if (!$product || !$product->canSell($item['quantity'])) {
                     throw new \Exception("Insufficient stock for {$item['name']}!");
                 }
             }
@@ -1223,13 +1307,20 @@ class PosTerminal extends Component
                 $product = Product::find($item['id']);
                 
                 TransactionItem::create([
-                    'transaction_id' => $transaction->id,
-                    'product_id' => $product->id,
-                    'product_sku' => $product->sku,
-                    'product_name' => $product->name,
-                    'unit_price' => $item['price'],
-                    'quantity' => $item['quantity'],
-                    'total_price' => $item['total']
+                    'transaction_id'   => $transaction->id,
+                    'product_id'       => $product->id,
+                    'product_sku'      => $product->sku,
+                    'product_name'     => $product->name,
+                    'unit_price'       => $item['price'],
+                    'quantity'         => $item['quantity'],
+                    'total_price'      => $item['total'],
+                    'tenant_id'        => $item['tenant_id'] ?? null,
+                    'tenant_name'      => $item['tenant_name'] ?? null,
+                    'commission_type'  => $item['commission_type'] ?? null,
+                    'commission_value' => $item['commission_value'] ?? 0,
+                    'commission_amount'=> $item['commission_amount'] ?? 0,
+                    'tenant_amount'    => $item['tenant_amount'] ?? $item['total'],
+                    'item_notes'       => $item['item_notes'] ?? null,
                 ]);
 
                 $product->updateStock($item['quantity'], 'subtract');
@@ -1264,7 +1355,8 @@ class PosTerminal extends Component
 
     public function getProducts()
     {
-        return Product::with(['category'])
+        return Product::with(['category', 'tenant'])
+            ->where('outlet_type', $this->outletMode)  // hanya tampilkan produk sesuai mode
             ->when($this->search, function ($query) {
                 $query->where(function ($q) {
                     $q->where('name', 'like', '%' . $this->search . '%')
@@ -1276,16 +1368,25 @@ class PosTerminal extends Component
                 $query->where('category_id', $this->selectedCategory);
             })
             ->where('is_active', true)
-            ->where('stock_quantity', '>', 0)
+            ->where(function ($q) {
+                $q->where('stock_quantity', '>', 0)
+                  ->orWhere('track_stock', false);
+            })
             ->orderBy('name')
             ->paginate(12);
     }
 
     public function render()
     {
+        $categories = Category::active()->ordered()->get();
+        $tenants    = $this->outletMode === 'foodcourt'
+            ? Tenant::active()->ordered()->get()
+            : collect();
+
         return view('livewire.pos-terminal', [
-            'products' => $this->getProducts(),
-            'categories' => Category::active()->ordered()->get()
+            'products'   => $this->getProducts(),
+            'categories' => $categories,
+            'tenants'    => $tenants,
         ])->layout('layouts.epos', [
             'header' => 'POS Terminal'
         ]);
