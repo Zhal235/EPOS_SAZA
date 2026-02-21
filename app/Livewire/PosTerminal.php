@@ -444,9 +444,23 @@ class PosTerminal extends Component
             // Store transaction for receipt
             $this->lastTransaction = $transaction;
 
+            // Load relations for receipt
+            $transaction->load(['items']);
+
             // Close cash modal and show receipt
             $this->closeCashModal();
             $this->showReceiptModal = true;
+            
+            // Auto-trigger print for foodcourt
+            if ($this->outletMode === 'foodcourt') {
+                $this->dispatch('printReceipt', [
+                   'transaction' => $transaction->toArray(),
+                   'items' => $this->cart, // Ensure items are passed even if relation is slow
+                   'cashReceived' => $cashAmount,
+                   'change' => $changeAmount,
+                   'paymentMethod' => 'cash'
+                ]);
+            }
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -471,11 +485,18 @@ class PosTerminal extends Component
             return;
         }
 
+        // Ensure items are loaded
+        if (!$this->lastTransaction->relationLoaded('items')) {
+            $this->lastTransaction->load('items');
+        }
+
         // Dispatch event to print receipt
         $this->dispatch('printReceipt', [
-            'transaction' => $this->lastTransaction,
+            'transaction' => $this->lastTransaction->toArray(), // Convert to array to ensure relationships are included
+            'items' => $this->lastTransaction->items->toArray(), // Explicitly pass items
             'change' => $this->lastTransaction->change_amount,
-            'cashReceived' => $this->lastTransaction->paid_amount
+            'cashReceived' => $this->lastTransaction->paid_amount,
+            'paymentMethod' => $this->lastTransaction->payment_method
         ]);
 
         // Close receipt modal and clear cart
@@ -1189,8 +1210,25 @@ class PosTerminal extends Component
 
             DB::commit();
 
-            $cartItemCount = count($this->cart);
+            // Store transaction for receipt
+            $this->lastTransaction = $transaction;
+            $this->showReceiptModal = true;
+
+            $cartItemCount = count($itemsList); // Use actual processed items count
             $transactionNumber = $transaction->transaction_number;
+
+            // Trigger automatic print for Foodcourt
+            if ($this->outletMode === 'foodcourt') {
+               $this->dispatch('printReceipt', [
+                   'transaction' => $transaction->toArray(),
+                   'items' => $itemsList, 
+                   'cashReceived' => $this->total, // Paid amount
+                   'change' => 0,
+                   'newBalance' => $newBalance, 
+                   'newRemainingLimit' => $newRemainingLimit,
+                   'paymentMethod' => 'RFID'
+               ]);
+            }
 
             // Clear cart and close modal after successful payment
             $this->clearCart();
@@ -1199,7 +1237,7 @@ class PosTerminal extends Component
             // Show success notification
             $this->dispatch('showRfidSuccess', [
                 'customerName' => $santriName,
-                'amount' => $this->total,
+                'amount' => $transaction->total_amount, // Use final transaction total
                 'newBalance' => $newBalance,
                 'newRemainingLimit' => $newRemainingLimit,
                 'transactionRef' => $transactionNumber,
@@ -1209,7 +1247,7 @@ class PosTerminal extends Component
             Log::info("RFID Payment completed successfully", [
                 'transaction_number' => $transactionNumber,
                 'santri_name' => $santriName,
-                'amount' => $this->total,
+                'amount' => $transaction->total_amount,
                 'new_balance' => $newBalance
             ]);
 

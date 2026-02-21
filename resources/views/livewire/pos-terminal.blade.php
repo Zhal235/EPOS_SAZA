@@ -70,6 +70,17 @@
                                 {{ $tenants->count() }} tenant aktif
                             </span>
                         @endif
+
+                        <!-- Bluetooth Printer Status -->
+                        <div class="ml-auto flex items-center gap-2">
+                           <div class="flex items-center gap-2 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg">
+                               <div id="bt-status-indicator" class="w-2.5 h-2.5 rounded-full bg-gray-400"></div>
+                               <span id="bt-status-text" class="text-xs font-medium text-gray-600">Terputus</span>
+                               <button onclick="toggleBluetoothConnection()" class="text-xs text-blue-600 hover:text-blue-800 font-semibold ml-1 focus:outline-none">
+                                   <span id="bt-action-text">Konekan</span>
+                               </button>
+                           </div>
+                        </div>
                     </div>
 
                     <!-- Search & Categories -->
@@ -1183,29 +1194,130 @@
     
     // Receipt printing functionality
     document.addEventListener('livewire:init', function() {
-        Livewire.on('printReceipt', (data) => {
+        Livewire.on('printReceipt', async (data) => {
             console.log('Print receipt event received:', data);
             
             // Extract transaction data
             const receiptData = Array.isArray(data) ? data[0] : data;
             const transaction = receiptData.transaction;
             
-            // Generate ESC/POS commands for 58mm thermal printer
-            const receiptContent = generateReceiptContent(transaction, receiptData);
+            // Normalize items
+            const items = receiptData.items || transaction.items || [];
             
-            // Try to print using different methods
-            if (window.printReceipt58mm) {
-                // Use dedicated printer function if available
-                window.printReceipt58mm(receiptContent);
-            } else if (navigator.bluetooth) {
-                // Use Web Bluetooth API for thermal printers
-                printViaBluetooth(receiptContent);
+            // Group items by tenant
+            const itemsByTenant = {};
+            let hasTenantInfo = false;
+            
+            items.forEach(item => {
+                // Determine tenant name. For Store mode, it might be null, so we group under 'Main'.
+                const tenantName = item.tenant_name || 'Main';
+                if (item.tenant_name) hasTenantInfo = true;
+                
+                if (!itemsByTenant[tenantName]) {
+                    itemsByTenant[tenantName] = [];
+                }
+                itemsByTenant[tenantName].push(item);
+            });
+
+            // Helper to print a single receipt content
+            const printContent = async (content) => {
+                if (window.printReceipt58mm) {
+                    window.printReceipt58mm(content);
+                } else if (navigator.bluetooth) {
+                    await window.printViaBluetooth(content);
+                    // Add delay between prints if using Bluetooth to avoid buffer overflow
+                    await new Promise(r => setTimeout(r, 1000));
+                } else {
+                    window.printToThermalPrinter(content);
+                }
+            };
+
+            // If we have tenant info (Foodcourt mode), print separate receipts
+            if (hasTenantInfo) {
+                console.log('Printing split receipts for tenants...');
+                
+                // Get unique tenants
+                const tenants = Object.keys(itemsByTenant);
+                
+                for (let i = 0; i < tenants.length; i++) {
+                    const tenantName = tenants[i];
+                    const tenantItems = itemsByTenant[tenantName];
+                    
+                    // Create a partial transaction object for this tenant
+                    const tenantSubtotal = tenantItems.reduce((sum, item) => sum + (item.total || item.total_price), 0);
+                    
+                    const tenantReceiptContent = generateTenantReceiptContent(transaction, receiptData, tenantName, tenantItems, tenantSubtotal);
+                    await printContent(tenantReceiptContent);
+                    
+                    // Add delay between prints if there are multiple receipts to print
+                    if (i < tenants.length - 1) {
+                        await new Promise(r => setTimeout(r, 1500));
+                    }
+                }
             } else {
-                // Fallback to browser print with thermal format
-                printToThermalPrinter(receiptContent);
+                // Standard single receipt (Store mode)
+                const receiptContent = generateReceiptContent(transaction, receiptData);
+                await printContent(receiptContent);
             }
         });
     });
+    
+    // Generate Tenant specific receipt
+    function generateTenantReceiptContent(transaction, receiptData, tenantName, items, subtotal) {
+        const storeName = "{{ config('app.name', 'EPOS SAZA') }}";
+        const cashierName = "{{ Auth::user()->name ?? 'Admin' }}";
+        const currentDate = new Date().toLocaleString('id-ID', {
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit', second: '2-digit'
+        });
+        
+        let receipt = '';
+        
+        // Header
+        receipt += '\x1B\x40'; // Initialize
+        receipt += '\x1B\x61\x01'; // Center
+        receipt += '\x1B\x21\x20'; // Double height
+        receipt += tenantName.toUpperCase() + '\n'; // Tenant Name prominently
+        receipt += '\x1B\x21\x00'; // Normal
+        receipt += '--------------------------------\n';
+        receipt += 'NO : ' + transaction.transaction_number + '\n';
+        receipt += 'TGL: ' + currentDate + '\n';
+        receipt += 'PELANGGAN: ' + transaction.customer_name + '\n';
+        receipt += '--------------------------------\n';
+        
+        // Items
+        receipt += '\x1B\x61\x00'; // Left
+        items.forEach(item => {
+            const name = (item.name || item.product_name).substring(0, 20); 
+            const qty = (item.quantity).toString();
+            // Optional: show price or just qty for kitchen? Usually price is shown on payment receipt.
+            // Let's show price for verification.
+            const price = formatPrice(item.price || item.unit_price);
+            const total = formatPrice(item.total || item.total_price);
+            
+            receipt += name + '\n';
+            receipt += ' ' + qty + ' x ' + price + ' = ' + total + '\n';
+        });
+        
+        receipt += '--------------------------------\n';
+        receipt += 'TOTAL TENANT' + ' '.repeat(11) + formatPrice(subtotal) + '\n';
+        
+        // Only show balance info on the receipt if it's relevant (e.g. maybe not for tenant copy, but customer copy)
+        // For "tenant copy", usually just order details. 
+        // But if this is the ONLY receipt given to santri, it should probably act as payment proof too.
+        
+        const paymentMethod = (transaction.payment_method || receiptData.paymentMethod || 'cash').toUpperCase();
+        receipt += 'METODE BAYAR: ' + paymentMethod + '\n';
+        
+        receipt += '================================\n';
+        receipt += '\x1B\x61\x01'; // Center
+        receipt += 'Simpan struk ini sebagai\n';
+        receipt += 'bukti pengambilan pesanan\n';
+        receipt += '\n\n\n'; // Feed
+        receipt += '\x1D\x56\x41\x10'; // Cut
+        
+        return receipt;
+    }
     
     // Generate 58mm thermal receipt content
     function generateReceiptContent(transaction, receiptData) {
@@ -1237,34 +1349,60 @@
         receipt += 'PELANGGAN: ' + transaction.customer_name + '\n';
         receipt += '================================\n';
         
-        // Items
-        receipt += '\x1B\x61\x00'; // Left alignment
-        if (transaction.items && transaction.items.length > 0) {
-            transaction.items.forEach(item => {
-                const name = item.product_name.substring(0, 20); // Truncate long names
-                const qty = item.quantity.toString();
-                const price = formatPrice(item.unit_price);
-                const total = formatPrice(item.total_price);
-                
-                receipt += name + '\n';
-                receipt += ' ' + qty + ' x ' + price + ' = ' + total + '\n';
-            });
-        }
+                        // Items
+                        receipt += '\x1B\x61\x00'; // Left alignment
+                        if (transaction.items && transaction.items.length > 0) {
+                            transaction.items.forEach(item => {
+                                const name = item.product_name.substring(0, 20); // Truncate long names
+                                const qty = item.quantity.toString();
+                                const price = formatPrice(item.unit_price);
+                                const total = formatPrice(item.total_price);
+                                
+                                receipt += name + '\n';
+                                receipt += ' ' + qty + ' x ' + price + ' = ' + total + '\n';
+                            });
+                        } else if (Array.isArray(receiptData.items)) {
+                            // Fallback if transaction items are empty but receiptData has items (e.g. from current cart state)
+                            receiptData.items.forEach(item => {
+                                const name = (item.name || item.product_name).substring(0, 20); 
+                                const qty = (item.quantity).toString();
+                                const price = formatPrice(item.price || item.unit_price);
+                                const total = formatPrice(item.total || item.total_price);
+                                
+                                receipt += name + '\n';
+                                receipt += ' ' + qty + ' x ' + price + ' = ' + total + '\n';
+                            });
+                        }
         
         receipt += '--------------------------------\n';
         
-        // Totals
-        receipt += 'SUBTOTAL' + ' '.repeat(15) + formatPrice(transaction.subtotal) + '\n';
-        if (transaction.discount_amount > 0) {
-            receipt += 'DISKON' + ' '.repeat(17) + '- ' + formatPrice(transaction.discount_amount) + '\n';
-        }
-        
-        receipt += '\x1B\x21\x20'; // Double height
-        receipt += 'TOTAL' + ' '.repeat(19) + formatPrice(transaction.total_amount) + '\n';
-        receipt += '\x1B\x21\x00'; // Normal text
-        
-        receipt += 'TUNAI' + ' '.repeat(19) + formatPrice(receiptData.cashReceived) + '\n';
-        receipt += 'KEMBALIAN' + ' '.repeat(15) + formatPrice(receiptData.change) + '\n';
+                        // Totals
+                        receipt += '--------------------------------\n';
+                        receipt += 'SUBTOTAL' + ' '.repeat(15) + formatPrice(transaction.subtotal) + '\n';
+                        if (transaction.discount_amount > 0) {
+                            receipt += 'DISKON' + ' '.repeat(17) + '- ' + formatPrice(transaction.discount_amount) + '\n';
+                        }
+                        
+                        receipt += '\x1B\x21\x20'; // Double height
+                        receipt += 'TOTAL' + ' '.repeat(19) + formatPrice(transaction.total_amount) + '\n';
+                        receipt += '\x1B\x21\x00'; // Normal text
+                        
+                        // Payment Details
+                        const paymentMethod = (transaction.payment_method || receiptData.paymentMethod || 'cash').toUpperCase();
+                        receipt += 'BAYAR (' + paymentMethod + ')' + ' '.repeat(20 - paymentMethod.length) + formatPrice(receiptData.cashReceived || transaction.paid_amount) + '\n';
+                        
+                        if (receiptData.change > 0 || transaction.change_amount > 0) {
+                            receipt += 'KEMBALIAN' + ' '.repeat(15) + formatPrice(receiptData.change || transaction.change_amount) + '\n';
+                        }
+                        
+                        // Remaining Limit Info for RFID - Foodcourt Critical
+                        if (paymentMethod === 'RFID' && receiptData.remainingLimit !== undefined) {
+                            receipt += '--------------------------------\n';
+                            receipt += 'SISA SALDO' + ' '.repeat(14) + formatPrice(receiptData.newBalance) + '\n';
+                            if (receiptData.newRemainingLimit !== null) {
+                                receipt += 'SISA LIMIT' + ' '.repeat(14) + formatPrice(receiptData.newRemainingLimit) + '\n';
+                            }
+                        }
         
         receipt += '================================\n';
         receipt += '\x1B\x61\x01'; // Center alignment
@@ -1283,10 +1421,123 @@
         return new Intl.NumberFormat('id-ID').format(amount);
     }
     
+    // Global Bluetooth Device Cache
+    window.cachedBluetoothDevice = null;
+    window.cachedCharacteristic = null;
+    window.isBluetoothConnected = false;
+
+    // Update Bluetooth status indicator
+    window.updateBluetoothStatus = function(status, deviceName = null) {
+        const indicator = document.getElementById('bt-status-indicator');
+        const text = document.getElementById('bt-status-text');
+        const action = document.getElementById('bt-action-text');
+
+        if (!indicator || !text || !action) return;
+
+        if (status === 'connected') {
+            indicator.className = 'w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse';
+            text.textContent = deviceName ? deviceName : 'Terhubung';
+            text.className = 'text-xs font-medium text-green-700';
+            action.textContent = 'Putuskan';
+            window.isBluetoothConnected = true;
+        } else if (status === 'connecting') {
+            indicator.className = 'w-2.5 h-2.5 rounded-full bg-yellow-400 animate-ping';
+            text.textContent = 'Menghubungkan...';
+            text.className = 'text-xs font-medium text-yellow-700';
+            action.textContent = 'Batal';
+            window.isBluetoothConnected = false;
+        } else {
+            indicator.className = 'w-2.5 h-2.5 rounded-full bg-gray-400';
+            text.textContent = 'Terputus';
+            text.className = 'text-xs font-medium text-gray-600';
+            action.textContent = 'Konekan';
+            window.isBluetoothConnected = false;
+        }
+    }
+
+    // Toggle Bluetooth connection
+    window.toggleBluetoothConnection = async function() {
+        if (window.isBluetoothConnected) {
+             if (window.cachedBluetoothDevice && window.cachedBluetoothDevice.gatt.connected) {
+                 window.cachedBluetoothDevice.gatt.disconnect();
+                 // onDisconnected will change status automatically
+                 return;
+             }
+             // Force change if state desync
+             updateBluetoothStatus('disconnected');
+             window.cachedCharacteristic = null;
+             window.cachedBluetoothDevice = null;
+        } else {
+            // Initiate connection manually
+            try {
+                updateBluetoothStatus('connecting');
+                
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [
+                        { services: ['000018f0-0000-1000-8000-00805f9b34fb'] }, // Thermal printer service
+                    ],
+                    optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
+                });
+                
+                window.cachedBluetoothDevice = device;
+                device.addEventListener('gattserverdisconnected', onDisconnected);
+
+                const server = await device.gatt.connect();
+                console.log('Connected to GATT Server');
+
+                const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+                const characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+                
+                window.cachedCharacteristic = characteristic;
+                
+                updateBluetoothStatus('connected', device.name);
+                
+                // Show simple notification
+                if (window.notificationSystem) {
+                    window.notificationSystem.success('✅ Printer Terhubung', 'Berhasil terhubung ke ' + device.name);
+                }
+
+            } catch (error) {
+                console.error('Bluetooth manual connection failed:', error);
+                updateBluetoothStatus('disconnected');
+            }
+        }
+    }
+
     // Print via Web Bluetooth (modern thermal printers)
-    async function printViaBluetooth(content) {
+    window.printViaBluetooth = async function(content) {
         try {
             console.log('Attempting Bluetooth print...');
+            
+            // Re-use cached connection if available
+            if (window.cachedCharacteristic && window.cachedBluetoothDevice && window.cachedBluetoothDevice.gatt.connected) {
+                console.log('Using cached Bluetooth connection');
+                updateBluetoothStatus('connected', window.cachedBluetoothDevice.name); // Ensure status is synced
+                await sendToPrinter(window.cachedCharacteristic, content);
+                return;
+            } else if (window.cachedBluetoothDevice && !window.cachedBluetoothDevice.gatt.connected) {
+                // Device cached but disconnected, try reconnecting
+                 updateBluetoothStatus('connecting');
+                 try {
+                     const server = await window.cachedBluetoothDevice.gatt.connect();
+                     const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+                     const characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+                     window.cachedCharacteristic = characteristic;
+                     updateBluetoothStatus('connected', window.cachedBluetoothDevice.name);
+                     await sendToPrinter(characteristic, content);
+                     return;
+                 } catch (reconnectError) {
+                     console.error('Reconnection failed:', reconnectError);
+                     // Fall through to requestDevice
+                 }
+            }
+
+            // If we are here, we are not connected or reconnect failed.
+            // Check if user has explicitly connected before? 
+            // If they are calling this function, they probably clicked "Print".
+            // We should try to connect, but if it fails (user cancels), we fallback.
+            
+            updateBluetoothStatus('connecting');
             
             const device = await navigator.bluetooth.requestDevice({
                 filters: [
@@ -1295,80 +1546,129 @@
                 optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
             });
             
+            console.log('Device selected:', device.name);
+            
+            // Store device for session
+            window.cachedBluetoothDevice = device;
+            
+            // Handle disconnection
+            device.addEventListener('gattserverdisconnected', onDisconnected);
+
             const server = await device.gatt.connect();
+            console.log('Connected to GATT Server');
+
             const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
             const characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
             
-            // Convert string to array buffer
-            const encoder = new TextEncoder();
-            const data = encoder.encode(content);
+            // Cache the characteristic
+            window.cachedCharacteristic = characteristic;
             
-            await characteristic.writeValue(data);
+            updateBluetoothStatus('connected', device.name);
+            
+            await sendToPrinter(characteristic, content);
             
             console.log('Receipt sent to Bluetooth printer successfully');
             
         } catch (error) {
             console.error('Bluetooth print failed:', error);
+            updateBluetoothStatus('disconnected');
+            console.log('Falling back to thermal print format...');
+            // Check if error is user cancellation, don't fallback, just stop
+            if (error.name === 'NotFoundError' || error.message.includes('User cancelled')) {
+                 return;
+            }
             // Fallback to thermal print format
             printToThermalPrinter(content);
         }
     }
+
+    window.sendToPrinter = async function(characteristic, content) {
+        // Convert string to array buffer
+        const encoder = new TextEncoder();
+        const data = encoder.encode(content);
+        
+        const CHUNK_SIZE = 100; 
+        let total = 0;
+        for (let i = 0; i < data.length; i += CHUNK_SIZE) {
+            const chunk = data.slice(i, i + CHUNK_SIZE);
+            total += chunk.length;
+            try {
+                await characteristic.writeValue(chunk);
+            } catch (e) {
+                console.error('Failed to write chunk:', e);
+                throw e;
+            }
+        }
+        console.log('Total bytes written:', total);
+    }
     
-    // Fallback thermal printer format
-    function printToThermalPrinter(content) {
+    window.onDisconnected = function(event) {
+        const device = event.target;
+        console.log(`Device ${device.name} is disconnected.`);
+        // Clear cached GATT characteristic
+        window.cachedCharacteristic = null;
+        updateBluetoothStatus('disconnected');
+    }
+    
+    
+    // Fallback thermal printer format (Browser Print)
+    window.printToThermalPrinter = function(content) {
         console.log('Using thermal printer fallback...');
         
-        // Create a hidden div with thermal receipt styling
-        const printDiv = document.createElement('div');
-        printDiv.style.position = 'fixed';
-        printDiv.style.left = '-9999px';
-        printDiv.innerHTML = `
-            <div id="thermal-receipt" style="
-                font-family: 'Courier New', monospace;
-                font-size: 10px;
-                line-height: 1.2;
-                width: 58mm;
-                max-width: 58mm;
-                margin: 0;
-                padding: 0;
-                background: white;
-                color: black;
-            ">
-                <pre style="margin: 0; padding: 0; white-space: pre-wrap;">${content.replace(/[\x1B\x1D][\x21\x40\x41\x56\x61][\x00\x01\x10\x20]?/g, '')}</pre>
-            </div>
-        `;
+        // Remove ESC/POS commands for browser printing
+        // Strips common ESC/POS sequences to make text readable in browser dialog
+        const cleanContent = content.replace(/[\x1B\x1D][\x21\x40\x41\x56\x61][\x00\x01\x10\x20]?/g, '');
+
+        // Create a hidden iframe for printing to avoid disrupting main UI
+        const printFrame = document.createElement('iframe');
+        printFrame.style.position = 'fixed';
+        printFrame.style.width = '0px';
+        printFrame.style.height = '0px';
+        printFrame.style.border = 'none';
+        document.body.appendChild(printFrame);
         
-        document.body.appendChild(printDiv);
+        const doc = printFrame.contentWindow.document;
+        doc.open();
+        doc.write(`
+            <html>
+            <head>
+                <title>Print Receipt</title>
+                <style>
+                    body {
+                        font-family: 'Courier New', monospace;
+                        font-size: 12px;
+                        margin: 0;
+                        padding: 0;
+                        width: 58mm; /* Standard thermal paper width */
+                    }
+                    pre {
+                        white-space: pre-wrap;
+                        margin: 0;
+                        line-height: 1.2;
+                    }
+                    @page {
+                        size: 58mm auto; /* Set page size for thermal printers */
+                        margin: 0;
+                    }
+                </style>
+            </head>
+            <body>
+                <pre>${cleanContent}</pre>
+            </body>
+            </html>
+        `);
+        doc.close();
         
-        // Create print styles
-        const style = document.createElement('style');
-        style.textContent = `
-            @media print {
-                body * { visibility: hidden; }
-                #thermal-receipt, #thermal-receipt * { visibility: visible; }
-                #thermal-receipt {
-                    position: absolute;
-                    left: 0;
-                    top: 0;
-                    width: 58mm !important;
-                    max-width: 58mm !important;
-                }
-                @page {
-                    size: 58mm auto;
-                    margin: 0;
-                }
-            }
-        `;
-        document.head.appendChild(style);
-        
-        // Print
-        window.print();
-        
-        // Cleanup
-        setTimeout(() => {
-            document.body.removeChild(printDiv);
-            document.head.removeChild(style);
-        }, 1000);
+        // Wait for content to load then print
+        printFrame.onload = function() {
+            setTimeout(() => {
+                printFrame.contentWindow.print();
+                // Cleanup after print dialog closes (approximate)
+                setTimeout(() => {
+                    document.body.removeChild(printFrame);
+                }, 60000); 
+            }, 500);
+        };
     }
         </script>
 
