@@ -19,10 +19,15 @@ class Tenant extends Model
         'commission_value',
         'is_active',
         'sort_order',
+        'balance',
+        'account_bank',
+        'account_number',
+        'account_name',
     ];
 
     protected $casts = [
         'commission_value' => 'decimal:2',
+        'balance' => 'decimal:2',
         'is_active' => 'boolean',
         'sort_order' => 'integer',
     ];
@@ -47,6 +52,16 @@ class Tenant extends Model
     public function transactionItems(): HasMany
     {
         return $this->hasMany(TransactionItem::class);
+    }
+    
+    public function ledgerEntries(): HasMany
+    {
+        return $this->hasMany(TenantLedger::class);
+    }
+
+    public function withdrawals(): HasMany
+    {
+        return $this->hasMany(TenantWithdrawal::class);
     }
 
     // Scopes

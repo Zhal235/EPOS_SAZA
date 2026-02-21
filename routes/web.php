@@ -39,6 +39,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Foodcourt Tenant Management routes (Admin only)
     Route::get('tenants', TenantManagement::class)->name('tenants')->middleware('can:access-admin');
+    Route::get('foodcourt-finance', \App\Livewire\FoodcourtFinance::class)->name('foodcourt.finance')->middleware('can:access-admin');
     
     
     // Profile routes

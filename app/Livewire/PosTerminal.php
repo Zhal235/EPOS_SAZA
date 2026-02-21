@@ -372,6 +372,35 @@ class PosTerminal extends Component
         $this->confirmCashPayment();
     }
 
+
+    /**
+     * Process tenant credits for a completed transaction item
+     */
+    protected function processTenantCredit(TransactionItem $transactionItem, $cartItem)
+    {
+        if (!empty($transactionItem->tenant_id)) {
+            $tenant = Tenant::find($transactionItem->tenant_id);
+            if ($tenant) {
+                $creditAmount = $transactionItem->tenant_amount ?? $transactionItem->total_price;
+                
+                // Increment tenant balance
+                $previousBalance = $tenant->balance;
+                $tenant->increment('balance', $creditAmount);
+                
+                // Record in ledger
+                \App\Models\TenantLedger::create([
+                    'tenant_id' => $tenant->id,
+                    'type' => 'sale',
+                    'amount' => $creditAmount,
+                    'balance_before' => $previousBalance,
+                    'balance_after' => $previousBalance + $creditAmount,
+                    'transaction_item_id' => $transactionItem->id,
+                    'description' => "Penjualan Item: {$transactionItem->product_name}",
+                ]);
+            }
+        }
+    }
+
     public function confirmCashPayment()
     {
         if (empty($this->cart)) {
@@ -418,7 +447,7 @@ class PosTerminal extends Component
             foreach ($this->cart as $item) {
                 $product = Product::find($item['id']);
 
-                TransactionItem::create([
+                $transactionItem = TransactionItem::create([
                     'transaction_id'   => $transaction->id,
                     'product_id'       => $product->id,
                     'product_sku'      => $product->sku,
@@ -437,6 +466,9 @@ class PosTerminal extends Component
                 ]);
 
                 $product->updateStock($item['quantity'], 'subtract');
+
+                // Process Tenant Credit
+                $this->processTenantCredit($transactionItem, $item);
             }
 
             DB::commit();
@@ -1043,7 +1075,7 @@ class PosTerminal extends Component
             foreach ($this->cart as $item) {
                 $product = Product::find($item['id']);
                 
-                TransactionItem::create([
+                $transactionItem = TransactionItem::create([
                     'transaction_id'   => $transaction->id,
                     'product_id'       => $product->id,
                     'product_sku'      => $product->sku,
@@ -1062,6 +1094,9 @@ class PosTerminal extends Component
 
                 $product->updateStock($item['quantity'], 'subtract');
                 
+                // Process Tenant Credit
+                $this->processTenantCredit($transactionItem, $item);
+
                 $itemsList[] = [
                     'product_id' => $product->id,
                     'product_name' => $product->name,
@@ -1344,7 +1379,7 @@ class PosTerminal extends Component
             foreach ($this->cart as $item) {
                 $product = Product::find($item['id']);
                 
-                TransactionItem::create([
+                $transactionItem = TransactionItem::create([
                     'transaction_id'   => $transaction->id,
                     'product_id'       => $product->id,
                     'product_sku'      => $product->sku,
@@ -1362,6 +1397,9 @@ class PosTerminal extends Component
                 ]);
 
                 $product->updateStock($item['quantity'], 'subtract');
+                
+                // Process Tenant Credit
+                $this->processTenantCredit($transactionItem, $item);
             }
 
             DB::commit();

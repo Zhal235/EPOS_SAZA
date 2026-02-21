@@ -93,6 +93,10 @@
             <i class="fas fa-store w-5 text-center"></i>
             <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Tenant Foodcourt</span>
         </a>
+        <a href="{{ route('foodcourt.finance') }}" class="menu-item flex items-center px-4 py-3 text-white rounded-lg {{ request()->routeIs('foodcourt.finance') ? 'active' : '' }}">
+            <i class="fas fa-wallet w-5 text-center"></i>
+            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Keuangan Foodcourt</span>
+        </a>
         @endif
         
         <a href="#" class="menu-item flex items-center px-4 py-3 text-white rounded-lg">
