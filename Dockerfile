@@ -42,6 +42,9 @@ COPY --from=deps /app/vendor /var/www/html/vendor
 COPY . .
 COPY --from=assets /app/public/build /var/www/html/public/build
 
+# Install composer for the final stage
+COPY --from=composer:2.6 /usr/bin/composer /usr/bin/composer
+
 # Finish composer setup
 RUN composer dump-autoload --optimize
 
