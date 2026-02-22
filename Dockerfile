@@ -8,7 +8,9 @@ RUN npm run build
 FROM composer:2.6 AS deps
 WORKDIR /app
 COPY composer.json composer.lock ./
-RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist
+# Ignore platform requirements to avoid errors with missing extensions in the composer image
+# The actual runtime image will have the necessary extensions
+RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --ignore-platform-reqs
 
 FROM php:8.2-fpm-alpine
 
