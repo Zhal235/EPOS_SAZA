@@ -42,6 +42,7 @@ services:
       - ./storage/framework/views:/var/www/html/storage/framework/views
       - ./storage/logs:/var/www/html/storage/logs
     networks:
+      - dokploy-network
       - saza-network
       - default
     labels:
@@ -93,6 +94,8 @@ services:
       retries: 3
 
 networks:
+  dokploy-network:
+    external: true
   saza-network:
     external: true
   default:
