@@ -1,5 +1,5 @@
 services:
-  epos-app:
+  epos-saza:
     build:
       context: .
       dockerfile: Dockerfile
@@ -46,11 +46,11 @@ services:
       - default
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.epos-app.rule=Host(`epos.saza.sch.id`)"
-      - "traefik.http.routers.epos-app.entrypoints=websecure"
-      - "traefik.http.routers.epos-app.tls=true"
-      - "traefik.http.routers.epos-app.tls.certresolver=letsencrypt" # Adjust according to existing Traefik config
-      - "traefik.http.services.epos-app.loadbalancer.server.port=80"
+      - "traefik.http.routers.epos-saza.rule=Host(`epos.saza.sch.id`)"
+      - "traefik.http.routers.epos-saza.entrypoints=websecure"
+      - "traefik.http.routers.epos-saza.tls=true"
+      - "traefik.http.routers.epos-saza.tls.certresolver=letsencrypt" # Adjust according to existing Traefik config
+      - "traefik.http.services.epos-saza.loadbalancer.server.port=80"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost"]
       interval: 30s
