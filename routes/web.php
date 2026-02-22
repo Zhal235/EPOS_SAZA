@@ -34,6 +34,15 @@ Route::middleware(['auth'])->group(function () {
     // Financial routes (Admin only)
     Route::get('financial', \App\Livewire\Financial::class)->name('financial')->middleware('can:access-admin');
     
+    // Revenue Reports (New separated Logic)
+    Route::get('revenue-report', \App\Livewire\RevenueReport::class)->name('revenue.report')->middleware('can:access-admin');
+
+    // Financial Management (Restored)
+    Route::get('financial', \App\Livewire\Financial::class)->name('financial')->middleware('can:access-admin');
+
+    // RFID Withdrawal (New separated menu)
+    Route::get('rfid-withdrawal', \App\Livewire\RfidWithdrawal::class)->name('rfid.withdrawal')->middleware('can:access-admin');
+
     // Staff Management routes (Admin only)
     Route::get('staff', \App\Livewire\StaffManagement::class)->name('staff')->middleware('can:access-admin');
 

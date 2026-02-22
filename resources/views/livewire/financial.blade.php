@@ -672,12 +672,25 @@
                     <!-- Info Jumlah yang Akan Ditarik -->
                     <div class="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg">
                         <div class="text-center">
-                            <p class="text-sm font-medium text-gray-600 mb-1">Jumlah yang Akan Ditarik</p>
-                            <p class="text-3xl font-bold text-blue-600">{{ $summary['pending_withdrawal_formatted'] ?? 'Rp 0' }}</p>
-                            <p class="text-xs text-blue-600 mt-2">
-                                <i class="fas fa-info-circle mr-1"></i>
-                                Semua saldo tersedia akan ditarik secara otomatis
-                            </p>
+                             <p class="text-sm font-medium text-gray-600 mb-1">Saldo Tersedia</p>
+                             <p class="text-3xl font-bold text-blue-600 mb-2">{{ $summary['pending_withdrawal_formatted'] ?? 'Rp 0' }}</p>
+                            
+                             <div class="border-t border-blue-200 pt-3 mt-1 text-left">
+                                <label class="block text-sm font-medium text-blue-800 mb-1">Nominal Penarikan <span class="text-red-500">*</span></label>
+                                <div class="relative rounded-md shadow-sm">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <span class="text-gray-500 sm:text-lg">Rp</span>
+                                    </div>
+                                    <input type="number" 
+                                        wire:model="withdrawalAmount"
+                                        min="1"
+                                        max="{{ $summary['pending_withdrawal'] }}"
+                                        class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 pr-12 sm:text-lg border-gray-300 rounded-md py-2"
+                                        placeholder="0">
+                                </div>
+                                <p class="text-xs text-blue-600 mt-1">Masukkan nominal sesuai kebutuhan. Maksimal {{ $summary['pending_withdrawal_formatted'] }}</p>
+                                @error('withdrawalAmount') <span class="text-red-500 text-xs mt-1 block">{{ $message }}</span> @enderror
+                             </div>
                         </div>
                     </div>
 

@@ -352,7 +352,7 @@ class Financial extends Component
             $this->dispatch('showNotification', [
                 'type' => 'warning',
                 'title' => 'Tidak Dapat Membuat Penarikan',
-                'message' => 'Masih ada ' . $pendingWithdrawals . ' penarikan yang belum diproses di SIMPELS. Harap tunggu admin SIMPELS menyetujui atau menolak penarikan sebelumnya terlebih dahulu.'
+                'message' => 'Masih ada ' . $pendingWithdrawals . ' penarikan yang belum diproses di SIMPELS. Tunggu admin menyetujui penarikan sebelumnya.'
             ]);
             return;
         }
@@ -360,9 +360,7 @@ class Financial extends Component
         // Get available balance
         try {
             $availableBalance = $this->getDashboardSummary()['pending_withdrawal'];
-            \Log::info('Available balance retrieved', ['balance' => $availableBalance]);
         } catch (\Exception $e) {
-            \Log::error('Failed to get available balance', ['error' => $e->getMessage()]);
             $this->dispatch('showNotification', [
                 'type' => 'error',
                 'title' => 'Error',
@@ -371,11 +369,8 @@ class Financial extends Component
             return;
         }
         
-        \Log::info('Available balance calculated', [
-            'availableBalance' => $availableBalance
-        ]);
-        
         $this->validate([
+            'withdrawalAmount' => 'required|numeric|min:1|max:' . $availableBalance,
             'withdrawalMethod' => 'required|in:bank_transfer,cash',
             'bankName' => 'required_if:withdrawalMethod,bank_transfer',
             'accountNumber' => 'required_if:withdrawalMethod,bank_transfer',

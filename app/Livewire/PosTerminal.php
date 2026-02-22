@@ -72,6 +72,12 @@ class PosTerminal extends Component
     {
         $this->cart = [];
         $this->selectedSantri = null;
+        
+        // Auto-detect mode from URL query parameter 'mode'
+        if (request()->has('mode') && in_array(request('mode'), ['store', 'foodcourt'])) {
+            $this->outletMode = request('mode');
+        }
+        
         $this->initializeSimpelsApi();
     }
     
@@ -1459,12 +1465,14 @@ class PosTerminal extends Component
             ? Tenant::active()->ordered()->get()
             : collect();
 
+        $headerMode = $this->outletMode === 'foodcourt' ? 'Foodcourt' : 'Toko';
+        
         return view('livewire.pos-terminal', [
             'products'   => $this->getProducts(),
             'categories' => $categories,
             'tenants'    => $tenants,
         ])->layout('layouts.epos', [
-            'header' => 'POS Terminal'
+            'header' => "POS Terminal ({$headerMode})"
         ]);
     }
 }
