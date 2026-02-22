@@ -16,7 +16,7 @@ services:
       APP_ENV: "${APP_ENV:-production}"
       APP_KEY: "${APP_KEY}"
       APP_DEBUG: "${APP_DEBUG:-false}"
-      APP_URL: "${APP_URL:-https://epos.saza.sch.id}"
+      APP_URL: "${APP_URL:-https://epos-simpels.saza.sch.id}"
       LOG_CHANNEL: "stderr"
       DB_CONNECTION: "mysql"
       DB_HOST: "epos-db"
@@ -47,7 +47,7 @@ services:
       - default
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.epos-saza.rule=Host(`epos.saza.sch.id`)"
+      - "traefik.http.routers.epos-saza.rule=Host(`epos-simpels.saza.sch.id`)"
       - "traefik.http.routers.epos-saza.entrypoints=websecure"
       - "traefik.http.routers.epos-saza.tls=true"
       - "traefik.http.routers.epos-saza.tls.certresolver=letsencrypt" # Adjust according to existing Traefik config
