@@ -24,11 +24,12 @@ RUN apk add --no-cache \
     libxml2-dev \
     zip \
     unzip \
+    libzip-dev \
     oniguruma-dev \
     icu-dev
 
 # Install PHP extensions
-RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd intl \
+RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd intl zip \
     && apk add --no-cache $PHPIZE_DEPS \
     && pecl install redis \
     && docker-php-ext-enable redis \
