@@ -1,6 +1,6 @@
 <div>
     <!-- Statistics Cards -->
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
         <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-4">
             <div class="flex items-center justify-between">
                 <div>
@@ -16,7 +16,7 @@
         <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-4">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-xs text-gray-500 uppercase">Admins</p>
+                    <p class="text-xs text-gray-500 uppercase">Admin</p>
                     <h3 class="text-2xl font-bold text-gray-800 mt-1">{{ $stats['admin'] }}</h3>
                 </div>
                 <div class="bg-red-100 rounded-full p-3">
@@ -28,7 +28,7 @@
         <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-4">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-xs text-gray-500 uppercase">Managers</p>
+                    <p class="text-xs text-gray-500 uppercase">Manager</p>
                     <h3 class="text-2xl font-bold text-gray-800 mt-1">{{ $stats['manager'] }}</h3>
                 </div>
                 <div class="bg-blue-100 rounded-full p-3">
@@ -40,7 +40,7 @@
         <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-4">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-xs text-gray-500 uppercase">Cashiers</p>
+                    <p class="text-xs text-gray-500 uppercase">Kasir Umum</p>
                     <h3 class="text-2xl font-bold text-gray-800 mt-1">{{ $stats['cashier'] }}</h3>
                 </div>
                 <div class="bg-green-100 rounded-full p-3">
@@ -52,7 +52,31 @@
         <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-4">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-xs text-gray-500 uppercase">Active</p>
+                    <p class="text-xs text-gray-500 uppercase">Kasir Toko</p>
+                    <h3 class="text-2xl font-bold text-gray-800 mt-1">{{ $stats['cashier_store'] }}</h3>
+                </div>
+                <div class="bg-purple-100 rounded-full p-3">
+                    <i class="fas fa-shopping-bag text-purple-600"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-gray-500 uppercase">Kasir Foodcourt</p>
+                    <h3 class="text-2xl font-bold text-gray-800 mt-1">{{ $stats['cashier_foodcourt'] }}</h3>
+                </div>
+                <div class="bg-yellow-100 rounded-full p-3">
+                    <i class="fas fa-utensils text-yellow-600"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-gray-500 uppercase">Aktif</p>
                     <h3 class="text-2xl font-bold text-green-600 mt-1">{{ $stats['active'] }}</h3>
                 </div>
                 <div class="bg-green-100 rounded-full p-3">
@@ -64,7 +88,7 @@
         <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-4">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-xs text-gray-500 uppercase">Inactive</p>
+                    <p class="text-xs text-gray-500 uppercase">Nonaktif</p>
                     <h3 class="text-2xl font-bold text-gray-600 mt-1">{{ $stats['inactive'] }}</h3>
                 </div>
                 <div class="bg-gray-100 rounded-full p-3">
@@ -134,7 +158,9 @@
                                     <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white
                                         {{ $staff->role === 'admin' ? 'bg-gradient-to-br from-red-500 to-pink-600' : '' }}
                                         {{ $staff->role === 'manager' ? 'bg-gradient-to-br from-blue-500 to-indigo-600' : '' }}
-                                        {{ $staff->role === 'cashier' ? 'bg-gradient-to-br from-green-500 to-emerald-600' : '' }}">
+                                        {{ $staff->role === 'cashier' ? 'bg-gradient-to-br from-green-500 to-emerald-600' : '' }}
+                                        {{ $staff->role === 'cashier_store' ? 'bg-gradient-to-br from-purple-500 to-violet-600' : '' }}
+                                        {{ $staff->role === 'cashier_foodcourt' ? 'bg-gradient-to-br from-yellow-500 to-orange-500' : '' }}">
                                         {{ strtoupper(substr($staff->name, 0, 2)) }}
                                     </div>
                                     <div>
@@ -159,15 +185,21 @@
                                 <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold
                                     {{ $staff->role === 'admin' ? 'bg-red-100 text-red-800' : '' }}
                                     {{ $staff->role === 'manager' ? 'bg-blue-100 text-blue-800' : '' }}
-                                    {{ $staff->role === 'cashier' ? 'bg-green-100 text-green-800' : '' }}">
+                                    {{ $staff->role === 'cashier' ? 'bg-green-100 text-green-800' : '' }}
+                                    {{ $staff->role === 'cashier_store' ? 'bg-purple-100 text-purple-800' : '' }}
+                                    {{ $staff->role === 'cashier_foodcourt' ? 'bg-yellow-100 text-yellow-800' : '' }}">
                                     @if($staff->role === 'admin')
                                         <i class="fas fa-crown mr-1"></i>
                                     @elseif($staff->role === 'manager')
                                         <i class="fas fa-user-tie mr-1"></i>
+                                    @elseif($staff->role === 'cashier_store')
+                                        <i class="fas fa-shopping-bag mr-1"></i>
+                                    @elseif($staff->role === 'cashier_foodcourt')
+                                        <i class="fas fa-utensils mr-1"></i>
                                     @else
                                         <i class="fas fa-cash-register mr-1"></i>
                                     @endif
-                                    {{ ucfirst($staff->role) }}
+                                    {{ $staff->getRoleLabel() }}
                                 </span>
                             </td>
                             <td class="px-6 py-4">
@@ -286,7 +318,9 @@
                                 </label>
                                 <select wire:model="role" 
                                         class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white text-gray-900">
-                                    <option value="cashier">Cashier</option>
+                                    <option value="cashier">Kasir Umum (Toko & Foodcourt)</option>
+                                    <option value="cashier_store">Kasir Toko</option>
+                                    <option value="cashier_foodcourt">Kasir Foodcourt</option>
                                     <option value="manager">Manager</option>
                                     <option value="admin">Admin</option>
                                 </select>

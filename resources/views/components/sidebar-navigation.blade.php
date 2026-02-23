@@ -15,16 +15,18 @@
             <h3 class="text-xs font-semibold text-indigo-200 uppercase tracking-wider">RETAIL / TOKO</h3>
         </div>
         
+        @if($user->canAccessStore())
         <a href="{{ route('pos', ['mode' => 'store']) }}" 
            class="menu-item flex items-center px-4 py-3 text-white rounded-lg {{ request()->routeIs('pos') && (!request('mode') || request('mode') == 'store') ? 'active' : '' }}">
             <i class="fas fa-shopping-bag w-5 text-center"></i>
             <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Kasir Toko</span>
         </a>
+        @endif
 
         @if($user->canAccessAdmin())
         <a href="{{ route('products') }}" class="menu-item flex items-center px-4 py-3 text-white rounded-lg {{ request()->routeIs('products') ? 'active' : '' }}">
             <i class="fas fa-box w-5 text-center"></i>
-            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Produk & Stok</span>
+            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Produk &amp; Stok</span>
             @if(isset($lowStockCount) && $lowStockCount > 0)
                 <span x-show="sidebarOpen" class="ml-auto bg-red-500 text-white text-xs px-2 py-1 rounded-full">{{ $lowStockCount }}</span>
             @endif
@@ -48,11 +50,13 @@
             <h3 class="text-xs font-semibold text-indigo-200 uppercase tracking-wider">FOODCOURT</h3>
         </div>
         
+        @if($user->canAccessFoodcourt())
         <a href="{{ route('pos', ['mode' => 'foodcourt']) }}" 
            class="menu-item flex items-center px-4 py-3 text-white rounded-lg {{ request()->routeIs('pos') && request('mode') == 'foodcourt' ? 'active' : '' }}">
             <i class="fas fa-utensils w-5 text-center"></i>
             <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Kasir Foodcourt</span>
         </a>
+        @endif
 
         @if($user->canAccessAdmin())
         <a href="{{ route('tenants') }}" class="menu-item flex items-center px-4 py-3 text-white rounded-lg {{ request()->routeIs('tenants') ? 'active' : '' }}">
@@ -62,7 +66,7 @@
         
         <a href="{{ route('foodcourt.finance') }}" class="menu-item flex items-center px-4 py-3 text-white rounded-lg {{ request()->routeIs('foodcourt.finance') ? 'active' : '' }}">
             <i class="fas fa-wallet w-5 text-center"></i>
-            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Keuangan & Saldo</span>
+            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Keuangan &amp; Saldo</span>
         </a>
 
         <a href="{{ route('revenue.report', ['type' => 'foodcourt']) }}" class="menu-item flex items-center px-4 py-3 text-white rounded-lg {{ request()->routeIs('revenue.report') && request('type') == 'foodcourt' ? 'active' : '' }}">
@@ -99,6 +103,13 @@
         <a href="{{ route('staff') }}" class="menu-item flex items-center px-4 py-3 text-white rounded-lg {{ request()->routeIs('staff') ? 'active' : '' }}">
             <i class="fas fa-users w-5 text-center"></i>
             <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Manajemen Staf</span>
+        </a>
+        @endif
+
+        @if($user->canAccessAdmin())
+        <a href="{{ route('cashier.report') }}" class="menu-item flex items-center px-4 py-3 text-white rounded-lg {{ request()->routeIs('cashier.report') ? 'active' : '' }}">
+            <i class="fas fa-user-clock w-5 text-center"></i>
+            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Laporan Per Kasir</span>
         </a>
         @endif
         

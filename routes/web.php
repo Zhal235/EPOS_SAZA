@@ -30,6 +30,7 @@ Route::middleware(['auth'])->group(function () {
     
     // Reports routes
     Route::get('sales-report', SalesReport::class)->name('sales.report');
+    Route::get('cashier-report', \App\Livewire\CashierReport::class)->name('cashier.report')->middleware('can:access-admin');
     
     // Financial routes (Admin only)
     Route::get('financial', \App\Livewire\Financial::class)->name('financial')->middleware('can:access-admin');

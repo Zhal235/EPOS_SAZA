@@ -38,7 +38,7 @@ class StaffManagement extends Component
             'name' => 'required|string|max:255',
             'email' => ['required', 'email', Rule::unique('users', 'email')->ignore($this->userId)],
             'phone' => 'nullable|string|max:20',
-            'role' => 'required|in:admin,manager,cashier',
+            'role' => 'required|in:admin,manager,cashier,cashier_store,cashier_foodcourt',
             'is_active' => 'boolean',
         ];
 
@@ -181,8 +181,8 @@ class StaffManagement extends Component
 
     public function render()
     {
-        // Query hanya untuk STAFF (admin, manager, cashier) - BUKAN customer
-        $query = User::whereIn('role', ['admin', 'manager', 'cashier']);
+        // Query hanya untuk STAFF (admin, manager, cashier, cashier_store, cashier_foodcourt) - BUKAN customer
+        $query = User::whereIn('role', User::getStaffRoles());
 
         // Search filter
         if (!empty($this->search)) {
@@ -197,12 +197,14 @@ class StaffManagement extends Component
 
         // Statistics - hanya untuk STAFF
         $stats = [
-            'total' => User::whereIn('role', ['admin', 'manager', 'cashier'])->count(),
-            'admin' => User::where('role', 'admin')->count(),
-            'manager' => User::where('role', 'manager')->count(),
-            'cashier' => User::where('role', 'cashier')->count(),
-            'active' => User::whereIn('role', ['admin', 'manager', 'cashier'])->where('is_active', true)->count(),
-            'inactive' => User::whereIn('role', ['admin', 'manager', 'cashier'])->where('is_active', false)->count(),
+            'total'              => User::whereIn('role', User::getStaffRoles())->count(),
+            'admin'              => User::where('role', 'admin')->count(),
+            'manager'            => User::where('role', 'manager')->count(),
+            'cashier'            => User::where('role', 'cashier')->count(),
+            'cashier_store'      => User::where('role', 'cashier_store')->count(),
+            'cashier_foodcourt'  => User::where('role', 'cashier_foodcourt')->count(),
+            'active'             => User::whereIn('role', User::getStaffRoles())->where('is_active', true)->count(),
+            'inactive'           => User::whereIn('role', User::getStaffRoles())->where('is_active', false)->count(),
         ];
 
         return view('livewire.staff-management', [

@@ -70,7 +70,15 @@ class User extends Authenticatable
      */
     public static function getValidRoles(): array
     {
-        return ['admin', 'manager', 'cashier', 'customer'];
+        return ['admin', 'manager', 'cashier', 'cashier_store', 'cashier_foodcourt', 'customer'];
+    }
+
+    /**
+     * Valid staff roles (non-customer)
+     */
+    public static function getStaffRoles(): array
+    {
+        return ['admin', 'manager', 'cashier', 'cashier_store', 'cashier_foodcourt'];
     }
 
     /**
@@ -106,11 +114,51 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if user has cashier role
+     * Check if user has the generic cashier role
      */
     public function isCashier(): bool
     {
         return $this->role === 'cashier';
+    }
+
+    /**
+     * Check if user is a store-only cashier
+     */
+    public function isCashierStore(): bool
+    {
+        return $this->role === 'cashier_store';
+    }
+
+    /**
+     * Check if user is a foodcourt-only cashier
+     */
+    public function isCashierFoodcourt(): bool
+    {
+        return $this->role === 'cashier_foodcourt';
+    }
+
+    /**
+     * Check if user has any cashier role
+     */
+    public function isAnyCashier(): bool
+    {
+        return in_array($this->role, ['cashier', 'cashier_store', 'cashier_foodcourt']);
+    }
+
+    /**
+     * Check if user can access the store POS
+     */
+    public function canAccessStore(): bool
+    {
+        return in_array($this->role, ['admin', 'manager', 'cashier', 'cashier_store']);
+    }
+
+    /**
+     * Check if user can access the foodcourt POS
+     */
+    public function canAccessFoodcourt(): bool
+    {
+        return in_array($this->role, ['admin', 'manager', 'cashier', 'cashier_foodcourt']);
     }
 
     /**
@@ -119,6 +167,22 @@ class User extends Authenticatable
     public function canAccessAdmin(): bool
     {
         return in_array($this->role, ['admin', 'manager']);
+    }
+
+    /**
+     * Get human-readable role label (Bahasa Indonesia)
+     */
+    public function getRoleLabel(): string
+    {
+        return match($this->role) {
+            'admin'              => 'Administrator',
+            'manager'           => 'Manager',
+            'cashier'           => 'Kasir Umum',
+            'cashier_store'     => 'Kasir Toko',
+            'cashier_foodcourt' => 'Kasir Foodcourt',
+            'customer'          => 'Pelanggan',
+            default             => ucfirst($this->role),
+        };
     }
 
     /**

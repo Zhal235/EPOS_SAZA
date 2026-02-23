@@ -65,5 +65,31 @@ class AdminUserSeeder extends Seeder
                 'email_verified_at' => now(),
             ]
         );
+
+        // Create Kasir Toko (store-only cashier)
+        User::updateOrCreate(
+            ['email' => 'kasir.toko@epos.com'],
+            [
+                'name' => 'Kasir Toko',
+                'email' => 'kasir.toko@epos.com',
+                'password' => Hash::make('password123'),
+                'role' => 'cashier_store',
+                'is_active' => true,
+                'email_verified_at' => now(),
+            ]
+        );
+
+        // Create Kasir Foodcourt (foodcourt-only cashier)
+        User::updateOrCreate(
+            ['email' => 'kasir.foodcourt@epos.com'],
+            [
+                'name' => 'Kasir Foodcourt',
+                'email' => 'kasir.foodcourt@epos.com',
+                'password' => Hash::make('password123'),
+                'role' => 'cashier_foodcourt',
+                'is_active' => true,
+                'email_verified_at' => now(),
+            ]
+        );
     }
 }

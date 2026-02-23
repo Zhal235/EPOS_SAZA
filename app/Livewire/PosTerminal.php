@@ -77,6 +77,16 @@ class PosTerminal extends Component
         if (request()->has('mode') && in_array(request('mode'), ['store', 'foodcourt'])) {
             $this->outletMode = request('mode');
         }
+
+        // Enforce role-based POS access restrictions
+        $user = auth()->user();
+        if ($user->isCashierStore()) {
+            // Store-only cashier: always redirect to store mode
+            $this->outletMode = 'store';
+        } elseif ($user->isCashierFoodcourt()) {
+            // Foodcourt-only cashier: always redirect to foodcourt mode
+            $this->outletMode = 'foodcourt';
+        }
         
         $this->initializeSimpelsApi();
     }
@@ -438,6 +448,7 @@ class PosTerminal extends Component
             // Create transaction
             $transaction = Transaction::create([
                 'user_id' => Auth::id() ?? 1,
+                'outlet_mode' => $this->outletMode,
                 'customer_name' => $customerName,
                 'subtotal' => $this->subtotal,
                 'tax_amount' => 0,
@@ -1063,6 +1074,7 @@ class PosTerminal extends Component
             // Create transaction in local database
             $transaction = Transaction::create([
                 'user_id' => Auth::id() ?? 1,
+                'outlet_mode' => $this->outletMode,
                 'customer_name' => $santriName,
                 'customer_phone' => $santriClass,
                 'subtotal' => $this->subtotal,
@@ -1370,6 +1382,7 @@ class PosTerminal extends Component
             // Create transaction
             $transaction = Transaction::create([
                 'user_id' => Auth::id() ?? 1,
+                'outlet_mode' => $this->outletMode,
                 'customer_name' => $customerName,
                 'subtotal' => $this->subtotal,
                 'tax_amount' => 0,

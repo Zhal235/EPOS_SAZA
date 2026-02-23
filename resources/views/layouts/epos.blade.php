@@ -100,12 +100,17 @@
                             <div class="text-white text-sm">
                                 <p class="font-medium">{{ auth()->user()->name }}</p>
                                 <p class="text-indigo-200 text-xs">
-                                    @if(auth()->user()->isAdmin())
+                                    @php $authUser = auth()->user(); @endphp
+                                    @if($authUser->isAdmin())
                                         <i class="fas fa-crown mr-1"></i>Administrator
-                                    @elseif(auth()->user()->isManager())
+                                    @elseif($authUser->isManager())
                                         <i class="fas fa-user-tie mr-1"></i>Manager
+                                    @elseif($authUser->isCashierStore())
+                                        <i class="fas fa-shopping-bag mr-1"></i>Kasir Toko
+                                    @elseif($authUser->isCashierFoodcourt())
+                                        <i class="fas fa-utensils mr-1"></i>Kasir Foodcourt
                                     @else
-                                        <i class="fas fa-cash-register mr-1"></i>Cashier
+                                        <i class="fas fa-cash-register mr-1"></i>Kasir Umum
                                     @endif
                                 </p>
                             </div>
