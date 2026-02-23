@@ -36,13 +36,12 @@ services:
       # Additional settings
       VITE_APP_NAME: "${APP_NAME:-EPOS_SAZA}"
     volumes:
-      - ./storage/app:/var/www/html/storage/app
-      - ./storage/framework/cache:/var/www/html/storage/framework/cache
-      - ./storage/framework/sessions:/var/www/html/storage/framework/sessions
-      - ./storage/framework/views:/var/www/html/storage/framework/views
-      - ./storage/logs:/var/www/html/storage/logs
+      - epos-storage-app:/var/www/html/storage/app
+      - epos-storage-cache:/var/www/html/storage/framework/cache
+      - epos-storage-sessions:/var/www/html/storage/framework/sessions
+      - epos-storage-views:/var/www/html/storage/framework/views
+      - epos-storage-logs:/var/www/html/storage/logs
     networks:
-      - dokploy-network
       - saza-network
       - default
     healthcheck:
@@ -87,8 +86,6 @@ services:
       retries: 3
 
 networks:
-  dokploy-network:
-    external: true
   saza-network:
     external: true
   default:
@@ -97,3 +94,8 @@ networks:
 volumes:
   epos-mysql-data:
   epos-redis-data:
+  epos-storage-app:
+  epos-storage-cache:
+  epos-storage-sessions:
+  epos-storage-views:
+  epos-storage-logs:
