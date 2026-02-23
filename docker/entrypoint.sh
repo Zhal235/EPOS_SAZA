@@ -4,15 +4,13 @@ set -e
 # Wait for database to be ready
 echo "Waiting for database connection..."
 until php -r "
-    \$conn = @new mysqli(
-        getenv('DB_HOST'),
-        getenv('DB_USERNAME'),
-        getenv('DB_PASSWORD'),
-        getenv('DB_DATABASE'),
-        (int)getenv('DB_PORT') ?: 3306
-    );
-    if (\$conn->connect_error) { exit(1); }
-    exit(0);
+    try {
+        \$dsn = 'mysql:host=' . getenv('DB_HOST') . ';port=' . (getenv('DB_PORT') ?: 3306) . ';dbname=' . getenv('DB_DATABASE');
+        new PDO(\$dsn, getenv('DB_USERNAME'), getenv('DB_PASSWORD'), [PDO::ATTR_TIMEOUT => 3]);
+        exit(0);
+    } catch (Exception \$e) {
+        exit(1);
+    }
 " 2>/dev/null; do
     echo "Database not ready, retrying in 3 seconds..."
     sleep 3
