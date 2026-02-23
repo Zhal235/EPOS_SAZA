@@ -23,6 +23,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Force HTTPS scheme when app URL is configured with https (e.g. behind a TLS-terminating proxy)
+        if (str_starts_with(config('app.url'), 'https://')) {
+            \Illuminate\Support\Facades\URL::forceScheme('https');
+        }
+
         // Define authorization gates
         \Illuminate\Support\Facades\Gate::define('access-admin', function ($user) {
             return $user->canAccessAdmin();
