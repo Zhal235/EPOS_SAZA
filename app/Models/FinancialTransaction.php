@@ -54,6 +54,7 @@ class FinancialTransaction extends Model
     const TYPE_WITHDRAWAL_SIMPELS = 'withdrawal_simpels';
     const TYPE_CASH_IN = 'cash_in';
     const TYPE_CASH_OUT = 'cash_out';
+    const TYPE_TENANT_PAYOUT = 'tenant_payout'; // Pembayaran/pencairan saldo ke tenant foodcourt
 
     const CATEGORY_INCOME = 'income';
     const CATEGORY_EXPENSE = 'expense';
@@ -195,6 +196,7 @@ class FinancialTransaction extends Model
             self::TYPE_WITHDRAWAL_SIMPELS => 'Penarikan SIMPels',
             self::TYPE_CASH_IN => 'Kas Masuk',
             self::TYPE_CASH_OUT => 'Kas Keluar',
+            self::TYPE_TENANT_PAYOUT => 'Pembayaran ke Tenant',
             default => 'Lainnya'
         };
     }

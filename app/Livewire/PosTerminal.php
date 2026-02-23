@@ -470,6 +470,7 @@ class PosTerminal extends Component
                     'product_sku'      => $product->sku,
                     'product_name'     => $product->name,
                     'unit_price'       => $item['price'],
+                    'cost_price'       => $product->cost_price, // snapshot
                     'quantity'         => $item['quantity'],
                     'total_price'      => $item['total'],
                     // Tenant & commission snapshot
@@ -1099,6 +1100,7 @@ class PosTerminal extends Component
                     'product_sku'      => $product->sku,
                     'product_name'     => $product->name,
                     'unit_price'       => $item['price'],
+                    'cost_price'       => $product->cost_price, // snapshot
                     'quantity'         => $item['quantity'],
                     'total_price'      => $item['total'],
                     'tenant_id'        => $item['tenant_id'] ?? null,

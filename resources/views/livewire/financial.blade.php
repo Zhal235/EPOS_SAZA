@@ -1,67 +1,111 @@
 <div>
-    <!-- Header dengan Ringkasan Keuangan -->
+    <!-- Ringkasan Keuangan -->
     <div class="mb-8">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <!-- Total Pemasukan -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+        <!-- Profit Bersih -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <!-- Total Profit Bersih -->
+            <div class="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-xl shadow-md p-5 text-white">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm font-medium text-gray-600 mb-1">Total Pemasukan</p>
-                        <p class="text-2xl font-bold text-green-600">{{ 'Rp ' . number_format($summary['total_income'], 0, ',', '.') }}</p>
-                        <p class="text-sm text-gray-500 mt-1">
-                            <i class="fas fa-arrow-up"></i> {{ $summary['total_transactions'] }} transaksi
+                        <p class="text-xs font-semibold text-indigo-200 uppercase tracking-wider mb-1">Total Profit Bersih</p>
+                        <p class="text-2xl font-bold">Rp {{ number_format($summary['pos_total_profit'], 0, ',', '.') }}</p>
+                        <p class="text-xs text-indigo-200 mt-1"><i class="fas fa-receipt mr-1"></i>{{ $summary['pos_total_count'] }} transaksi</p>
+                    </div>
+                    <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-sack-dollar text-white text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profit Toko -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Profit Bersih Toko</p>
+                        <p class="text-2xl font-bold text-purple-700">Rp {{ number_format($summary['pos_store_profit'], 0, ',', '.') }}</p>
+                        <p class="text-xs text-gray-400 mt-1">
+                            dari omzet Rp {{ number_format($summary['pos_store_sales'], 0, ',', '.') }}
+                            &nbsp;·&nbsp; {{ $summary['pos_store_count'] }} trx
                         </p>
                     </div>
-                    <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-plus text-green-600 text-xl"></i>
+                    <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-shopping-bag text-purple-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profit Foodcourt -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Profit Bersih Foodcourt</p>
+                        <p class="text-2xl font-bold text-orange-700">Rp {{ number_format($summary['pos_foodcourt_profit'], 0, ',', '.') }}</p>
+                        <p class="text-xs text-gray-400 mt-1">
+                            dari omzet Rp {{ number_format($summary['pos_foodcourt_sales'], 0, ',', '.') }}
+                            &nbsp;·&nbsp; {{ $summary['pos_foodcourt_count'] }} trx
+                        </p>
+                    </div>
+                    <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-utensils text-orange-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RFID / SIMPels Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Total Pemasukan RFID -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Pemasukan RFID</p>
+                        <p class="text-xl font-bold text-green-600">Rp {{ number_format($summary['total_rfid_payments'], 0, ',', '.') }}</p>
+                        <p class="text-xs text-gray-500 mt-1"><i class="fas fa-credit-card mr-1"></i>Dari SIMPels</p>
+                    </div>
+                    <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-id-card text-green-600"></i>
                     </div>
                 </div>
             </div>
 
             <!-- Total Pengeluaran -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm font-medium text-gray-600 mb-1">Total Pengeluaran</p>
-                        <p class="text-2xl font-bold text-red-600">{{ 'Rp ' . number_format($summary['total_expense'], 0, ',', '.') }}</p>
-                        <p class="text-sm text-gray-500 mt-1">
-                            <i class="fas fa-arrow-down"></i> Termasuk refund
-                        </p>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Total Pengeluaran</p>
+                        <p class="text-xl font-bold text-red-600">Rp {{ number_format($summary['total_expense'], 0, ',', '.') }}</p>
+                        <p class="text-xs text-gray-500 mt-1"><i class="fas fa-arrow-down mr-1"></i>Termasuk refund</p>
                     </div>
-                    <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-minus text-red-600 text-xl"></i>
+                    <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-minus text-red-600"></i>
                     </div>
                 </div>
             </div>
 
             <!-- Saldo RFID Tersedia -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm font-medium text-gray-600 mb-1">Saldo RFID Tersedia</p>
-                        <p class="text-2xl font-bold text-blue-600">{{ $summary['pending_withdrawal_formatted'] }}</p>
-                        <p class="text-sm text-gray-500 mt-1">
-                            <i class="fas fa-wallet"></i> Siap ditarik
-                        </p>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Saldo RFID Tersedia</p>
+                        <p class="text-xl font-bold text-blue-600">{{ $summary['pending_withdrawal_formatted'] }}</p>
+                        <p class="text-xs text-gray-500 mt-1"><i class="fas fa-wallet mr-1"></i>Siap ditarik</p>
                     </div>
-                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-credit-card text-blue-600 text-xl"></i>
+                    <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-wallet text-blue-600"></i>
                     </div>
                 </div>
             </div>
 
             <!-- Total Sudah Ditarik -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm font-medium text-gray-600 mb-1">Sudah Ditarik</p>
-                        <p class="text-2xl font-bold text-purple-600">{{ 'Rp ' . number_format($summary['withdrawn_amount'], 0, ',', '.') }}</p>
-                        <p class="text-sm text-gray-500 mt-1">
-                            <i class="fas fa-check-circle"></i> Dari SIMPels
-                        </p>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Sudah Ditarik</p>
+                        <p class="text-xl font-bold text-purple-600">Rp {{ number_format($summary['withdrawn_amount'], 0, ',', '.') }}</p>
+                        <p class="text-xs text-gray-500 mt-1"><i class="fas fa-check-circle mr-1"></i>Dari SIMPels</p>
                     </div>
-                    <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-download text-purple-600 text-xl"></i>
+                    <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-download text-purple-600"></i>
                     </div>
                 </div>
             </div>
@@ -77,9 +121,13 @@
                         class="px-4 py-2 rounded-md text-sm font-medium transition-colors {{ $activeTab === 'overview' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700' }}">
                     <i class="fas fa-chart-pie mr-2"></i>Ringkasan
                 </button>
+                <button wire:click="setTab('pos')" 
+                        class="px-4 py-2 rounded-md text-sm font-medium transition-colors {{ $activeTab === 'pos' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700' }}">
+                    <i class="fas fa-receipt mr-2"></i>Penjualan POS
+                </button>
                 <button wire:click="setTab('transactions')" 
                         class="px-4 py-2 rounded-md text-sm font-medium transition-colors {{ $activeTab === 'transactions' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700' }}">
-                    <i class="fas fa-list mr-2"></i>Transaksi
+                    <i class="fas fa-list mr-2"></i>Transaksi RFID
                 </button>
                 <button wire:click="setTab('withdrawals')" 
                         class="px-4 py-2 rounded-md text-sm font-medium transition-colors {{ $activeTab === 'withdrawals' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700' }}">
@@ -134,6 +182,7 @@
                 <select wire:model="filterType" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
                     <option value="all">Semua Jenis</option>
                     <option value="rfid_payment">Pembayaran RFID</option>
+                    <option value="tenant_payout">Pembayaran ke Tenant</option>
                     <option value="refund">Pengembalian</option>
                     <option value="cash_in">Kas Masuk</option>
                     <option value="cash_out">Kas Keluar</option>
@@ -191,39 +240,156 @@
                 </div>
             </div>
 
-            <!-- Status RFID -->
+            <!-- Ringkasan Profit & RFID -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Status Saldo RFID</h3>
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Profit Bersih</h3>
                 
-                <div class="space-y-4">
-                    <div class="p-4 bg-blue-50 rounded-lg">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-sm font-medium text-blue-900">Total Pembayaran RFID</span>
+                <div class="space-y-3">
+                    <div class="p-4 bg-indigo-50 rounded-lg">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-sm font-semibold text-indigo-900">Total Profit</span>
                         </div>
-                        <p class="text-2xl font-bold text-blue-600">{{ 'Rp ' . number_format($summary['total_rfid_payments'], 0, ',', '.') }}</p>
+                        <p class="text-2xl font-bold text-indigo-700">Rp {{ number_format($summary['pos_total_profit'], 0, ',', '.') }}</p>
+                    </div>
+
+                    <div class="p-3 bg-purple-50 rounded-lg">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium text-purple-900"><i class="fas fa-shopping-bag mr-1"></i>Toko</span>
+                            <span class="text-sm font-bold text-purple-700">Rp {{ number_format($summary['pos_store_profit'], 0, ',', '.') }}</span>
+                        </div>
+                        <p class="text-xs text-purple-400 mt-0.5">omzet Rp {{ number_format($summary['pos_store_sales'], 0, ',', '.') }}</p>
+                    </div>
+
+                    <div class="p-3 bg-orange-50 rounded-lg">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium text-orange-900"><i class="fas fa-utensils mr-1"></i>Foodcourt (komisi)</span>
+                            <span class="text-sm font-bold text-orange-700">Rp {{ number_format($summary['pos_foodcourt_profit'], 0, ',', '.') }}</span>
+                        </div>
+                        <p class="text-xs text-orange-400 mt-0.5">omzet Rp {{ number_format($summary['pos_foodcourt_sales'], 0, ',', '.') }}</p>
                     </div>
                     
-                    <div class="p-4 bg-green-50 rounded-lg">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-sm font-medium text-green-900">Sisa Belum Ditarik</span>
+                    <div class="p-3 bg-blue-50 rounded-lg">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-sm font-medium text-blue-900"><i class="fas fa-wallet mr-1"></i>Saldo RFID Tersedia</span>
                         </div>
-                        <p class="text-2xl font-bold text-green-600">{{ $summary['pending_withdrawal_formatted'] }}</p>
-                        
+                        <p class="text-lg font-bold text-blue-700">{{ $summary['pending_withdrawal_formatted'] }}</p>
                         @if($summary['pending_withdrawal'] > 0)
                         <button wire:click="openWithdrawalModal" 
-                                class="mt-3 w-full px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
+                                class="mt-2 w-full px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
                             <i class="fas fa-download mr-2"></i>Tarik Sekarang
                         </button>
                         @endif
                     </div>
 
-                    <div class="p-4 bg-gray-50 rounded-lg">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-sm font-medium text-gray-900">Sudah Ditarik</span>
+                    <div class="p-3 bg-gray-50 rounded-lg">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium text-gray-700"><i class="fas fa-check-circle mr-1"></i>Sudah Ditarik (RFID)</span>
+                            <span class="text-sm font-bold text-gray-600">Rp {{ number_format($summary['withdrawn_amount'], 0, ',', '.') }}</span>
                         </div>
-                        <p class="text-xl font-bold text-gray-600">{{ 'Rp ' . number_format($summary['withdrawn_amount'], 0, ',', '.') }}</p>
                     </div>
                 </div>
+            </div>
+        </div>
+
+    @elseif($activeTab === 'pos')
+        {{-- ─── Tab Penjualan POS ───────────────────────────────────────── --}}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <h3 class="text-lg font-semibold text-gray-900">Daftar Transaksi POS</h3>
+                <div class="flex flex-wrap gap-3">
+                    <!-- Outlet Filter -->
+                    <select wire:model.live="outletModeFilter"
+                            class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 bg-white">
+                        <option value="">Semua Outlet</option>
+                        <option value="store">Toko</option>
+                        <option value="foodcourt">Foodcourt</option>
+                    </select>
+                    <!-- Search -->
+                    <input type="text" wire:model.live.debounce.300ms="posSearch"
+                           placeholder="Cari no. transaksi / pelanggan..."
+                           class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 w-56">
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead class="bg-gradient-to-r from-indigo-600 to-purple-600">
+                        <tr>
+                            <th class="px-5 py-3 text-left text-xs font-semibold text-white uppercase">Tanggal</th>
+                            <th class="px-5 py-3 text-left text-xs font-semibold text-white uppercase">No. Transaksi</th>
+                            <th class="px-5 py-3 text-left text-xs font-semibold text-white uppercase">Outlet</th>
+                            <th class="px-5 py-3 text-left text-xs font-semibold text-white uppercase">Kasir</th>
+                            <th class="px-5 py-3 text-left text-xs font-semibold text-white uppercase">Pelanggan</th>
+                            <th class="px-5 py-3 text-center text-xs font-semibold text-white uppercase">Metode</th>
+                            <th class="px-5 py-3 text-right text-xs font-semibold text-white uppercase">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-100">
+                        @forelse($posTransactions as $pos)
+                        <tr class="hover:bg-gray-50 transition-colors">
+                            <td class="px-5 py-3 whitespace-nowrap text-gray-700">
+                                {{ $pos->created_at->format('d/m/Y H:i') }}
+                            </td>
+                            <td class="px-5 py-3 whitespace-nowrap font-mono font-medium text-indigo-700">
+                                {{ $pos->transaction_number }}
+                            </td>
+                            <td class="px-5 py-3 whitespace-nowrap">
+                                @if($pos->outlet_mode === 'foodcourt')
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+                                        <i class="fas fa-utensils mr-1"></i>Foodcourt
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-sky-100 text-sky-800">
+                                        <i class="fas fa-shopping-bag mr-1"></i>Toko
+                                    </span>
+                                @endif
+                            </td>
+                            <td class="px-5 py-3 whitespace-nowrap text-gray-700">
+                                {{ $pos->user->name ?? '-' }}
+                            </td>
+                            <td class="px-5 py-3 text-gray-700">
+                                {{ $pos->customer_name }}
+                            </td>
+                            <td class="px-5 py-3 whitespace-nowrap text-center">
+                                @php
+                                    $pmColor = match($pos->payment_method) {
+                                        'cash'  => 'bg-green-100 text-green-700',
+                                        'qris'  => 'bg-blue-100 text-blue-700',
+                                        'rfid'  => 'bg-purple-100 text-purple-700',
+                                        'card'  => 'bg-gray-100 text-gray-700',
+                                        default => 'bg-gray-100 text-gray-700',
+                                    };
+                                    $pmIcon = match($pos->payment_method) {
+                                        'cash'  => 'fa-money-bill-wave',
+                                        'qris'  => 'fa-qrcode',
+                                        'rfid'  => 'fa-id-card',
+                                        'card'  => 'fa-credit-card',
+                                        default => 'fa-coins',
+                                    };
+                                @endphp
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold {{ $pmColor }}">
+                                    <i class="fas {{ $pmIcon }} mr-1"></i>{{ strtoupper($pos->payment_method) }}
+                                </span>
+                            </td>
+                            <td class="px-5 py-3 whitespace-nowrap text-right font-bold text-indigo-700">
+                                Rp {{ number_format($pos->total_amount, 0, ',', '.') }}
+                            </td>
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="7" class="px-6 py-16 text-center text-gray-400">
+                                <i class="fas fa-receipt text-4xl mb-4 block"></i>
+                                <p class="font-medium">Tidak ada transaksi POS ditemukan</p>
+                                <p class="text-xs mt-1">Coba ubah filter periode atau outlet</p>
+                            </td>
+                        </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                {{ $posTransactions->links() }}
             </div>
         </div>
 

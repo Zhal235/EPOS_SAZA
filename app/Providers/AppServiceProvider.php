@@ -35,7 +35,7 @@ class AppServiceProvider extends ServiceProvider
         
         // Define gate to check if user can login (customers cannot login)
         \Illuminate\Support\Facades\Gate::define('can-login', function ($user) {
-            return in_array($user->role, ['admin', 'manager', 'cashier']);
+            return in_array($user->role, ['admin', 'manager', 'cashier', 'cashier_store', 'cashier_foodcourt']);
         });
 
         // Set default redirect after login

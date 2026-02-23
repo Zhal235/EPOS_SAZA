@@ -13,6 +13,7 @@ class TransactionItem extends Model
         'product_sku',
         'product_name',
         'unit_price',
+        'cost_price',
         'quantity',
         'total_price',
         // Tenant fields
@@ -27,6 +28,7 @@ class TransactionItem extends Model
 
     protected $casts = [
         'unit_price'        => 'decimal:2',
+        'cost_price'        => 'decimal:2',
         'total_price'       => 'decimal:2',
         'commission_value'  => 'decimal:2',
         'commission_amount' => 'decimal:2',

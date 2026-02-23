@@ -82,10 +82,12 @@
             <h3 class="text-xs font-semibold text-indigo-200 uppercase tracking-wider">SYSTEM</h3>
         </div>
 
+        @if($user->canAccessAdmin())
         <a href="{{ route('rfid.withdrawal') }}" class="menu-item flex items-center px-4 py-3 text-white rounded-lg {{ request()->routeIs('rfid.withdrawal') ? 'active' : '' }}">
             <i class="fas fa-hand-holding-usd w-5 text-center"></i>
             <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Penarikan Tunai (Santri)</span>
         </a>
+        @endif
 
         @if($user->canAccessAdmin())
         <a href="{{ route('financial') }}" class="menu-item flex items-center px-4 py-3 text-white rounded-lg {{ request()->routeIs('financial') ? 'active' : '' }}">

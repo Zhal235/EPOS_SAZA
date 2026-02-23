@@ -22,6 +22,8 @@ class Financial extends Component
     public $filterType = 'all';
     public $filterStatus = 'all';
     public $searchQuery = '';
+    public $outletModeFilter = ''; // '' = all, 'store', 'foodcourt'
+    public $posSearch = '';
 
     // Withdrawal modal
     public $showWithdrawalModal = false;
@@ -43,7 +45,7 @@ class Financial extends Component
 
     public $refreshKey = 0;
 
-    protected $queryString = ['activeTab', 'dateFrom', 'dateTo'];
+    protected $queryString = ['activeTab', 'dateFrom', 'dateTo', 'outletModeFilter'];
     
     protected $listeners = ['refreshComponent' => '$refresh'];
 
@@ -92,6 +94,16 @@ class Financial extends Component
         $this->resetPage();
     }
 
+    public function updatingPosSearch()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingOutletModeFilter()
+    {
+        $this->resetPage();
+    }
+
     public function updatingFilterType()
     {
         $this->resetPage();
@@ -124,53 +136,56 @@ class Financial extends Component
 
     public function getDashboardSummary()
     {
-        $query = FinancialTransaction::query()
-            ->whereBetween('created_at', [
-                Carbon::parse($this->dateFrom)->startOfDay(),
-                Carbon::parse($this->dateTo)->endOfDay()
-            ]);
+        $from = Carbon::parse($this->dateFrom)->startOfDay();
+        $to   = Carbon::parse($this->dateTo)->endOfDay();
 
-        // Total RFID payments
+        // ── POS Transactions (tabel transactions) ────────────────────────
+        $posBase = Transaction::whereBetween('created_at', [$from, $to])
+            ->where('status', 'completed');
+
+        $posStore      = (clone $posBase)->where('outlet_mode', 'store');
+        $posFoodcourt  = (clone $posBase)->where('outlet_mode', 'foodcourt');
+
+        $posStoreSales      = (float) (clone $posStore)->sum('total_amount');
+        $posFoodcourtSales  = (float) (clone $posFoodcourt)->sum('total_amount');
+        $posTotalSales      = $posStoreSales + $posFoodcourtSales;
+        $posTotalCount      = (int) (clone $posBase)->count();
+        $posStoreCount      = (int) (clone $posStore)->count();
+        $posFoodcourtCount  = (int) (clone $posFoodcourt)->count();
+
+        // ── Profit Toko = Penjualan - HPP (pakai snapshot cost_price di transaction_items) ──
+        $storeTransactionIds = (clone $posStore)->pluck('id');
+        $storeProfitRaw = DB::table('transaction_items as ti')
+            ->whereIn('ti.transaction_id', $storeTransactionIds)
+            ->select(
+                DB::raw('SUM(ti.total_price) as revenue'),
+                DB::raw('SUM(ti.cost_price * ti.quantity) as cogs')
+            )
+            ->first();
+        $posStoreProfit = (float) (($storeProfitRaw->revenue ?? 0) - ($storeProfitRaw->cogs ?? 0));
+
+        // ── Profit Foodcourt = Total Komisi dari transaction_items ──────────────
+        $foodcourtTransactionIds = (clone $posFoodcourt)->pluck('id');
+        $posFoodcourtProfit = (float) DB::table('transaction_items')
+            ->whereIn('transaction_id', $foodcourtTransactionIds)
+            ->sum('commission_amount');
+
+        $posTotalProfit = $posStoreProfit + $posFoodcourtProfit;
+
+        // ── FinancialTransaction (RFID / SIMPels) ────────────────────────
+        $query = FinancialTransaction::query()->whereBetween('created_at', [$from, $to]);
+
         $totalRfidPayments = (clone $query)->rfidPayments()->completed()->sum('amount');
-        
-        // Debug: Check withdrawals and transactions
-        $allWithdrawals = SimpelsWithdrawal::all();
-        $transactionsWithWithdrawal = FinancialTransaction::whereNotNull('withdrawal_id')->get();
-        
-        \Log::info('Dashboard calculation - Debug', [
-            'withdrawals_count' => $allWithdrawals->count(),
-            'withdrawals' => $allWithdrawals->map(fn($w) => [
-                'id' => $w->id,
-                'number' => $w->withdrawal_number,
-                'simpels_status' => $w->simpels_status,
-                'amount' => $w->total_amount
-            ])->toArray(),
-            'transactions_with_withdrawal_id' => $transactionsWithWithdrawal->map(fn($t) => [
-                'id' => $t->id,
-                'number' => $t->transaction_number,
-                'withdrawal_id' => $t->withdrawal_id,
-                'amount' => $t->amount
-            ])->toArray()
-        ]);
-        
-        // Total yang sudah approved/completed di SIMPELS (benar-benar sudah ditarik)
+
         $withdrawnTransactions = DB::table('financial_transactions')
             ->join('simpels_withdrawals', 'financial_transactions.withdrawal_id', '=', 'simpels_withdrawals.id')
             ->where('financial_transactions.type', FinancialTransaction::TYPE_RFID_PAYMENT)
             ->where('financial_transactions.status', FinancialTransaction::STATUS_COMPLETED)
             ->whereIn('simpels_withdrawals.simpels_status', ['approved', 'completed'])
-            ->whereBetween('financial_transactions.created_at', [
-                Carbon::parse($this->dateFrom)->startOfDay(),
-                Carbon::parse($this->dateTo)->endOfDay()
-            ])
+            ->whereBetween('financial_transactions.created_at', [$from, $to])
             ->whereNull('financial_transactions.deleted_at')
             ->sum('financial_transactions.amount');
-            
-        \Log::info('Dashboard calculation - Withdrawn amount', [
-            'withdrawn_transactions' => $withdrawnTransactions
-        ]);
 
-        // Total yang sudah masuk withdrawal request tapi belum approved (pending/rejected - masih tersedia)
         $pendingOrRejectedTransactions = DB::table('financial_transactions')
             ->join('simpels_withdrawals', 'financial_transactions.withdrawal_id', '=', 'simpels_withdrawals.id')
             ->where('financial_transactions.type', FinancialTransaction::TYPE_RFID_PAYMENT)
@@ -180,37 +195,64 @@ class Financial extends Component
                   ->orWhere('simpels_withdrawals.simpels_status', 'rejected')
                   ->orWhereNull('simpels_withdrawals.simpels_status');
             })
-            ->whereBetween('financial_transactions.created_at', [
-                Carbon::parse($this->dateFrom)->startOfDay(),
-                Carbon::parse($this->dateTo)->endOfDay()
-            ])
+            ->whereBetween('financial_transactions.created_at', [$from, $to])
             ->whereNull('financial_transactions.deleted_at')
             ->sum('financial_transactions.amount');
-        
-        // Total yang belum masuk withdrawal request sama sekali
+
         $notInWithdrawal = FinancialTransaction::rfidPayments()
             ->completed()
             ->whereNull('withdrawal_id')
-            ->whereBetween('created_at', [
-                Carbon::parse($this->dateFrom)->startOfDay(),
-                Carbon::parse($this->dateTo)->endOfDay()
-            ])
+            ->whereBetween('created_at', [$from, $to])
             ->sum('amount');
 
-        // Saldo tersedia = yang belum masuk withdrawal + yang pending/rejected (dikembalikan)
         $availableForWithdrawal = $notInWithdrawal + $pendingOrRejectedTransactions;
 
         return [
-            'total_income' => (clone $query)->income()->completed()->sum('amount'),
-            'total_expense' => (clone $query)->expense()->completed()->sum('amount'),
-            'total_rfid_payments' => $totalRfidPayments,
-            'total_refunds' => (clone $query)->refunds()->completed()->sum('amount'),
-            'total_transactions' => (clone $query)->completed()->count(),
-            'pending_sync' => FinancialTransaction::notSynced()->where('type', FinancialTransaction::TYPE_RFID_PAYMENT)->count(),
-            'pending_withdrawal' => $availableForWithdrawal,
+            // POS sales breakdown
+            'pos_total_sales'       => $posTotalSales,
+            'pos_store_sales'       => $posStoreSales,
+            'pos_foodcourt_sales'   => $posFoodcourtSales,
+            'pos_total_count'       => $posTotalCount,
+            'pos_store_count'       => $posStoreCount,
+            'pos_foodcourt_count'   => $posFoodcourtCount,
+            // Profit bersih
+            'pos_store_profit'      => $posStoreProfit,
+            'pos_foodcourt_profit'  => $posFoodcourtProfit,
+            'pos_total_profit'      => $posTotalProfit,
+            // RFID / SIMPels
+            'total_income'             => (clone $query)->income()->completed()->sum('amount'),
+            'total_expense'            => (clone $query)->expense()->completed()->sum('amount'),
+            'total_rfid_payments'      => $totalRfidPayments,
+            'total_refunds'            => (clone $query)->refunds()->completed()->sum('amount'),
+            'total_transactions'       => (clone $query)->completed()->count(),
+            'pending_sync'             => FinancialTransaction::notSynced()->where('type', FinancialTransaction::TYPE_RFID_PAYMENT)->count(),
+            'pending_withdrawal'       => $availableForWithdrawal,
             'pending_withdrawal_formatted' => 'Rp ' . number_format($availableForWithdrawal, 0, ',', '.'),
-            'withdrawn_amount' => $withdrawnTransactions,
+            'withdrawn_amount'         => $withdrawnTransactions,
         ];
+    }
+
+    public function getPosTransactionsProperty()
+    {
+        $query = Transaction::with('user')
+            ->whereBetween('created_at', [
+                Carbon::parse($this->dateFrom)->startOfDay(),
+                Carbon::parse($this->dateTo)->endOfDay(),
+            ])
+            ->where('status', 'completed');
+
+        if ($this->outletModeFilter !== '') {
+            $query->where('outlet_mode', $this->outletModeFilter);
+        }
+
+        if ($this->posSearch) {
+            $query->where(function ($q) {
+                $q->where('transaction_number', 'like', '%' . $this->posSearch . '%')
+                  ->orWhere('customer_name', 'like', '%' . $this->posSearch . '%');
+            });
+        }
+
+        return $query->latest()->paginate(20);
     }
 
     public function getTransactionsProperty()
@@ -665,6 +707,7 @@ class Financial extends Component
         return view('livewire.financial', [
             'summary'          => $this->getDashboardSummary(),
             'transactions'     => $this->transactions,
+            'posTransactions'  => $this->posTransactions,
             'withdrawals'      => $this->withdrawals,
             'chartData'        => $this->getChartData(),
             'tenantSettlement' => $this->getTenantSettlement(),

@@ -143,6 +143,15 @@ class FoodcourtFinance extends Component
             // Update Tenant Balance
             $tenant->decrement('balance', $this->withdrawAmount);
 
+            // Record as expense in central financial ledger
+            $financialService = app(\App\Services\FinancialService::class);
+            $financialService->recordTenantPayout(
+                $tenant,
+                (float) $this->withdrawAmount,
+                $withdrawal->reference_number ?? (string) $withdrawal->id,
+                $this->withdrawNotes,
+            );
+
             DB::commit();
 
             $this->dispatch('showNotification', [

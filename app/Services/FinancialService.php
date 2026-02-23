@@ -108,6 +108,43 @@ class FinancialService
     }
 
     /**
+     * Record tenant payout as an expense so the treasurer's net balance is correct.
+     * Called every time a withdrawal is processed for a foodcourt tenant.
+     */
+    public function recordTenantPayout(\App\Models\Tenant $tenant, float $amount, string $reference, ?string $notes = null): FinancialTransaction
+    {
+        try {
+            $ft = FinancialTransaction::create([
+                'type'           => FinancialTransaction::TYPE_TENANT_PAYOUT,
+                'category'       => FinancialTransaction::CATEGORY_EXPENSE,
+                'amount'         => $amount,
+                'description'    => "Pembayaran ke Tenant: {$tenant->name} (Booth {$tenant->booth_number}) - Ref #{$reference}",
+                'reference_number' => $reference,
+                'payment_method' => 'cash',
+                'status'         => FinancialTransaction::STATUS_COMPLETED,
+                'user_id'        => auth()->id(),
+                'notes'          => $notes,
+            ]);
+
+            Log::info('Tenant payout recorded as expense', [
+                'financial_transaction_id' => $ft->id,
+                'tenant'  => $tenant->name,
+                'amount'  => $amount,
+                'ref'     => $reference,
+            ]);
+
+            return $ft;
+        } catch (\Exception $e) {
+            Log::error('Failed to record tenant payout expense', [
+                'tenant_id' => $tenant->id,
+                'amount'    => $amount,
+                'error'     => $e->getMessage(),
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
      * Record general expense
      */
     public function recordExpense(float $amount, string $description, string $category = 'operational', ?string $notes = null): FinancialTransaction
