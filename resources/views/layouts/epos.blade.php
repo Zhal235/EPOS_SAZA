@@ -29,7 +29,7 @@
                 padding: 0;
             }
             .sidebar {
-                transition: all 0.3s ease;
+                transition: width 0.3s ease;
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             }
             .sidebar-collapsed {
@@ -38,6 +38,7 @@
             .sidebar-expanded {
                 width: 280px;
             }
+            [x-cloak] { display: none !important; }
             .menu-item {
                 transition: all 0.2s ease;
             }
@@ -66,8 +67,10 @@
     <body class="font-sans antialiased bg-gray-50" x-data="{ sidebarOpen: true }">
         <div class="flex h-screen overflow-hidden">
             <!-- Sidebar -->
-            <div class="sidebar fixed inset-y-0 left-0 z-50 flex flex-col" 
-                 :class="sidebarOpen ? 'sidebar-expanded' : 'sidebar-collapsed'">
+            <div class="sidebar fixed inset-y-0 left-0 z-50 flex flex-col overflow-hidden transition-all duration-300"
+                 :class="sidebarOpen ? 'sidebar-expanded' : '!w-0 !min-w-0'"
+                 :style="sidebarOpen ? '' : 'width:0;min-width:0;overflow:hidden'"
+                 x-cloak>
                 
                 <!-- Logo Area -->
                 <div class="flex items-center justify-center h-16 px-4 border-b border-white/20">
@@ -85,48 +88,24 @@
                 <!-- Navigation Menu -->
                 <x-sidebar-navigation />
 
-                <!-- Sidebar Toggle & User Info -->
-                <div class="p-4 border-t border-white/20">
-                    <div class="flex items-center justify-between">
-                        <button @click="sidebarOpen = !sidebarOpen" 
-                                class="p-2 text-white hover:bg-white/10 rounded-lg transition-colors">
-                            <i class="fas fa-bars"></i>
-                        </button>
-                        
-                        <div x-show="sidebarOpen" x-transition class="flex items-center space-x-3">
-                            <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center">
-                                <i class="fas fa-user text-indigo-600 text-sm"></i>
-                            </div>
-                            <div class="text-white text-sm">
-                                <p class="font-medium">{{ auth()->user()->name }}</p>
-                                <p class="text-indigo-200 text-xs">
-                                    @php $authUser = auth()->user(); @endphp
-                                    @if($authUser->isAdmin())
-                                        <i class="fas fa-crown mr-1"></i>Administrator
-                                    @elseif($authUser->isManager())
-                                        <i class="fas fa-user-tie mr-1"></i>Manager
-                                    @elseif($authUser->isCashierStore())
-                                        <i class="fas fa-shopping-bag mr-1"></i>Kasir Toko
-                                    @elseif($authUser->isCashierFoodcourt())
-                                        <i class="fas fa-utensils mr-1"></i>Kasir Foodcourt
-                                    @else
-                                        <i class="fas fa-cash-register mr-1"></i>Kasir Umum
-                                    @endif
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             <!-- Main Content -->
-            <div class="flex-1 flex flex-col min-h-screen overflow-hidden" 
-                 :class="sidebarOpen ? 'ml-70' : 'ml-20'" style="margin-left: 280px;" 
-                 :style="sidebarOpen ? 'margin-left: 280px' : 'margin-left: 80px'">
+            <div class="flex-1 flex flex-col min-h-screen overflow-hidden transition-all duration-300"
+                 :style="sidebarOpen ? 'margin-left: 280px' : 'margin-left: 0'">
                 
                 <!-- Top Header -->
                 <header class="glassmorphism shadow-sm border-b border-gray-200 sticky top-0 z-40">
                     <div class="flex items-center justify-between px-6 py-4">
+                        <!-- Left: Toggle + Title -->
+                        <div class="flex items-center">
+                        <!-- Sidebar Toggle Button -->
+                        <button @click="sidebarOpen = !sidebarOpen"
+                                class="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors mr-3 flex-shrink-0"
+                                :title="sidebarOpen ? 'Sembunyikan Sidebar' : 'Tampilkan Sidebar'">
+                            <i class="fas fa-bars text-lg"></i>
+                        </button>
+
                         <!-- Breadcrumb & Page Title -->
                         <div class="flex items-center space-x-4">
                             <div>
@@ -161,6 +140,7 @@
                                 </nav>
                             </div>
                         </div>
+                        </div>{{-- end left group --}}
 
                         <!-- Header Actions -->
                         <div class="flex items-center space-x-4">
@@ -188,21 +168,6 @@
                                 </div>
                             </div>
                             -->
-
-                            <!-- Notifications -->
-                            <div class="relative">
-                                <button class="p-2 text-gray-400 hover:text-gray-600 relative">
-                                    <i class="fas fa-bell text-xl"></i>
-                                    <span class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">3</span>
-                                </button>
-                            </div>
-
-                            <!-- Quick Actions -->
-                            <div class="flex space-x-2">
-                                <a href="{{ route('pos') }}" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-                                    <i class="fas fa-plus mr-2"></i>Penjualan Baru
-                                </a>
-                            </div>
 
                             <!-- User Menu -->
                             <div class="relative" x-data="{ open: false }">
