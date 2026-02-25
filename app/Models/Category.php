@@ -15,7 +15,8 @@ class Category extends Model
         'icon',
         'color',
         'is_active',
-        'sort_order'
+        'sort_order',
+        'outlet_type',  // 'store' atau 'foodcourt'
     ];
 
     protected $casts = [
@@ -45,6 +46,16 @@ class Category extends Model
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    public function scopeStore($query)
+    {
+        return $query->where('outlet_type', 'store');
+    }
+
+    public function scopeFoodcourt($query)
+    {
+        return $query->where('outlet_type', 'foodcourt');
     }
 
     public function scopeOrdered($query)

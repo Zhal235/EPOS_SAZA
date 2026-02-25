@@ -386,7 +386,7 @@ class Products extends Component
             $financialService->recordExpense(
                 $totalCost,
                 $description,
-                'restock', // Category
+                'restock',
                 "Product ID: {$product->id}, Supplier ID: {$this->restockForm['supplier_id']}"
             );
 

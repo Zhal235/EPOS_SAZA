@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Livewire\WithPagination;
 use App\Models\FinancialTransaction;
@@ -263,9 +264,8 @@ class Financial extends Component
                 Carbon::parse($this->dateTo)->endOfDay()
             ]);
 
-        if ($this->filterType !== 'all') {
-            $query->where('type', $this->filterType);
-        }
+        // Tab RFID hanya menampilkan transaksi kartu RFID saja
+        $query->where('type', FinancialTransaction::TYPE_RFID_PAYMENT);
 
         if ($this->filterStatus !== 'all') {
             $query->where('status', $this->filterStatus);
@@ -281,6 +281,19 @@ class Financial extends Component
         }
 
         return $query->latest()->paginate(20);
+    }
+
+    #[Computed]
+    public function getExpensesProperty()
+    {
+        return FinancialTransaction::with(['user'])
+            ->where('category', FinancialTransaction::CATEGORY_EXPENSE)
+            ->whereBetween('created_at', [
+                Carbon::parse($this->dateFrom)->startOfDay(),
+                Carbon::parse($this->dateTo)->endOfDay()
+            ])
+            ->latest()
+            ->paginate(20);
     }
 
     public function getWithdrawalsProperty()
@@ -709,6 +722,7 @@ class Financial extends Component
             'transactions'     => $this->transactions,
             'posTransactions'  => $this->posTransactions,
             'withdrawals'      => $this->withdrawals,
+            'expenses'         => $this->getExpensesProperty(),
             'chartData'        => $this->getChartData(),
             'tenantSettlement' => $this->getTenantSettlement(),
         ])->layout('layouts.epos', [

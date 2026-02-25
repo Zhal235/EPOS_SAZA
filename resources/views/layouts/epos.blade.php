@@ -2,10 +2,27 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
         <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
         <title>{{ config('app.name', 'EPOS SAZA') }} - Point of Sale System</title>
+
+        <!-- PWA Meta Tags -->
+        <meta name="theme-color" content="#667eea">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="default">
+        <meta name="apple-mobile-web-app-title" content="EPOS SAZA">
+        <meta name="application-name" content="EPOS SAZA">
+        <meta name="msapplication-TileColor" content="#667eea">
+        <meta name="msapplication-TileImage" content="/icons/icon-144x144.png">
+        <link rel="manifest" href="/manifest.json">
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+        <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png">
+        <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192x192.png">
+        <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512x512.png">
+        <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png">
+        <link rel="shortcut icon" href="/icons/icon-96x96.png">
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
@@ -64,7 +81,7 @@
             }
         </style>
     </head>
-    <body class="font-sans antialiased bg-gray-50" x-data="{ sidebarOpen: true }">
+    <body class="font-sans antialiased bg-gray-50" x-data="{ sidebarOpen: {{ request()->routeIs('pos') ? 'false' : 'true' }} }">
         <div class="flex h-screen overflow-hidden">
             <!-- Sidebar -->
             <div class="sidebar fixed inset-y-0 left-0 z-50 flex flex-col overflow-hidden transition-all duration-300"
@@ -333,6 +350,15 @@
             if (typeof Livewire !== 'undefined') {
                 console.log('Livewire version:', Livewire.version || 'unknown');
             }
+        }
+
+        // Register PWA Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('SW registered:', reg.scope))
+                    .catch(err => console.log('SW error:', err));
+            });
         }
         </script>
     </body>

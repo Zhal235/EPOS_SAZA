@@ -19,13 +19,15 @@ class Supplier extends Model
         'credit_limit',
         'payment_terms',
         'is_active',
+        'is_tenant_supplier', // true = supplier dummy otomatis untuk tenant foodcourt
         'notes'
     ];
 
     protected $casts = [
         'credit_limit' => 'decimal:2',
         'payment_terms' => 'integer',
-        'is_active' => 'boolean'
+        'is_active' => 'boolean',
+        'is_tenant_supplier' => 'boolean',
     ];
 
     // Relationships
@@ -38,6 +40,12 @@ class Supplier extends Model
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    // Hanya supplier nyata (bukan dummy tenant)
+    public function scopeReal($query)
+    {
+        return $query->where('is_tenant_supplier', false);
     }
 
     // Accessors

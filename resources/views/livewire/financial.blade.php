@@ -178,17 +178,6 @@
             </div>
             @if($activeTab === 'transactions')
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Jenis</label>
-                <select wire:model="filterType" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
-                    <option value="all">Semua Jenis</option>
-                    <option value="rfid_payment">Pembayaran RFID</option>
-                    <option value="tenant_payout">Pembayaran ke Tenant</option>
-                    <option value="refund">Pengembalian</option>
-                    <option value="cash_in">Kas Masuk</option>
-                    <option value="cash_out">Kas Keluar</option>
-                </select>
-            </div>
-            <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
                 <select wire:model="filterStatus" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
                     <option value="all">Semua Status</option>
@@ -199,7 +188,7 @@
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Pencarian</label>
-                <input type="text" wire:model.live.debounce.300ms="searchQuery" placeholder="Cari transaksi..." 
+                <input type="text" wire:model.live.debounce.300ms="searchQuery" placeholder="Cari transaksi RFID..." 
                        class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
             </div>
             @endif
@@ -624,7 +613,7 @@
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
-                        @forelse($transactions->where('category', 'expense') as $expense)
+                        @forelse($expenses as $expense)
                         <tr class="hover:bg-gray-50">
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                 {{ $expense->created_at->format('d/m/Y H:i') }}
@@ -633,7 +622,7 @@
                                 {{ $expense->description }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                <span class="px-2 py-1 text-xs bg-gray-100 rounded-full">{{ ucfirst($expense->category) }}</span>
+                                <span class="px-2 py-1 text-xs bg-red-100 text-red-700 rounded-full">{{ $expense->type_label }}</span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-red-600">
                                 Rp {{ number_format($expense->amount, 0, ',', '.') }}
@@ -649,6 +638,9 @@
                         @endforelse
                     </tbody>
                 </table>
+             </div>
+             <div class="mt-4">
+                 {{ $expenses->links() }}
              </div>
         </div>
     @elseif($activeTab === 'settlement')

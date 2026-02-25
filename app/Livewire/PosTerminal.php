@@ -21,8 +21,13 @@ class PosTerminal extends Component
 
     public $search = '';
     public $selectedCategory = '';
+    public $selectedTenant = ''; // Filter per tenant khusus mode foodcourt
     // 'store' = mode toko biasa, 'foodcourt' = mode foodcourt (hanya produk tenant)
     public string $outletMode = 'store';
+
+    // Cache kategori & tenant agar tidak query ulang setiap render()
+    public $cachedCategories = [];
+    public $cachedTenants = [];
     public $cart = [];
     public $customer = 'walk-in';
     public $paymentMethod = 'cash';
@@ -89,6 +94,22 @@ class PosTerminal extends Component
         }
         
         $this->initializeSimpelsApi();
+        $this->refreshSidebarCache();
+    }
+
+    /**
+     * Load (atau reload) cache kategori/tenant sesuai outletMode.
+     * Dipanggil sekali di mount() dan saat switchOutletMode().
+     */
+    protected function refreshSidebarCache(): void
+    {
+        if ($this->outletMode === 'store') {
+            $this->cachedCategories = Category::active()->ordered()->get()->toArray();
+            $this->cachedTenants    = [];
+        } else {
+            $this->cachedCategories = [];
+            $this->cachedTenants    = Tenant::active()->ordered()->get()->toArray();
+        }
     }
     
     /**
@@ -139,6 +160,12 @@ class PosTerminal extends Component
         $this->resetPage();
     }
 
+    public function selectTenant($tenantId)
+    {
+        $this->selectedTenant = $tenantId;
+        $this->resetPage();
+    }
+
     public function switchOutletMode(string $mode): void
     {
         if (!in_array($mode, ['store', 'foodcourt'])) return;
@@ -155,8 +182,10 @@ class PosTerminal extends Component
 
         $this->outletMode = $mode;
         $this->selectedCategory = '';
+        $this->selectedTenant = '';
         $this->search = '';
         $this->resetPage();
+        $this->refreshSidebarCache(); // reload cache sesuai mode baru
 
         $label = $mode === 'foodcourt' ? 'Foodcourt' : 'Toko';
         $this->dispatch('showNotification', [
@@ -169,7 +198,12 @@ class PosTerminal extends Component
 
     public function addToCart($productId)
     {
-        $product = Product::with('tenant')->find($productId);
+        // Cukup query kolom yang dibutuhkan — tanpa eager load tenant
+        $product = Product::with('tenant:id,name,booth_number,commission_type,commission_value')
+            ->select('id','name','sku','selling_price','cost_price','stock_quantity',
+                     'track_stock','is_active','outlet_type','tenant_id',
+                     'commission_type','commission_value')
+            ->find($productId);
         
         if (!$product || !$product->canSell(1)) {
             $this->dispatch('showNotification', [
@@ -1461,8 +1495,11 @@ class PosTerminal extends Component
                       ->orWhere('barcode', 'like', '%' . $this->search . '%');
                 });
             })
-            ->when($this->selectedCategory, function ($query) {
+            ->when($this->outletMode === 'store' && $this->selectedCategory, function ($query) {
                 $query->where('category_id', $this->selectedCategory);
+            })
+            ->when($this->outletMode === 'foodcourt' && $this->selectedTenant, function ($query) {
+                $query->where('tenant_id', $this->selectedTenant);
             })
             ->where('is_active', true)
             ->where(function ($q) {
@@ -1475,17 +1512,12 @@ class PosTerminal extends Component
 
     public function render()
     {
-        $categories = Category::active()->ordered()->get();
-        $tenants    = $this->outletMode === 'foodcourt'
-            ? Tenant::active()->ordered()->get()
-            : collect();
-
         $headerMode = $this->outletMode === 'foodcourt' ? 'Foodcourt' : 'Toko';
-        
+
         return view('livewire.pos-terminal', [
             'products'   => $this->getProducts(),
-            'categories' => $categories,
-            'tenants'    => $tenants,
+            'categories' => collect($this->cachedCategories),
+            'tenants'    => collect($this->cachedTenants),
         ])->layout('layouts.epos', [
             'header' => "POS Terminal ({$headerMode})"
         ]);

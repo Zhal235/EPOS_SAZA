@@ -55,6 +55,10 @@ class FinancialTransaction extends Model
     const TYPE_CASH_IN = 'cash_in';
     const TYPE_CASH_OUT = 'cash_out';
     const TYPE_TENANT_PAYOUT = 'tenant_payout'; // Pembayaran/pencairan saldo ke tenant foodcourt
+    const TYPE_RESTOCK = 'restock';             // Pengeluaran restock produk
+    const TYPE_OPERATIONAL = 'operational';     // Pengeluaran operasional
+    const TYPE_UTILITIES = 'utilities';         // Pengeluaran utilitas
+    const TYPE_OTHER_EXPENSE = 'other';         // Pengeluaran lainnya
 
     const CATEGORY_INCOME = 'income';
     const CATEGORY_EXPENSE = 'expense';
@@ -197,7 +201,11 @@ class FinancialTransaction extends Model
             self::TYPE_CASH_IN => 'Kas Masuk',
             self::TYPE_CASH_OUT => 'Kas Keluar',
             self::TYPE_TENANT_PAYOUT => 'Pembayaran ke Tenant',
-            default => 'Lainnya'
+            self::TYPE_RESTOCK      => 'Restock Produk',
+            self::TYPE_OPERATIONAL  => 'Pengeluaran Operasional',
+            self::TYPE_UTILITIES    => 'Pengeluaran Utilitas',
+            self::TYPE_OTHER_EXPENSE => 'Pengeluaran Lainnya',
+            default => 'Pengeluaran'
         };
     }
 

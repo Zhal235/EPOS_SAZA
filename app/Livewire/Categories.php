@@ -301,6 +301,7 @@ class Categories extends Component
     {
         if ($this->activeTab === 'categories') {
             $categories = Category::query()
+                ->where('outlet_type', 'store') // sembunyikan kategori foodcourt
                 ->when($this->search, function ($query) {
                     $query->where('name', 'like', '%' . $this->search . '%')
                           ->orWhere('description', 'like', '%' . $this->search . '%');
@@ -314,8 +315,8 @@ class Categories extends Component
                 ->orderBy('name')
                 ->paginate(12);
 
-            $totalCategories = Category::count();
-            $activeCategories = Category::where('is_active', true)->count();
+            $totalCategories = Category::where('outlet_type', 'store')->count();
+            $activeCategories = Category::where('outlet_type', 'store')->where('is_active', true)->count();
 
             return view('livewire.categories', [
                 'categories' => $categories,
@@ -327,6 +328,7 @@ class Categories extends Component
             ])->layout('layouts.epos', ['header' => 'Categories & Suppliers']);
         } else {
             $suppliers = Supplier::query()
+                ->where('is_tenant_supplier', false) // sembunyikan supplier dummy tenant
                 ->when($this->search, function ($query) {
                     $query->where('name', 'like', '%' . $this->search . '%')
                           ->orWhere('contact_person', 'like', '%' . $this->search . '%')
@@ -341,8 +343,8 @@ class Categories extends Component
                 ->orderBy('name')
                 ->paginate(12);
 
-            $totalSuppliers = Supplier::count();
-            $activeSuppliers = Supplier::where('is_active', true)->count();
+            $totalSuppliers = Supplier::where('is_tenant_supplier', false)->count();
+            $activeSuppliers = Supplier::where('is_tenant_supplier', false)->where('is_active', true)->count();
 
             return view('livewire.categories', [
                 'categories' => collect(),

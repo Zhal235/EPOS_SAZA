@@ -103,24 +103,47 @@
                         </div>
                     </div>
 
-                    <!-- Category Tabs -->
+                    <!-- Category / Tenant Tabs -->
                     <div class="flex space-x-2 mb-6 overflow-x-auto">
-                        <button wire:click="selectCategory('')" 
-                                class="px-4 py-2 {{ $selectedCategory == '' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }} rounded-lg text-sm whitespace-nowrap">
-                            Semua
-                        </button>
-                        @foreach($categories as $category)
-                            <button wire:click="selectCategory('{{ $category->id }}')" 
-                                    class="px-4 py-2 {{ $selectedCategory == $category->id ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }} rounded-lg text-sm whitespace-nowrap">
-                                {{ $category->name }}
+                        @if($outletMode === 'foodcourt')
+                            {{-- Mode Foodcourt: filter per Tenant --}}
+                            <button wire:click="selectTenant('')"
+                                    class="px-4 py-2 {{ $selectedTenant == '' ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }} rounded-lg text-sm whitespace-nowrap">
+                                Semua Tenant
                             </button>
-                        @endforeach
+                            @foreach($tenants as $tenant)
+                                <button wire:click="selectTenant('{{ $tenant['id'] }}')"
+                                        class="px-4 py-2 {{ $selectedTenant == $tenant['id'] ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }} rounded-lg text-sm whitespace-nowrap">
+                                    {{ $tenant['name'] }}
+                                    @if($tenant['booth_number'])
+                                        <span class="text-xs opacity-75">({{ $tenant['booth_number'] }})</span>
+                                    @endif
+                                </button>
+                            @endforeach
+                        @else
+                            {{-- Mode Store: filter per Kategori --}}
+                            <button wire:click="selectCategory('')"
+                                    class="px-4 py-2 {{ $selectedCategory == '' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }} rounded-lg text-sm whitespace-nowrap">
+                                Semua
+                            </button>
+                            @foreach($categories as $category)
+                                <button wire:click="selectCategory('{{ $category['id'] }}')"
+                                        class="px-4 py-2 {{ $selectedCategory == $category['id'] ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }} rounded-lg text-sm whitespace-nowrap">
+                                    {{ $category['name'] }}
+                                </button>
+                            @endforeach
+                        @endif
                     </div>
 
                     <!-- Products Grid -->
                     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         @forelse($products as $product)
-                            <div wire:click="addToCart({{ $product->id }})" class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer flex flex-col justify-between min-h-[120px]">
+                            <div wire:key="product-{{ $product->id }}"
+                                 wire:click="addToCart({{ $product->id }})"
+                                 wire:loading.class="opacity-60 cursor-wait"
+                                 wire:loading.attr="disabled"
+                                 wire:target="addToCart({{ $product->id }})"
+                                 class="border border-gray-200 rounded-lg p-4 hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer flex flex-col justify-between min-h-[120px] select-none active:scale-95">
                                 <div>
                                     <h4 class="font-bold text-gray-900 text-base mb-2 line-clamp-2">{{ $product->name }}</h4>
                                     <p class="text-xs text-gray-500 mb-2">SKU: {{ $product->sku }}</p>
@@ -204,7 +227,7 @@
                             <div class="h-full overflow-y-auto scrollbar-thin pr-2">
                                 <div class="space-y-2">
                                     @foreach($cart as $item)
-                                        <div class="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-gray-50 cart-item">
+                                        <div wire:key="cart-item-{{ $item['id'] }}" class="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-gray-50 cart-item">
                                             <div class="flex-1 min-w-0">
                                                 <h4 class="font-medium text-gray-900 text-sm truncate cart-item-name">{{ $item['name'] }}</h4>
                                                 <p class="text-xs text-gray-500 cart-item-price">{{ 'Rp ' . number_format($item['price'], 0, ',', '.') }} per item</p>

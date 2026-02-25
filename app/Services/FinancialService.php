@@ -147,12 +147,12 @@ class FinancialService
     /**
      * Record general expense
      */
-    public function recordExpense(float $amount, string $description, string $category = 'operational', ?string $notes = null): FinancialTransaction
+    public function recordExpense(float $amount, string $description, string $subCategory = 'operational', ?string $notes = null): FinancialTransaction
     {
         try {
             $transaction = FinancialTransaction::create([
-                'type' => 'expense',
-                'category' => 'expense',
+                'type' => $subCategory,                        // restock, operational, utilities, dll.
+                'category' => FinancialTransaction::CATEGORY_EXPENSE, // selalu 'expense'
                 'amount' => $amount,
                 'description' => $description,
                 'payment_method' => 'cash',
@@ -164,7 +164,7 @@ class FinancialService
             Log::info('General expense recorded', [
                 'transaction_id' => $transaction->id,
                 'amount' => $amount,
-                'category' => $category
+                'sub_category' => $subCategory,
             ]);
 
             return $transaction;

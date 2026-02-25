@@ -221,14 +221,15 @@ class TenantManagement extends Component
 
         $tenant = Tenant::findOrFail($this->selectedTenantId);
 
-        // Auto-create Foodcourt category & supplier if needed
+        // Auto-create Foodcourt category & supplier jika belum ada
+        // outlet_type='foodcourt' agar tidak muncul di kategori toko
         $category = Category::firstOrCreate(
             ['slug' => 'foodcourt'],
-            ['name' => 'Foodcourt', 'is_active' => true]
+            ['name' => 'Foodcourt', 'is_active' => true, 'outlet_type' => 'foodcourt']
         );
         $supplier = Supplier::firstOrCreate(
             ['name' => 'Tenant ' . $tenant->name],
-            ['contact_name' => $tenant->owner_name ?? '-']
+            ['contact_person' => $tenant->owner_name ?? '-', 'is_tenant_supplier' => true]
         );
 
         Product::create([
