@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -17,6 +18,15 @@ return new class extends Migration
             // true = supplier dummy yang dibuat otomatis untuk tenant foodcourt
             $table->boolean('is_tenant_supplier')->default(false)->after('is_active');
         });
+
+        // Fix data existing: tandai kategori foodcourt & supplier dummy tenant
+        DB::table('categories')
+            ->where('slug', 'foodcourt')
+            ->update(['outlet_type' => 'foodcourt']);
+
+        DB::table('suppliers')
+            ->where('name', 'like', 'Tenant %')
+            ->update(['is_tenant_supplier' => true]);
     }
 
     public function down(): void
