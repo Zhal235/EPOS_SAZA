@@ -184,39 +184,6 @@
             <!-- Cart & Checkout -->
             <div class="lg:col-span-1">
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 h-full flex flex-col" style="max-height: calc(100vh - 120px);">
-                    <!-- Customer Selection -->
-                    @if($paymentMethod !== 'rfid')
-                    <div class="mb-4 flex-shrink-0">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Pelanggan</label>
-                        <select wire:model="customer" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm">
-                            <option value="walk-in">Pelanggan Biasa</option>
-                            @foreach(\App\Models\User::regularCustomers()->get() as $regularCustomer)
-                                <option value="{{ $regularCustomer->id }}">{{ $regularCustomer->name }} - {{ $regularCustomer->email }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    @else
-                    <div class="mb-4 flex-shrink-0">
-                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center">
-                                    <i class="fas fa-id-card text-blue-600 mr-2 text-sm"></i>
-                                    <div>
-                                        <h4 class="text-xs font-medium text-blue-900">🔴 RFID Payment AKTIF</h4>
-                                        <p class="text-xs text-blue-700">Sistem pembayaran RFID terintegrasi dengan SIMPels</p>
-                                    </div>
-                                </div>
-                                <button 
-                                    wire:click="getApiStatus" 
-                                    class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
-                                    title="Cek mode API">
-                                    📊 Mode
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    @endif
-
                     <!-- Cart Items - Fixed Height with Scroll -->
                     <div class="flex-shrink-0 mb-4">
                         <h3 class="text-base md:text-lg font-semibold text-gray-900 mb-3">Item Keranjang</h3>
@@ -289,7 +256,7 @@
                                 <i class="fas fa-money-bill-wave {{ $paymentMethod == 'cash' ? 'text-indigo-600' : 'text-gray-600' }} mb-1 text-sm"></i>
                                 <span class="text-xs font-medium {{ $paymentMethod == 'cash' ? 'text-indigo-600' : 'text-gray-600' }}">Tunai</span>
                             </button>
-                            <button wire:click="selectPaymentMethod('qris')" class="flex flex-col items-center p-2 border-2 {{ $paymentMethod == 'qris' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300' }} rounded-lg">
+                            <button wire:click="selectPaymentMethod('qris')" class="hidden flex flex-col items-center p-2 border-2 {{ $paymentMethod == 'qris' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300' }} rounded-lg">
                                 <i class="fas fa-qrcode {{ $paymentMethod == 'qris' ? 'text-indigo-600' : 'text-gray-600' }} mb-1 text-sm"></i>
                                 <span class="text-xs font-medium {{ $paymentMethod == 'qris' ? 'text-indigo-600' : 'text-gray-600' }}">QRIS</span>
                             </button>
@@ -297,7 +264,7 @@
                                 <i class="fas fa-wifi {{ $paymentMethod == 'rfid' ? 'text-indigo-600' : 'text-gray-600' }} mb-1 text-sm"></i>
                                 <span class="text-xs font-medium {{ $paymentMethod == 'rfid' ? 'text-indigo-600' : 'text-gray-600' }}">RFID</span>
                             </button>
-                            <button wire:click="selectPaymentMethod('card')" class="flex flex-col items-center p-2 border-2 {{ $paymentMethod == 'card' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300' }} rounded-lg">
+                            <button wire:click="selectPaymentMethod('card')" class="hidden flex flex-col items-center p-2 border-2 {{ $paymentMethod == 'card' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300' }} rounded-lg">
                                 <i class="fas fa-credit-card {{ $paymentMethod == 'card' ? 'text-indigo-600' : 'text-gray-600' }} mb-1 text-sm"></i>
                                 <span class="text-xs font-medium {{ $paymentMethod == 'card' ? 'text-indigo-600' : 'text-gray-600' }}">Kartu</span>
                             </button>
