@@ -20,7 +20,7 @@ Route::get('/', function () {
 
 // Service Worker dinamis — versi berubah tiap deploy agar browser detect update
 Route::get('/sw.js', function () {
-    $version = config('app.version', filemtime(public_path('sw.js')));
+    $version = config('app.version', '1.0.0');
     return response()
         ->view('pwa.sw', ['version' => $version])
         ->header('Content-Type', 'application/javascript')
