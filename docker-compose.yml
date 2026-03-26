@@ -41,6 +41,10 @@ services:
       REDIS_HOST: epos-redis
       REDIS_PASSWORD: ${REDIS_PASSWORD:-null}
       REDIS_PORT: "6379"
+      SIMPELS_API_URL: ${SIMPELS_API_URL:-https://api-simpels.saza.sch.id/api}
+      SIMPELS_API_KEY: ${SIMPELS_API_KEY:-}
+      SIMPELS_API_TIMEOUT: ${SIMPELS_API_TIMEOUT:-30}
+      EPOS_WEBHOOK_SECRET: ${EPOS_WEBHOOK_SECRET:-simpels_epos_webhook_2026}
       VITE_APP_NAME: ${APP_NAME:-EPOS_SAZA}
     volumes:
       - epos-storage-app:/var/www/html/storage/app
