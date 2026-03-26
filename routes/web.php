@@ -18,6 +18,16 @@ Route::get('/', function () {
     return redirect()->route('login');
 })->name('home');
 
+// Service Worker dinamis — versi berubah tiap deploy agar browser detect update
+Route::get('/sw.js', function () {
+    $version = config('app.version', filemtime(public_path('sw.js')));
+    return response()
+        ->view('pwa.sw', ['version' => $version])
+        ->header('Content-Type', 'application/javascript')
+        ->header('Cache-Control', 'no-store, no-cache, must-revalidate')
+        ->header('Pragma', 'no-cache');
+})->name('sw.js');
+
 
 
 // Protected routes

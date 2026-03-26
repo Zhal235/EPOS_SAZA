@@ -355,10 +355,41 @@
         // Register PWA Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(reg => console.log('SW registered:', reg.scope))
-                    .catch(err => console.log('SW error:', err));
+                navigator.serviceWorker.register('/sw.js', {
+                    updateViaCache: 'none'  // Selalu fetch sw.js terbaru, jangan cache via HTTP
+                }).then(reg => {
+                    // Cek update setiap 60 detik (untuk mendeteksi deploy baru)
+                    setInterval(() => reg.update(), 60000);
+
+                    // SW baru sudah install, menunggu untuk aktif
+                    reg.addEventListener('updatefound', () => {
+                        const newWorker = reg.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                // Ada versi baru tersedia — tampilkan notifikasi
+                                showUpdateBanner();
+                            }
+                        });
+                    });
+                }).catch(err => console.warn('SW error:', err));
+
+                // Jika SW baru sudah skip waiting (dari tab lain), reload otomatis
+                let refreshing = false;
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    if (!refreshing) { refreshing = true; window.location.reload(); }
+                });
             });
+        }
+
+        function showUpdateBanner() {
+            const banner = document.createElement('div');
+            banner.id = 'sw-update-banner';
+            banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:99999;background:#1e40af;color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;font-family:sans-serif;font-size:14px;box-shadow:0 -2px 12px rgba(0,0,0,0.3);';
+            banner.innerHTML = `
+                <span>🔄 <strong>Versi baru tersedia!</strong> Refresh untuk mendapatkan pembaruan terbaru.</span>
+                <button onclick="window.location.reload()" style="background:#fff;color:#1e40af;border:none;padding:8px 18px;border-radius:6px;font-weight:700;cursor:pointer;margin-left:16px;">Refresh Sekarang</button>
+            `;
+            document.body.appendChild(banner);
         }
         </script>
     </body>
