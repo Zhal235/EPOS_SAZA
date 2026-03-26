@@ -13,7 +13,10 @@ Route::prefix('simpels')->group(function () {
     // Withdrawal status updates from SIMPels
     Route::put('/withdrawal/{withdrawal_number}/status', [\App\Http\Controllers\Api\WithdrawalStatusController::class, 'updateStatus']);
     Route::get('/withdrawal/{withdrawal_number}', [\App\Http\Controllers\Api\WithdrawalStatusController::class, 'getWithdrawal']);
-    
+
+    // Kebutuhan order status push dari SIMPELS (saat dikonfirmasi/ditolak wali/admin)
+    Route::post('/kebutuhan-order/{orderNumber}/status', [\App\Http\Controllers\Api\KebutuhanOrderWebhookController::class, 'updateStatus']);
+
     // Testing endpoints (can be used by frontend AJAX)
     Route::get('/test-connection', [SimpelsTestController::class, 'testConnection']);
     Route::get('/test-santri/{uid}', [SimpelsTestController::class, 'testSantriLookup']);

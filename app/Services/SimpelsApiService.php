@@ -15,7 +15,17 @@ class SimpelsApiService
 
     public function __construct()
     {
-        $this->baseUrl = config('services.simpels.api_url');
+        $rawUrl = rtrim(config('services.simpels.api_url'), '/');
+
+        // Normalize: strip legacy suffix /v1/wallets so baseUrl always ends at /api
+        // This ensures compatibility whether SIMPELS_API_URL is set to:
+        //   http://host/api           (new format)
+        //   http://host/api/v1/wallets (old format)
+        if (str_ends_with($rawUrl, '/v1/wallets')) {
+            $rawUrl = substr($rawUrl, 0, -strlen('/v1/wallets'));
+        }
+
+        $this->baseUrl = $rawUrl;
         $this->timeout = config('services.simpels.timeout');
         $this->apiKey = config('services.simpels.api_key');
         $this->endpoints = config('services.simpels.endpoints');
@@ -379,6 +389,72 @@ class SimpelsApiService
                 'error' => $e->getMessage()
             ]);
             throw $e;
+        }
+    }
+
+    /**
+     * Kirim pesanan kebutuhan santri ke SIMPELS untuk konfirmasi orang tua
+     */
+    public function createKebutuhanOrder(array $data): array
+    {
+        try {
+            $payload = [
+                'epos_order_id' => $data['order_number'],
+                'santri_id'     => $data['santri_id'],
+                'santri_name'   => $data['santri_name'],
+                'rfid_uid'      => $data['rfid_uid'] ?? null,
+                'items'         => $data['items'],
+                'total_amount'  => (float) $data['total_amount'],
+                'cashier_name'  => $data['cashier_name'] ?? (auth()->user()->name ?? 'EPOS'),
+                'terminal_id'   => gethostname(),
+                'timestamp'     => now()->timezone('Asia/Jakarta')->toDateTimeString(),
+            ];
+
+            Log::info('SIMPELS createKebutuhanOrder request', $payload);
+
+            $endpoint = $this->endpoints['kebutuhan_order'] ?? '/v1/epos/kebutuhan-order';
+            $result = $this->makeRequest('POST', $endpoint, $payload);
+
+            if (!$result || !isset($result['success']) || !$result['success']) {
+                throw new \Exception($result['message'] ?? 'Gagal membuat kebutuhan order di SIMPELS');
+            }
+
+            return [
+                'success'          => true,
+                'simpels_order_id' => $result['data']['id'] ?? null,
+            ];
+        } catch (\Exception $e) {
+            Log::error('SIMPELS createKebutuhanOrder failed', ['error' => $e->getMessage(), 'data' => $data]);
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Cek status pesanan kebutuhan santri dari SIMPELS (polling, cache 1 jam)
+     */
+    public function checkKebutuhanOrderStatus(string $santriId): array
+    {
+        $cacheKey = "kebutuhan_status_{$santriId}";
+
+        // Clear cache to always get fresh data
+        Cache::forget($cacheKey);
+
+        try {
+            $base = $this->endpoints['kebutuhan_order_status'] ?? '/v1/epos/kebutuhan-order/santri';
+            $result = $this->makeRequest('GET', "{$base}/{$santriId}/pending");
+
+            $response = [
+                'success' => $result['success'] ?? false,
+                'orders'  => $result['data'] ?? [],
+            ];
+
+            // Cache for 1 hour for subsequent calls
+            cache()->put($cacheKey, $response, now()->addHour());
+
+            return $response;
+        } catch (\Exception $e) {
+            Log::error('SIMPELS checkKebutuhanOrderStatus failed', ['santri_id' => $santriId, 'error' => $e->getMessage()]);
+            return ['success' => false, 'orders' => [], 'message' => $e->getMessage()];
         }
     }
 

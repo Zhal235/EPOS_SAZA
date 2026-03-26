@@ -21,6 +21,12 @@
             <i class="fas fa-shopping-bag w-5 text-center"></i>
             <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Kasir Toko</span>
         </a>
+
+        <a href="{{ route('kebutuhan.orders') }}" 
+           class="menu-item flex items-center px-4 py-3 text-white rounded-lg {{ request()->routeIs('kebutuhan.orders') ? 'active' : '' }}">
+            <i class="fas fa-check-circle w-5 text-center"></i>
+            <span x-show="sidebarOpen" x-transition class="ml-3 font-medium">Pesanan Dikonfirmasi</span>
+        </a>
         @endif
 
         @if($user->canAccessAdmin())

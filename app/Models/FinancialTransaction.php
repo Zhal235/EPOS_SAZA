@@ -59,6 +59,7 @@ class FinancialTransaction extends Model
     const TYPE_OPERATIONAL = 'operational';     // Pengeluaran operasional
     const TYPE_UTILITIES = 'utilities';         // Pengeluaran utilitas
     const TYPE_OTHER_EXPENSE = 'other';         // Pengeluaran lainnya
+    const TYPE_KEBUTUHAN_ORDER = 'kebutuhan_order'; // Pesanan kebutuhan santri (dikonfirmasi wali)
 
     const CATEGORY_INCOME = 'income';
     const CATEGORY_EXPENSE = 'expense';
@@ -205,6 +206,7 @@ class FinancialTransaction extends Model
             self::TYPE_OPERATIONAL  => 'Pengeluaran Operasional',
             self::TYPE_UTILITIES    => 'Pengeluaran Utilitas',
             self::TYPE_OTHER_EXPENSE => 'Pengeluaran Lainnya',
+            self::TYPE_KEBUTUHAN_ORDER => 'Pesanan Kebutuhan',
             default => 'Pengeluaran'
         };
     }
