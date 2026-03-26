@@ -35,6 +35,36 @@ RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd intl zip \
     && docker-php-ext-enable redis \
     && apk del $PHPIZE_DEPS
 
+# ========================================
+# 🚀 PHP OPTIMIZATION CONFIGURATION
+# ========================================
+
+# Create PHP config directory if not exists
+RUN mkdir -p /usr/local/etc/php/conf.d
+
+# PHP-FPM Memory and Upload Optimization
+RUN echo "memory_limit = 512M" > /usr/local/etc/php/conf.d/memory.ini \
+    && echo "upload_max_filesize = 20M" >> /usr/local/etc/php/conf.d/memory.ini \
+    && echo "post_max_size = 20M" >> /usr/local/etc/php/conf.d/memory.ini \
+    && echo "max_execution_time = 60" >> /usr/local/etc/php/conf.d/memory.ini \
+    && echo "max_input_time = 60" >> /usr/local/etc/php/conf.d/memory.ini
+
+# OPcache Configuration (CRITICAL for Laravel Performance)
+RUN echo "opcache.enable=1" > /usr/local/etc/php/conf.d/opcache.ini \
+    && echo "opcache.memory_consumption=256" >> /usr/local/etc/php/conf.d/opcache.ini \
+    && echo "opcache.interned_strings_buffer=16" >> /usr/local/etc/php/conf.d/opcache.ini \
+    && echo "opcache.max_accelerated_files=20000" >> /usr/local/etc/php/conf.d/opcache.ini \
+    && echo "opcache.validate_timestamps=0" >> /usr/local/etc/php/conf.d/opcache.ini \
+    && echo "opcache.save_comments=1" >> /usr/local/etc/php/conf.d/opcache.ini \
+    && echo "opcache.fast_shutdown=1" >> /usr/local/etc/php/conf.d/opcache.ini \
+    && docker-php-ext-enable opcache
+
+# Realpath Cache (Important for Laravel file resolution)
+RUN echo "realpath_cache_size=4096K" > /usr/local/etc/php/conf.d/realpath.ini \
+    && echo "realpath_cache_ttl=600" >> /usr/local/etc/php/conf.d/realpath.ini
+
+# ========================================
+
 # Configure Nginx
 COPY docker/nginx/default.conf /etc/nginx/http.d/default.conf
 COPY docker/supervisor.conf /etc/supervisord.conf
@@ -50,8 +80,8 @@ COPY --from=assets /app/public/build /var/www/html/public/build
 # Install composer for the final stage
 COPY --from=composer:2.6 /usr/bin/composer /usr/bin/composer
 
-# Finish composer setup
-RUN composer dump-autoload --optimize
+# Finish composer setup with optimization
+RUN composer dump-autoload --optimize --classmap-authoritative
 
 # Permissions
 RUN chown -R www-data:www-data /var/www/html \

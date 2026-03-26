@@ -25,11 +25,32 @@ chmod -R 775 storage bootstrap/cache
 php artisan storage:link --force 2>/dev/null || true
 
 # Run Laravel setup
-echo "Caching configuration..."
+echo "🚀 Optimizing Laravel application..."
+
+# Clear all caches first (important for clean state)
+php artisan optimize:clear
+
+# Cache configuration for faster boot
+echo "  ➤ Caching configuration..."
 php artisan config:cache
+
+# Cache routes for faster routing
+echo "  ➤ Caching routes..."
 php artisan route:cache
+
+# Cache views for faster rendering
+echo "  ➤ Caching views..."
 php artisan view:cache
+
+# Cache events for faster event dispatch
+echo "  ➤ Caching events..."
 php artisan event:cache
+
+# Optimize composer autoloader (again, for safety)
+echo "  ➤ Optimizing autoloader..."
+composer dump-autoload --optimize --classmap-authoritative --no-dev 2>/dev/null || true
+
+echo "✅ Optimization complete!"
 
 echo "Running migrations..."
 php artisan migrate --force
