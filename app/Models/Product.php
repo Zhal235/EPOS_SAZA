@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 // Tenant relationship is declared below; no extra import needed (same namespace)
@@ -43,11 +44,11 @@ class Product extends Model
     ];
 
     protected $casts = [
-        'cost_price' => 'decimal:2',
-        'selling_price' => 'decimal:2',
-        'wholesale_price' => 'decimal:2',
-        'weight' => 'decimal:3',
-        'tax_rate' => 'decimal:2',
+        'cost_price' => 'float',
+        'selling_price' => 'float',
+        'wholesale_price' => 'float',
+        'weight' => 'float',
+        'tax_rate' => 'float',
         'stock_quantity' => 'integer',
         'min_stock' => 'integer',
         'max_stock' => 'integer',
@@ -57,7 +58,7 @@ class Product extends Model
         'is_active' => 'boolean',
         'is_featured' => 'boolean',
         'track_stock' => 'boolean',
-        'commission_value' => 'decimal:2',
+        'commission_value' => 'float',
     ];
 
     // Auto-generate SKU if not provided
@@ -86,6 +87,21 @@ class Product extends Model
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
+    }
+
+    public function productUnits(): HasMany
+    {
+        return $this->hasMany(ProductUnit::class)->orderBy('display_order');
+    }
+
+    public function activeUnits(): HasMany
+    {
+        return $this->hasMany(ProductUnit::class)->where('is_active', true)->orderBy('display_order');
+    }
+
+    public function baseUnit()
+    {
+        return $this->hasOne(ProductUnit::class)->where('is_base_unit', true);
     }
 
     // Scopes
@@ -257,5 +273,45 @@ class Product extends Model
         }
         
         return $this->barcode;
+    }
+
+    /**
+     * Check if product has multiple units configured
+     */
+    public function hasMultipleUnits(): bool
+    {
+        return $this->productUnits()->count() > 0;
+    }
+
+    /**
+     * Get the available stock for a specific unit
+     */
+    public function getStockInUnit($unitId): float
+    {
+        $unit = $this->productUnits()->find($unitId);
+        if (!$unit || $unit->conversion_rate == 0) {
+            return 0;
+        }
+        
+        return floor($this->stock_quantity / $unit->conversion_rate);
+    }
+
+    /**
+     * Update stock using a specific unit
+     * Example: Sold 2 boxes (1 box = 24 pcs), will deduct 48 from stock_quantity
+     */
+    public function updateStockByUnit($quantity, $unitId, $operation = 'subtract'): bool
+    {
+        if (!$this->track_stock) return true;
+
+        $unit = $this->productUnits()->find($unitId);
+        if (!$unit) {
+            return false;
+        }
+
+        // Convert quantity to base unit
+        $baseQuantity = $quantity * $unit->conversion_rate;
+
+        return $this->updateStock($baseQuantity, $operation);
     }
 }

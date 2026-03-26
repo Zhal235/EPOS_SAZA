@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\Product;
+use App\Models\ProductUnit;
 use App\Models\Category;
 use App\Models\Tenant;
 use App\Models\Transaction;
@@ -55,6 +56,11 @@ class PosTerminal extends Component
     
     // Last RFID scan timestamp for debouncing
     private $lastRfidScan = 0;
+    
+    // Multi-unit selection
+    public $showUnitSelectionModal = false;
+    public $selectedProductForUnit = null;
+    public $availableUnits = [];
     
     protected $simpelsApi;
 
@@ -198,11 +204,14 @@ class PosTerminal extends Component
 
     public function addToCart($productId)
     {
-        // Cukup query kolom yang dibutuhkan — tanpa eager load tenant
-        $product = Product::with('tenant:id,name,booth_number,commission_type,commission_value')
+        // Cukup query kolom yang dibutuhkan — dengan eager load units
+        $product = Product::with([
+                'tenant:id,name,booth_number,commission_type,commission_value',
+                'activeUnits'
+            ])
             ->select('id','name','sku','selling_price','cost_price','stock_quantity',
                      'track_stock','is_active','outlet_type','tenant_id',
-                     'commission_type','commission_value')
+                      'commission_type','commission_value','unit')
             ->find($productId);
         
         if (!$product || !$product->canSell(1)) {
@@ -237,11 +246,74 @@ class PosTerminal extends Component
             return;
         }
 
-        $existingItem = collect($this->cart)->where('id', $productId)->first();
+        // Check if product has multiple units configured
+        if ($product->activeUnits && $product->activeUnits->count() > 0) {
+            // Show unit selection modal
+            $this->selectedProductForUnit = $product;
+            $this->availableUnits = $product->activeUnits;
+            $this->showUnitSelectionModal = true;
+            return;
+        }
+
+        // No multi-unit, add normally
+        $this->addToCartWithUnit($productId, null);
+    }
+
+    public function addToCartWithUnit($productId, $unitId = null)
+    {
+        // Close unit selection modal if open
+        $this->showUnitSelectionModal = false;
+        
+        // Load product with unit data
+        $product = Product::with([
+                'tenant:id,name,booth_number,commission_type,commission_value',
+                'activeUnits'
+            ])
+            ->select('id','name','sku','selling_price','cost_price','stock_quantity',
+                     'track_stock','is_active','outlet_type','tenant_id',
+                     'commission_type','commission_value','unit')
+            ->find($productId);
+
+        if (!$product) {
+            return;
+        }
+
+        // Get unit details if specified
+        $unit = null;
+        $unitName = $product->unit;
+        $conversionRate = 1;
+        $price = $product->selling_price;
+        
+        if ($unitId) {
+            $unit = $product->activeUnits->firstWhere('id', $unitId);
+            if ($unit) {
+                $unitName = $unit->unit_name;
+                $conversionRate = $unit->conversion_rate;
+                $price = $unit->selling_price;
+                
+                // Check stock availability for this unit
+                $availableInUnit = floor($product->stock_quantity / $conversionRate);
+                if ($product->track_stock && $availableInUnit <= 0) {
+                    $this->dispatch('showNotification', [
+                        'type' => 'error',
+                        'title' => '❌ Stok Habis',
+                        'message' => "Stok untuk unit {$unitName} habis!",
+                        'options' => ['duration' => 3000]
+                    ]);
+                    return;
+                }
+            }
+        }
+
+        // Create unique cart ID combining product and unit
+        $cartId = $productId . ($unitId ? '_unit_' . $unitId : '');
+        
+        $existingItem = collect($this->cart)->where('cart_id', $cartId)->first();
         
         if ($existingItem) {
             // Check if we can add more
-            if ($product->track_stock && $existingItem['quantity'] >= $product->stock_quantity) {
+            $requiredStock = ($existingItem['quantity'] + 1) * $conversionRate;
+            if ($product->track_stock && $requiredStock > $product->stock_quantity) {
                 $this->dispatch('showNotification', [
                     'type' => 'warning',
                     'title' => '⚠️ Batas Stok',
@@ -252,27 +324,34 @@ class PosTerminal extends Component
             }
             
             // Update quantity and recalculate commission
-            $this->cart = collect($this->cart)->map(function ($item) use ($productId, $product) {
-                if ($item['id'] == $productId) {
+            $this->cart = collect($this->cart)->map(function ($item) use ($cartId, $product, $unitId, $conversionRate) {
+                if ($item['cart_id'] == $cartId) {
                     $item['quantity']++;
-                    $item['total']             = $item['quantity'] * $item['price'];
-                    $item['commission_amount'] = $product->calculateCommission($item['quantity']);
-                    $item['tenant_amount']     = $item['total'] - $item['commission_amount'];
+                    $item['total'] = $item['quantity'] * $item['price'];
+                    
+                    // Recalculate commission based on base quantity
+                    $baseQuantity = $item['quantity'] * $conversionRate;
+                    $item['commission_amount'] = $product->calculateCommission($baseQuantity);
+                    $item['tenant_amount'] = $item['total'] - $item['commission_amount'];
                 }
                 return $item;
             })->toArray();
         } else {
-            // Calculate commission for this product
-            $commissionAmount = $product->calculateCommission(1);
+            // Calculate commission for this unit (based on base quantity)
+            $commissionAmount = $product->calculateCommission($conversionRate);
 
             // Add new item
             $this->cart[] = [
+                'cart_id'          => $cartId,
                 'id'               => $product->id,
+                'unit_id'          => $unitId,
+                'unit_name'        => $unitName,
+                'conversion_rate'  => $conversionRate,
                 'name'             => $product->name,
                 'sku'              => $product->sku,
-                'price'            => $product->selling_price,
+                'price'            => $price,
                 'quantity'         => 1,
-                'total'            => $product->selling_price,
+                'total'            => $price,
                 'stock'            => $product->stock_quantity,
                 // Tenant info (null for store products)
                 'outlet_type'      => $product->outlet_type,
@@ -281,7 +360,7 @@ class PosTerminal extends Component
                 'commission_type'  => $product->commission_type ?? $product->tenant?->commission_type,
                 'commission_value' => $product->commission_value ?? $product->tenant?->commission_value,
                 'commission_amount'=> $commissionAmount,
-                'tenant_amount'    => $product->selling_price - $commissionAmount,
+                'tenant_amount'    => $price - $commissionAmount,
                 'item_notes'       => '',
             ];
         }
@@ -290,20 +369,35 @@ class PosTerminal extends Component
         $this->dispatch('showNotification', [
             'type' => 'success',
             'title' => '✅ Ditambah ke Keranjang',
-            'message' => "{$product->name} berhasil ditambahkan!",
+            'message' => "{$product->name} ({$unitName}) berhasil ditambahkan!",
             'options' => ['duration' => 2000, 'sound' => false]
         ]);
     }
 
-    public function updateQuantity($productId, $quantity)
+    public function closeUnitSelectionModal()
+    {
+        $this->showUnitSelectionModal = false;
+        $this->selectedProductForUnit = null;
+        $this->availableUnits = [];
+    }
+
+    public function updateQuantity($cartId, $quantity)
     {
         if ($quantity <= 0) {
-            $this->removeFromCart($productId);
+            $this->removeFromCart($cartId);
             return;
         }
 
-        $product = Product::find($productId);
-        if ($product->track_stock && $quantity > $product->stock_quantity) {
+        $cartItem = collect($this->cart)->firstWhere('cart_id', $cartId);
+        if (!$cartItem) {
+            return;
+        }
+
+        $product = Product::find($cartItem['id']);
+        $conversionRate = $cartItem['conversion_rate'] ?? 1;
+        $requiredStock = $quantity * $conversionRate;
+        
+        if ($product->track_stock && $requiredStock > $product->stock_quantity) {
             $this->dispatch('showNotification', [
                 'type' => 'warning',
                 'title' => '⚠️ Batas Stok',
@@ -313,30 +407,33 @@ class PosTerminal extends Component
             return;
         }
 
-        $this->cart = collect($this->cart)->map(function ($item) use ($productId, $quantity, $product) {
-            if ($item['id'] == $productId) {
-                $item['quantity']          = $quantity;
-                $item['total']             = $item['quantity'] * $item['price'];
-                $item['commission_amount'] = $product->calculateCommission($item['quantity']);
-                $item['tenant_amount']     = $item['total'] - $item['commission_amount'];
+        $this->cart = collect($this->cart)->map(function ($item) use ($cartId, $quantity, $product, $conversionRate) {
+            if ($item['cart_id'] == $cartId) {
+                $item['quantity'] = $quantity;
+                $item['total'] = $item['quantity'] * $item['price'];
+                
+                // Recalculate commission based on base quantity
+                $baseQuantity = $item['quantity'] * $conversionRate;
+                $item['commission_amount'] = $product->calculateCommission($baseQuantity);
+                $item['tenant_amount'] = $item['total'] - $item['commission_amount'];
             }
             return $item;
         })->toArray();
     }
 
-    public function updateItemNotes($productId, $notes): void
+    public function updateItemNotes($cartId, $notes): void
     {
-        $this->cart = collect($this->cart)->map(function ($item) use ($productId, $notes) {
-            if ($item['id'] == $productId) {
+        $this->cart = collect($this->cart)->map(function ($item) use ($cartId, $notes) {
+            if ($item['cart_id'] == $cartId) {
                 $item['item_notes'] = substr(strip_tags($notes), 0, 200);
             }
             return $item;
         })->toArray();
     }
 
-    public function removeFromCart($productId)
+    public function removeFromCart($cartId)
     {
-        $this->cart = collect($this->cart)->where('id', '!=', $productId)->values()->toArray();
+        $this->cart = collect($this->cart)->where('cart_id', '!=', $cartId)->values()->toArray();
     }
 
     public function clearCart()
@@ -467,7 +564,10 @@ class PosTerminal extends Component
             // Validate stock availability again before processing
             foreach ($this->cart as $item) {
                 $product = Product::find($item['id']);
-                if (!$product || !$product->canSell($item['quantity'])) {
+                $conversionRate = $item['conversion_rate'] ?? 1;
+                $requiredStock = $item['quantity'] * $conversionRate;
+                
+                if (!$product || ($product->track_stock && $product->stock_quantity < $requiredStock)) {
                     throw new \Exception("Insufficient stock for {$item['name']}!");
                 }
             }
@@ -497,12 +597,14 @@ class PosTerminal extends Component
             // Create transaction items and update stock
             foreach ($this->cart as $item) {
                 $product = Product::find($item['id']);
+                $conversionRate = $item['conversion_rate'] ?? 1;
+                $baseQuantity = $item['quantity'] * $conversionRate;
 
                 $transactionItem = TransactionItem::create([
                     'transaction_id'   => $transaction->id,
                     'product_id'       => $product->id,
                     'product_sku'      => $product->sku,
-                    'product_name'     => $product->name,
+                    'product_name'     => $product->name . ($item['unit_name'] && $item['unit_name'] != $product->unit ? ' (' . $item['unit_name'] . ')' : ''),
                     'unit_price'       => $item['price'],
                     'cost_price'       => $product->cost_price, // snapshot
                     'quantity'         => $item['quantity'],
@@ -517,7 +619,8 @@ class PosTerminal extends Component
                     'item_notes'       => $item['item_notes'] ?? null,
                 ]);
 
-                $product->updateStock($item['quantity'], 'subtract');
+                // Update stock using base quantity (after unit conversion)
+                $product->updateStock($baseQuantity, 'subtract');
 
                 // Process Tenant Credit
                 $this->processTenantCredit($transactionItem, $item);
@@ -1486,7 +1589,7 @@ class PosTerminal extends Component
 
     public function getProducts()
     {
-        return Product::with(['category', 'tenant'])
+        return Product::with(['category', 'tenant', 'activeUnits'])
             ->where('outlet_type', $this->outletMode)  // hanya tampilkan produk sesuai mode
             ->when($this->search, function ($query) {
                 $query->where(function ($q) {

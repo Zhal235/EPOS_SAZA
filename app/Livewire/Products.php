@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\Product;
+use App\Models\ProductUnit;
 use App\Models\Category;
 use App\Models\Supplier;
 use Livewire\Component;
@@ -48,6 +49,8 @@ class Products extends Component
     public $showImportModal = false;
     public $showDeleteModal = false;
     public $showRestockModal = false;
+    public $showUnitsModal = false;
+    public $showUnitFormModal = false;
 
     // Form Data
     public $productForm = [
@@ -81,6 +84,24 @@ class Products extends Component
     public $selectedProduct = null;
     public $productToDelete = null;
     public $importFile = null;
+
+    // Product Units Management
+    public $selectedProductForUnits = null;
+    public $productUnits = [];
+    public $unitForm = [
+        'id' => null,
+        'unit_name' => '',
+        'conversion_rate' => 1,
+        'is_sub_unit' => false,
+        'is_base_unit' => false,
+        'selling_price' => 0.0,
+        'cost_price' => 0.0,
+        'wholesale_price' => 0.0,
+        'barcode' => '',
+        'is_active' => true,
+        'display_order' => 0,
+    ];
+    public $editingUnitId = null;
 
     protected $updatesQueryString = [
         'search' => ['except' => ''],
@@ -799,6 +820,281 @@ class Products extends Component
             ->orderBy($this->sortBy, $this->sortDirection);
 
         return $query->paginate(12);
+    }
+
+    // ==================== PRODUCT UNITS MANAGEMENT ====================
+
+    /**
+     * Open units management modal for a product
+     */
+    public function openUnitsModal($productId)
+    {
+        $this->selectedProductForUnits = Product::with('productUnits')->findOrFail($productId);
+        $this->productUnits = $this->selectedProductForUnits->productUnits;
+        $this->showUnitsModal = true;
+    }
+
+    /**
+     * Close units modal
+     */
+    public function closeUnitsModal()
+    {
+        $this->showUnitsModal = false;
+        $this->selectedProductForUnits = null;
+        $this->productUnits = [];
+        $this->resetUnitForm();
+    }
+
+    /**
+     * Open form to add new unit
+     */
+    public function openAddUnitForm()
+    {
+        $this->resetUnitForm();
+        $this->editingUnitId = null;
+        
+        // Pre-fill some values from parent product
+        // Use getRawOriginal() to bypass faulty decimal cast on the model
+        if ($this->selectedProductForUnits) {
+            $product = $this->selectedProductForUnits;
+            $raw_selling   = $product->getRawOriginal('selling_price');
+            $raw_cost      = $product->getRawOriginal('cost_price');
+            $raw_wholesale = $product->getRawOriginal('wholesale_price');
+            $this->unitForm['selling_price']   = is_numeric($raw_selling)   ? (float) $raw_selling   : 0.0;
+            $this->unitForm['cost_price']      = is_numeric($raw_cost)      ? (float) $raw_cost      : 0.0;
+            $this->unitForm['wholesale_price'] = is_numeric($raw_wholesale) ? (float) $raw_wholesale : 0.0;
+        }
+        
+        $this->showUnitFormModal = true;
+    }
+
+    /**
+     * Open form to edit existing unit
+     */
+    public function openEditUnitForm($unitId)
+    {
+        $unit = ProductUnit::findOrFail($unitId);
+        $this->editingUnitId = $unitId;
+        
+        $this->unitForm = [
+            'id' => $unit->id,
+            'unit_name' => $unit->unit_name,
+            'conversion_rate' => (int) $unit->conversion_rate,
+            'is_base_unit' => $unit->is_base_unit,
+            'selling_price' => is_numeric($unit->getRawOriginal('selling_price')) ? (float) $unit->getRawOriginal('selling_price') : 0.0,
+            'cost_price'    => is_numeric($unit->getRawOriginal('cost_price'))    ? (float) $unit->getRawOriginal('cost_price')    : 0.0,
+            'wholesale_price' => is_numeric($unit->getRawOriginal('wholesale_price')) ? (float) $unit->getRawOriginal('wholesale_price') : 0.0,
+            'barcode' => $unit->barcode ?? '',
+            'is_active' => $unit->is_active,
+            'display_order' => (int) $unit->display_order,
+        ];
+        
+        $this->showUnitFormModal = true;
+    }
+
+    /**
+     * Close unit form modal
+     */
+    public function closeUnitFormModal()
+    {
+        $this->showUnitFormModal = false;
+        $this->resetUnitForm();
+        $this->editingUnitId = null;
+    }
+
+    /**
+     * Reset unit form
+     */
+    protected function resetUnitForm()
+    {
+        $this->unitForm = [
+            'id' => null,
+            'unit_name' => '',
+            'conversion_rate' => 1,
+            'is_sub_unit' => false,
+            'is_base_unit' => false,
+            'selling_price' => 0.0,
+            'cost_price' => 0.0,
+            'wholesale_price' => 0.0,
+            'barcode' => '',
+            'is_active' => true,
+            'display_order' => 0,
+        ];
+    }
+
+    /**
+     * Save unit (create or update)
+     */
+    public function saveUnit()
+    {
+        // Validate
+        $this->validate([
+            'unitForm.unit_name' => 'required|string|max:50',
+            'unitForm.conversion_rate' => 'required|integer|min:1',
+            'unitForm.selling_price' => 'required|numeric|min:0',
+            'unitForm.cost_price' => 'nullable|numeric|min:0',
+            'unitForm.wholesale_price' => 'nullable|numeric|min:0',
+            'unitForm.barcode' => 'nullable|string|max:50',
+        ]);
+
+        if (!$this->selectedProductForUnits) {
+            session()->flash('error', 'Produk tidak ditemukan!');
+            return;
+        }
+
+        try {
+            $product = $this->selectedProductForUnits->fresh();
+            $convRate    = (int) $this->unitForm['conversion_rate'];
+            $isSubUnit   = $this->unitForm['is_sub_unit'] ?? false;
+            $prodSellPrice = is_numeric($product->getRawOriginal('selling_price')) ? (float) $product->getRawOriginal('selling_price') : 0.0;
+            $prodCostPrice = is_numeric($product->getRawOriginal('cost_price'))    ? (float) $product->getRawOriginal('cost_price')    : null;
+
+            // Auto-hitung harga jika user tidak isi manual (selling_price = 0 atau kosong)
+            $userSellPrice = is_numeric($this->unitForm['selling_price']) ? (float) $this->unitForm['selling_price'] : 0.0;
+            if ($userSellPrice <= 0 && $convRate > 0 && $prodSellPrice > 0) {
+                $sellingPrice = $isSubUnit
+                    ? round($prodSellPrice / $convRate)
+                    : round($prodSellPrice * $convRate);
+            } else {
+                $sellingPrice = $userSellPrice;
+            }
+
+            $costPrice      = is_numeric($this->unitForm['cost_price']) && $this->unitForm['cost_price'] !== '' && (float)$this->unitForm['cost_price'] > 0
+                ? (float) $this->unitForm['cost_price'] : null;
+            $wholesalePrice = is_numeric($this->unitForm['wholesale_price']) && $this->unitForm['wholesale_price'] !== '' && (float)$this->unitForm['wholesale_price'] > 0
+                ? (float) $this->unitForm['wholesale_price'] : null;
+
+            // ==========================================
+            // KASUS SUB-UNIT: unit baru LEBIH KECIL dari unit produk
+            // Contoh: produk unit=Dus stok=7, tambah pcs (1 Dus=24 pcs)
+            // Sistem otomatis: update unit produk ke pcs, stok jadi 168,
+            // buat product_unit untuk Dus (konversi=24).
+            // ==========================================
+            if (!$this->editingUnitId && ($this->unitForm['is_sub_unit'] ?? false)) {
+                $oldUnit       = $product->getRawOriginal('unit') ?: $product->unit;
+                $oldStock      = (int) $product->stock_quantity;
+                $oldSellPrice  = is_numeric($product->getRawOriginal('selling_price')) ? (float) $product->getRawOriginal('selling_price') : 0.0;
+                $oldCostPrice  = is_numeric($product->getRawOriginal('cost_price'))    ? (float) $product->getRawOriginal('cost_price')    : null;
+                $oldWholesale  = is_numeric($product->getRawOriginal('wholesale_price')) ? (float) $product->getRawOriginal('wholesale_price') : null;
+
+                // Update semua product_units yang ada – gandakan conversion_rate-nya
+                ProductUnit::where('product_id', $product->id)
+                    ->update(['conversion_rate' => \DB::raw('conversion_rate * ' . $convRate)]);
+
+                // Buat unit untuk satuan LAMA produk (Dus) sebagai unit yang lebih besar
+                ProductUnit::firstOrCreate(
+                    ['product_id' => $product->id, 'unit_name' => $oldUnit],
+                    [
+                        'conversion_rate' => $convRate,
+                        'is_base_unit'    => false,
+                        'selling_price'   => $oldSellPrice,
+                        'cost_price'      => $oldCostPrice,
+                        'wholesale_price' => $oldWholesale,
+                        'is_active'       => true,
+                        'display_order'   => 10,
+                    ]
+                );
+
+                // Buat unit BARU yang lebih kecil (pcs) sebagai base unit
+                ProductUnit::firstOrCreate(
+                    ['product_id' => $product->id, 'unit_name' => $this->unitForm['unit_name']],
+                    [
+                        'conversion_rate' => 1,
+                        'is_base_unit'    => true,
+                        'selling_price'   => $sellingPrice,
+                        'cost_price'      => $costPrice,
+                        'wholesale_price' => $wholesalePrice,
+                        'barcode'         => $this->unitForm['barcode'] ?: null,
+                        'is_active'       => true,
+                        'display_order'   => 0,
+                    ]
+                );
+
+                // Update unit & stok produk ke satuan terkecil
+                $product->unit           = $this->unitForm['unit_name'];
+                $product->stock_quantity = $oldStock * $convRate;
+                $product->save();
+
+                // Refresh selectedProductForUnits
+                $this->selectedProductForUnits = $product->fresh();
+                $this->productUnits = $this->selectedProductForUnits->productUnits;
+                $this->closeUnitFormModal();
+                session()->flash('message', "Berhasil! Stok produk dikonversi dari {$oldStock} {$oldUnit} menjadi {$product->stock_quantity} {$this->unitForm['unit_name']}.");
+                return;
+            }
+
+            // ==========================================
+            // KASUS NORMAL: unit baru LEBIH BESAR dari unit produk
+            // Contoh: produk unit=pcs stok=168, tambah Dus (1 Dus=24 pcs)
+            // ==========================================
+            $data = [
+                'product_id'      => $product->id,
+                'unit_name'       => $this->unitForm['unit_name'],
+                'conversion_rate' => $convRate,
+                'is_base_unit'    => $this->unitForm['is_base_unit'] ?? false,
+                'selling_price'   => $sellingPrice,
+                'cost_price'      => $costPrice,
+                'wholesale_price' => $wholesalePrice,
+                'barcode'         => $this->unitForm['barcode'] ?: null,
+                'is_active'       => $this->unitForm['is_active'] ?? true,
+                'display_order'   => (int) ($this->unitForm['display_order'] ?? 0),
+            ];
+
+            if ($this->editingUnitId) {
+                $unit = ProductUnit::findOrFail($this->editingUnitId);
+                $unit->update($data);
+                session()->flash('message', 'Unit berhasil diupdate!');
+            } else {
+                ProductUnit::create($data);
+                session()->flash('message', 'Unit berhasil ditambahkan!');
+            }
+
+            $this->selectedProductForUnits = $product->fresh();
+            $this->productUnits = $this->selectedProductForUnits->productUnits;
+            $this->closeUnitFormModal();
+            
+        } catch (\Exception $e) {
+            session()->flash('error', 'Gagal menyimpan unit: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Delete a unit
+     */
+    public function deleteUnit($unitId)
+    {
+        try {
+            $unit = ProductUnit::findOrFail($unitId);
+            $unit->delete();
+            
+            session()->flash('message', 'Unit berhasil dihapus!');
+            
+            // Refresh units list
+            if ($this->selectedProductForUnits) {
+                $this->productUnits = $this->selectedProductForUnits->fresh()->productUnits;
+            }
+        } catch (\Exception $e) {
+            session()->flash('error', 'Gagal menghapus unit: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Toggle unit active status
+     */
+    public function toggleUnitStatus($unitId)
+    {
+        try {
+            $unit = ProductUnit::findOrFail($unitId);
+            $unit->is_active = !$unit->is_active;
+            $unit->save();
+            
+            // Refresh units list
+            if ($this->selectedProductForUnits) {
+                $this->productUnits = $this->selectedProductForUnits->fresh()->productUnits;
+            }
+        } catch (\Exception $e) {
+            session()->flash('error', 'Gagal mengubah status unit: ' . $e->getMessage());
+        }
     }
 
     public function render()

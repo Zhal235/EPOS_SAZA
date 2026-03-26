@@ -1,10 +1,8 @@
 const CACHE_NAME = 'epos-saza-v1';
 
-// Aset statis yang di-cache untuk offline/fast load
+// Aset statis lokal saja (CDN eksternal skip — CORS/opaque response tidak bisa di-cache)
 const STATIC_ASSETS = [
     '/manifest.json',
-    'https://fonts.bunny.net/css?family=inter:400,500,600,700&display=swap',
-    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css',
 ];
 
 // Install: cache aset statis
@@ -31,30 +29,29 @@ self.addEventListener('activate', (event) => {
     self.clients.claim();
 });
 
-// Fetch: network-first untuk halaman app, cache-first untuk aset statis
+// Fetch: hanya intercept request GET dari domain sendiri
 self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
 
-    // Lewati request non-GET dan Livewire update
+    // Lewati request non-GET
     if (event.request.method !== 'GET') return;
+
+    // Lewati Livewire update (harus selalu live)
     if (url.pathname.startsWith('/livewire/')) return;
 
-    // Cache-first untuk font & icon CDN
-    if (url.hostname !== self.location.hostname) {
-        event.respondWith(
-            caches.match(event.request).then((cached) => {
-                return cached || fetch(event.request).then((response) => {
-                    const clone = response.clone();
-                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-                    return response;
-                });
-            })
-        );
-        return;
-    }
+    // Lewati request ke domain eksternal (CDN fonts, icons, dll)
+    if (url.hostname !== self.location.hostname) return;
 
-    // Network-first untuk semua halaman app
+    // Network-first untuk semua halaman app, fallback ke cache jika ada
     event.respondWith(
-        fetch(event.request).catch(() => caches.match(event.request))
+        fetch(event.request).catch(() => {
+            return caches.match(event.request).then((cached) => {
+                // Jika tidak ada cache, return response kosong agar tidak error
+                return cached || new Response('', {
+                    status: 503,
+                    statusText: 'Service Unavailable',
+                });
+            });
+        })
     );
 });

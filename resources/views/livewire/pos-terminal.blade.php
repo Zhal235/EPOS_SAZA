@@ -138,24 +138,52 @@
                     <!-- Products Grid -->
                     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         @forelse($products as $product)
+                            @php
+                                $units = $product->relationLoaded('activeUnits') ? $product->activeUnits : $product->activeUnits;
+                                $hasUnits = $units && $units->count() > 0;
+                            @endphp
                             <div wire:key="product-{{ $product->id }}"
-                                 wire:click="addToCart({{ $product->id }})"
-                                 wire:loading.class="opacity-60 cursor-wait"
-                                 wire:loading.attr="disabled"
-                                 wire:target="addToCart({{ $product->id }})"
-                                 class="border border-gray-200 rounded-lg p-4 hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer flex flex-col justify-between min-h-[120px] select-none active:scale-95">
-                                <div>
-                                    <h4 class="font-bold text-gray-900 text-base mb-2 line-clamp-2">{{ $product->name }}</h4>
-                                    <p class="text-xs text-gray-500 mb-2">SKU: {{ $product->sku }}</p>
-                                </div>
-                                <div class="flex items-center justify-between mt-auto">
-                                    <span class="text-lg font-bold text-indigo-600">{{ $product->formatted_selling_price }}</span>
+                                 class="border border-gray-200 rounded-lg p-3 hover:shadow-md hover:border-indigo-300 transition-all flex flex-col justify-between min-h-[120px] select-none">
+                                <!-- Nama & SKU — klik untuk add default (tanpa unit) -->
+                                <div class="{{ $hasUnits ? '' : 'cursor-pointer active:scale-95' }}"
+                                     @if(!$hasUnits) wire:click="addToCart({{ $product->id }})" @endif>
+                                    <h4 class="font-bold text-gray-900 text-sm mb-1 line-clamp-2">{{ $product->name }}</h4>
                                     @if($product->track_stock)
-                                        <span class="text-xs {{ $product->is_low_stock ? 'text-red-500' : 'text-gray-500' }}">
-                                            Stock: {{ $product->stock_quantity }}
+                                        <span class="text-xs {{ $product->is_low_stock ? 'text-red-500' : 'text-gray-400' }}">
+                                            Stok: {{ $product->stock_quantity }} {{ $product->unit }}
                                         </span>
                                     @endif
                                 </div>
+
+                                @if($hasUnits)
+                                    <!-- Tampilkan tombol per unit langsung -->
+                                    <div class="mt-2 flex flex-col gap-1">
+                                        @foreach($units as $unit)
+                                            @php
+                                                $stockInUnit = $unit->conversion_rate > 0
+                                                    ? floor($product->stock_quantity / $unit->conversion_rate)
+                                                    : 0;
+                                                $outOfStock = $product->track_stock && $stockInUnit <= 0;
+                                            @endphp
+                                            <button
+                                                wire:click="addToCartWithUnit({{ $product->id }}, {{ $unit->id }})"
+                                                {{ $outOfStock ? 'disabled' : '' }}
+                                                class="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs font-semibold transition-all
+                                                       {{ $outOfStock
+                                                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                            : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white active:scale-95 cursor-pointer' }}">
+                                                <span>per {{ $unit->unit_name }}</span>
+                                                <span>Rp {{ number_format($unit->selling_price, 0, ',', '.') }}</span>
+                                            </button>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <!-- Produk biasa tanpa multi-unit -->
+                                    <div class="flex items-center justify-between mt-auto cursor-pointer active:scale-95"
+                                         wire:click="addToCart({{ $product->id }})">
+                                        <span class="text-base font-bold text-indigo-600">{{ $product->formatted_selling_price }}</span>
+                                    </div>
+                                @endif
                             </div>
                         @empty
                             <div class="col-span-full text-center py-12">
@@ -194,23 +222,28 @@
                             <div class="h-full overflow-y-auto scrollbar-thin pr-2">
                                 <div class="space-y-2">
                                     @foreach($cart as $item)
-                                        <div wire:key="cart-item-{{ $item['id'] }}" class="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-gray-50 cart-item">
+                                        <div wire:key="cart-item-{{ $item['cart_id'] ?? $item['id'] }}" class="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-gray-50 cart-item">
                                             <div class="flex-1 min-w-0">
-                                                <h4 class="font-medium text-gray-900 text-sm truncate cart-item-name">{{ $item['name'] }}</h4>
-                                                <p class="text-xs text-gray-500 cart-item-price">{{ 'Rp ' . number_format($item['price'], 0, ',', '.') }} per item</p>
+                                                <h4 class="font-medium text-gray-900 text-sm truncate cart-item-name">
+                                                    {{ $item['name'] }}
+                                                    @if(isset($item['unit_name']) && $item['unit_name'])
+                                                        <span class="text-purple-600">({{ $item['unit_name'] }})</span>
+                                                    @endif
+                                                </h4>
+                                                <p class="text-xs text-gray-500 cart-item-price">{{ 'Rp ' . number_format($item['price'], 0, ',', '.') }} per {{ $item['unit_name'] ?? 'item' }}</p>
                                             </div>
                                             <div class="flex items-center space-x-2 mx-2">
-                                                <button wire:click="updateQuantity({{ $item['id'] }}, {{ $item['quantity'] - 1 }})" class="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 flex-shrink-0">
+                                                <button wire:click="updateQuantity('{{ $item['cart_id'] ?? $item['id'] }}', {{ $item['quantity'] - 1 }})" class="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 flex-shrink-0">
                                                     <i class="fas fa-minus text-xs"></i>
                                                 </button>
                                                 <span class="w-6 text-center text-sm font-medium">{{ $item['quantity'] }}</span>
-                                                <button wire:click="updateQuantity({{ $item['id'] }}, {{ $item['quantity'] + 1 }})" class="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 flex-shrink-0">
+                                                <button wire:click="updateQuantity('{{ $item['cart_id'] ?? $item['id'] }}', {{ $item['quantity'] + 1 }})" class="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 flex-shrink-0">
                                                     <i class="fas fa-plus text-xs"></i>
                                                 </button>
                                             </div>
                                             <div class="text-right flex-shrink-0">
                                                 <p class="font-medium text-gray-900 text-sm">{{ 'Rp ' . number_format($item['total'], 0, ',', '.') }}</p>
-                                                <button wire:click="removeFromCart({{ $item['id'] }})" class="text-red-500 text-xs hover:text-red-700">
+                                                <button wire:click="removeFromCart('{{ $item['cart_id'] ?? $item['id'] }}')" class="text-red-500 text-xs hover:text-red-700">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
                                             </div>
@@ -530,6 +563,88 @@
                                 </div>
                             </div>
                         @endif
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        <!-- Unit Selection Modal -->
+        @if($showUnitSelectionModal && $selectedProductForUnit)
+            <div class="fixed inset-0 overflow-y-auto h-full w-full z-50 flex items-center justify-center" wire:click="closeUnitSelectionModal">
+                <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity"></div>
+                <div class="relative mx-auto p-6 border w-full max-w-lg shadow-xl rounded-lg bg-white z-10" @click.stop>
+                    <div class="mt-3">
+                        <!-- Modal Header -->
+                        <div class="flex items-center justify-between mb-4 pb-4 border-b">
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900">
+                                    <i class="fas fa-balance-scale text-purple-600 mr-2"></i>
+                                    Pilih Unit Penjualan
+                                </h3>
+                                <p class="text-sm text-gray-500 mt-1">{{ $selectedProductForUnit->name }}</p>
+                            </div>
+                            <button wire:click="closeUnitSelectionModal" class="text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+
+                        <!-- Info Box -->
+                        <div class="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                            <p class="text-sm text-blue-800">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Produk ini tersedia dalam beberapa satuan. Pilih satuan yang sesuai.
+                            </p>
+                        </div>
+
+                        <!-- Units List -->
+                        <div class="space-y-3 max-h-96 overflow-y-auto">
+                            @foreach($availableUnits as $unit)
+                                @php
+                                    $stockInUnit = floor($selectedProductForUnit->stock_quantity / $unit->conversion_rate);
+                                    $isOutOfStock = $stockInUnit <= 0;
+                                @endphp
+                                <button 
+                                    wire:click="addToCartWithUnit({{ $selectedProductForUnit->id }}, {{ $unit->id }})"
+                                    class="w-full text-left p-4 border-2 rounded-lg transition-all {{ $isOutOfStock ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60' : 'border-purple-200 hover:border-purple-500 hover:bg-purple-50' }}"
+                                    {{ $isOutOfStock ? 'disabled' : '' }}
+                                >
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex-1">
+                                            <div class="flex items-center gap-2 mb-1">
+                                                <h4 class="font-bold text-lg text-gray-900">{{ $unit->unit_name }}</h4>
+                                                @if($unit->is_base_unit)
+                                                    <span class="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded font-medium">Unit Dasar</span>
+                                                @endif
+                                                @if($isOutOfStock)
+                                                    <span class="bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded font-medium">Habis</span>
+                                                @endif
+                                            </div>
+                                            <p class="text-sm text-gray-600 mb-2">
+                                                1 {{ $unit->unit_name }} = {{ $unit->conversion_rate }} {{ $selectedProductForUnit->unit }}
+                                            </p>
+                                            <div class="flex items-center gap-4">
+                                                <div class="text-lg font-bold text-green-600">
+                                                    Rp {{ number_format($unit->selling_price, 0, ',', '.') }}
+                                                </div>
+                                                <div class="text-sm {{ $isOutOfStock ? 'text-red-600' : 'text-gray-600' }}">
+                                                    Stok: {{ $stockInUnit }} {{ $unit->unit_name }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        @if(!$isOutOfStock)
+                                            <i class="fas fa-chevron-right text-purple-600 text-xl ml-2"></i>
+                                        @endif
+                                    </div>
+                                </button>
+                            @endforeach
+                        </div>
+
+                        <!-- Cancel Button -->
+                        <div class="mt-6 pt-4 border-t">
+                            <button wire:click="closeUnitSelectionModal" class="w-full px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors">
+                                <i class="fas fa-times mr-2"></i>Batal
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

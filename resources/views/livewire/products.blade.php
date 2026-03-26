@@ -165,6 +165,9 @@
                              <button wire:click.prevent="openRestockModal({{ $product->id }})" type="button" class="px-3 py-2 text-sm bg-orange-50 text-orange-700 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors" title="Restock / Tambah Stok">
                                 <i class="fas fa-cubes"></i>
                             </button>
+                            <button wire:click.prevent="openUnitsModal({{ $product->id }})" type="button" class="px-3 py-2 text-sm bg-purple-50 text-purple-700 border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors" title="Kelola Unit Penjualan">
+                                <i class="fas fa-balance-scale"></i>
+                            </button>
                             <button wire:click.prevent="openEditModal({{ $product->id }})" type="button" class="flex-1 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
                                 <i class="fas fa-edit mr-1"></i>Edit
                             </button>
@@ -820,6 +823,332 @@
                         </button>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <!-- Product Units Management Modal -->
+    @if($showUnitsModal && $selectedProductForUnits && !$showUnitFormModal)
+    <div class="fixed inset-0 z-50 overflow-y-auto" 
+         x-data
+         x-init="document.body.classList.add('overflow-y-hidden')"
+         x-on:keydown.escape.window="$wire.closeUnitsModal()"
+         x-on:click.self="$wire.closeUnitsModal()"
+    >
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+             x-on:click="$wire.closeUnitsModal()"></div>
+        
+        <!-- Modal Content -->
+        <div class="flex items-center justify-center min-h-screen px-4 py-6"
+             x-on:click.stop>
+            <div class="relative bg-white rounded-lg shadow-xl max-w-2xl w-full mx-auto">
+                <div class="p-5">
+                    <!-- Header -->
+                    <div class="flex items-center justify-between mb-5 border-b pb-3">
+                        <div>
+                            <h2 class="text-lg font-bold text-gray-900">Kelola Unit Penjualan</h2>
+                            <p class="text-sm text-gray-500 mt-1">{{ $selectedProductForUnits->name }}</p>
+                            <p class="text-xs text-gray-400">Stok Dasar: {{ $selectedProductForUnits->stock_quantity }} {{ $selectedProductForUnits->unit }}</p>
+                        </div>
+                        <button wire:click="closeUnitsModal" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+
+                    <!-- Info Box -->
+                    <div class="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                        <div class="flex items-start gap-2">
+                            <i class="fas fa-lightbulb text-amber-500 mt-0.5 text-sm shrink-0"></i>
+                            <div class="text-xs text-amber-800">
+                                <p class="font-semibold mb-1">Cara kerja multi-unit:</p>
+                                <p>Stok selalu disimpan dalam <strong>satuan terkecil</strong>. Saat tambah unit baru, pilih:</p>
+                                <ul class="mt-1 space-y-0.5 pl-3">
+                                    <li>• <strong>Satuan Lebih Besar</strong> — stok sudah dalam <strong>{{ $selectedProductForUnits->unit }}</strong>, tambah Dus/Karton di atasnya.</li>
+                                    <li>• <strong>Satuan Lebih Kecil</strong> — stok masih dalam <strong>{{ $selectedProductForUnits->unit }}</strong> (besar), sistem otomatis konversi ke satuan kecil (pcs).</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Add Unit Button -->
+                    <div class="mb-4">
+                        <button wire:click="openAddUnitForm" type="button" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                            <i class="fas fa-plus mr-2"></i>Tambah Unit Baru
+                        </button>
+                    </div>
+
+                    <!-- Units List -->
+                    <div class="space-y-2 max-h-96 overflow-y-auto">
+                        @if($productUnits && count($productUnits) > 0)
+                            @foreach($productUnits as $unit)
+                            <div class="border border-gray-200 rounded-lg p-3 {{ !$unit->is_active ? 'bg-gray-50 opacity-60' : 'bg-white' }}">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <h4 class="font-bold text-base text-gray-900">{{ $unit->unit_name }}</h4>
+                                            @if($unit->is_base_unit)
+                                                <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded">Unit Dasar</span>
+                                            @endif
+                                            @if(!$unit->is_active)
+                                                <span class="bg-gray-100 text-gray-600 text-xs font-medium px-2 py-1 rounded">Nonaktif</span>
+                                            @endif
+                                        </div>
+                                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                                            <div>
+                                                <span class="text-gray-500 text-xs">Konversi:</span>
+                                                <div class="font-medium text-gray-900">1 = {{ $unit->conversion_rate }} {{ $selectedProductForUnits->unit }}</div>
+                                            </div>
+                                            <div>
+                                                <span class="text-gray-500 text-xs">Harga Jual:</span>
+                                                <div class="font-medium text-green-600">Rp {{ number_format($unit->selling_price, 0, ',', '.') }}</div>
+                                            </div>
+                                            <div>
+                                                <span class="text-gray-500 text-xs">Harga Beli:</span>
+                                                <div class="font-medium text-gray-900">Rp {{ number_format($unit->cost_price ?? 0, 0, ',', '.') }}</div>
+                                            </div>
+                                            <div>
+                                                <span class="text-gray-500 text-xs">Stok:</span>
+                                                <div class="font-medium {{ $unit->getStockInThisUnit() <= 0 ? 'text-red-600' : 'text-gray-900' }}">
+                                                    {{ $unit->getStockInThisUnit() }} {{ $unit->unit_name }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        @if($unit->barcode)
+                                        <div class="mt-2 text-xs text-gray-400">
+                                            Barcode: {{ $unit->barcode }}
+                                        </div>
+                                        @endif
+                                    </div>
+                                    <div class="flex items-center gap-1.5 ml-3">
+                                        <button wire:click="toggleUnitStatus({{ $unit->id }})" 
+                                                class="px-2.5 py-1.5 text-xs {{ $unit->is_active ? 'bg-gray-200 text-gray-700' : 'bg-green-100 text-green-700' }} rounded-lg hover:opacity-80 transition-colors"
+                                                title="{{ $unit->is_active ? 'Nonaktifkan' : 'Aktifkan' }}">
+                                            <i class="fas {{ $unit->is_active ? 'fa-toggle-on' : 'fa-toggle-off' }}"></i>
+                                        </button>
+                                        <button wire:click="openEditUnitForm({{ $unit->id }})" 
+                                                class="px-2.5 py-1.5 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                                                title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button wire:click="deleteUnit({{ $unit->id }})" 
+                                                class="px-2.5 py-1.5 text-xs bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                                                title="Hapus"
+                                                onclick="return confirm('Yakin ingin menghapus unit ini?')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            @endforeach
+                        @else
+                            <div class="text-center py-6 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                                <i class="fas fa-balance-scale text-gray-400 text-3xl mb-2"></i>
+                                <p class="text-gray-600 font-medium text-sm">Belum ada unit penjualan</p>
+                                <p class="text-xs text-gray-500 mt-1">Tambahkan unit untuk menjual produk dalam satuan berbeda</p>
+                            </div>
+                        @endif
+                    </div>
+
+                    <!-- Close Button -->
+                    <div class="flex justify-end mt-5 pt-3 border-t">
+                        <button wire:click="closeUnitsModal" type="button" class="px-5 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm">
+                            Tutup
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <!-- Add/Edit Unit Form Modal -->
+    @if($showUnitFormModal && $selectedProductForUnits)
+    <div class="fixed inset-0 z-[100] overflow-y-auto" 
+         x-data
+         x-init="document.body.classList.add('overflow-y-hidden')"
+         x-on:keydown.escape.window="$wire.closeUnitFormModal()"
+         x-on:click.self="$wire.closeUnitFormModal()"
+    >
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-black bg-opacity-75 transition-opacity"
+             x-on:click="$wire.closeUnitFormModal()"></div>
+        
+        <!-- Modal Content -->
+        <div class="flex items-center justify-center min-h-screen px-4 py-6"
+             x-on:click.stop>
+            <div class="relative bg-white rounded-lg shadow-xl max-w-xl w-full mx-auto">
+                <form wire:submit.prevent="saveUnit">
+                    <div class="p-5">
+                        <!-- Header -->
+                        <div class="flex items-center justify-between mb-4 border-b pb-3">
+                            <h2 class="text-lg font-bold text-gray-900">
+                                {{ $editingUnitId ? 'Edit Unit' : 'Tambah Unit Baru' }}
+                            </h2>
+                            <button type="button" wire:click="closeUnitFormModal" class="text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+
+                        <!-- Form Fields -->
+                        <div class="space-y-4">
+
+                            @if(!$editingUnitId)
+                            {{-- Produk saat ini --}}
+                            <div class="bg-gray-50 rounded-lg px-4 py-3 flex items-center justify-between">
+                                <div>
+                                    <p class="text-xs text-gray-500">Produk saat ini dijual per</p>
+                                    <p class="font-bold text-gray-800">{{ $selectedProductForUnits->unit }} &nbsp;—&nbsp; Rp {{ number_format($selectedProductForUnits->getRawOriginal('selling_price') ?? 0, 0, ',', '.') }}</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-xs text-gray-500">Stok</p>
+                                    <p class="font-bold text-gray-800">{{ $selectedProductForUnits->stock_quantity }} {{ $selectedProductForUnits->unit }}</p>
+                                </div>
+                            </div>
+
+                            {{-- Pilih arah: lebih kecil atau lebih besar --}}
+                            <div>
+                                <p class="text-sm font-medium text-gray-700 mb-2">Ingin menambah satuan apa?</p>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button type="button" wire:click="$set('unitForm.is_sub_unit', true)"
+                                        class="p-3 rounded-lg border-2 text-left transition-colors
+                                               {{ ($unitForm['is_sub_unit'] ?? false)
+                                                  ? 'border-blue-500 bg-blue-50'
+                                                  : 'border-gray-200 hover:border-gray-300' }}">
+                                        <p class="font-semibold text-sm">Satuan lebih kecil</p>
+                                        <p class="text-xs text-gray-500 mt-0.5">Contoh: jual per <strong>pcs/eceran</strong> dari dus</p>
+                                    </button>
+                                    <button type="button" wire:click="$set('unitForm.is_sub_unit', false)"
+                                        class="p-3 rounded-lg border-2 text-left transition-colors
+                                               {{ !($unitForm['is_sub_unit'] ?? false)
+                                                  ? 'border-purple-500 bg-purple-50'
+                                                  : 'border-gray-200 hover:border-gray-300' }}">
+                                        <p class="font-semibold text-sm">Satuan lebih besar</p>
+                                        <p class="text-xs text-gray-500 mt-0.5">Contoh: jual per <strong>karton</strong> isi 5 dus</p>
+                                    </button>
+                                </div>
+                            </div>
+                            @endif
+
+                            {{-- Nama satuan --}}
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Nama satuan baru <span class="text-red-500">*</span>
+                                </label>
+                                <input type="text" wire:model.live="unitForm.unit_name"
+                                       class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                                       placeholder="{{ ($unitForm['is_sub_unit'] ?? false) ? 'Contoh: pcs, botol, biji' : 'Contoh: Karton, Pak' }}">
+                                @error('unitForm.unit_name') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                            </div>
+
+                            {{-- Pertanyaan konversi --}}
+                            <div>
+                                @php
+                                    $convRate = (int)($unitForm['conversion_rate'] ?? 0);
+                                    $prodPrice = (float)($selectedProductForUnits->getRawOriginal('selling_price') ?? 0);
+                                    $unitName  = $unitForm['unit_name'] ?: '...';
+                                    $isSubUnit = $unitForm['is_sub_unit'] ?? false;
+                                    $autoPrice = ($convRate > 0 && $prodPrice > 0)
+                                        ? ($isSubUnit ? round($prodPrice / $convRate) : round($prodPrice * $convRate))
+                                        : 0;
+                                @endphp
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    @if($isSubUnit)
+                                        1 <strong class="text-purple-700">{{ $selectedProductForUnits->unit }}</strong> berisi berapa <strong class="text-blue-700">{{ $unitName }}</strong>? <span class="text-red-500">*</span>
+                                    @else
+                                        1 <strong class="text-purple-700">{{ $unitName }}</strong> isinya berapa <strong>{{ $selectedProductForUnits->unit }}</strong>? <span class="text-red-500">*</span>
+                                    @endif
+                                </label>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" wire:model.live="unitForm.conversion_rate"
+                                           class="w-28 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-center font-bold"
+                                           placeholder="24" min="1">
+                                    <span class="text-gray-600 text-sm">{{ $isSubUnit ? $unitName : $selectedProductForUnits->unit }}</span>
+                                </div>
+                                @error('unitForm.conversion_rate') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                            </div>
+
+                            {{-- Preview harga otomatis --}}
+                            @if($unitForm['unit_name'] && $convRate > 0)
+                            <div class="bg-green-50 border border-green-200 rounded-lg p-3">
+                                <p class="text-xs text-gray-600 mb-1">Harga jual per <strong>{{ $unitName }}</strong> (otomatis dihitung)</p>
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-xl font-bold text-green-700">Rp {{ number_format($autoPrice, 0, ',', '.') }}</p>
+                                        <p class="text-xs text-gray-500">
+                                            @if($isSubUnit)
+                                                Rp {{ number_format($prodPrice, 0, ',', '.') }} ÷ {{ $convRate }}
+                                            @else
+                                                Rp {{ number_format($prodPrice, 0, ',', '.') }} × {{ $convRate }}
+                                            @endif
+                                        </p>
+                                    </div>
+                                    <div class="text-xs text-right text-gray-600">
+                                        @if($isSubUnit)
+                                            Stok: {{ $selectedProductForUnits->stock_quantity }} {{ $selectedProductForUnits->unit }}<br>
+                                            → {{ $selectedProductForUnits->stock_quantity * $convRate }} {{ $unitName }}
+                                        @else
+                                            Tersedia: {{ floor($selectedProductForUnits->stock_quantity / $convRate) }} {{ $unitName }}
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                            @endif
+
+                            {{-- Override harga (opsional) --}}
+                            <div x-data="{ open: false }">
+                                <button type="button" @click="open = !open"
+                                        class="text-xs text-purple-600 hover:underline flex items-center gap-1">
+                                    <i class="fas fa-edit text-xs"></i>
+                                    <span x-text="open ? 'Sembunyikan pengaturan harga' : 'Ganti harga manual / tambah harga beli grosir'"></span>
+                                </button>
+                                <div x-show="open" x-transition class="mt-2 space-y-2 border border-gray-200 rounded-lg p-3 bg-gray-50">
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label class="block text-xs text-gray-600 mb-1">Harga Jual (override)</label>
+                                            <input type="number" wire:model="unitForm.selling_price"
+                                                   class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                                                   placeholder="{{ $autoPrice }}" min="0">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs text-gray-600 mb-1">Harga Beli</label>
+                                            <input type="number" wire:model="unitForm.cost_price"
+                                                   class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                                                   placeholder="0" min="0">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-600 mb-1">Harga Grosir (jika ada diskon beli banyak)</label>
+                                        <input type="number" wire:model="unitForm.wholesale_price"
+                                               class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                                               placeholder="0" min="0">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-600 mb-1">Barcode unit ini (opsional)</label>
+                                        <input type="text" wire:model="unitForm.barcode"
+                                               class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg"
+                                               placeholder="Scan barcode...">
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="flex justify-end gap-2 mt-5 pt-3 border-t">
+                            <button type="button" wire:click="closeUnitFormModal" 
+                                    class="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
+                                Batal
+                            </button>
+                            <button type="submit" 
+                                    class="px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                                <i class="fas fa-save mr-1"></i>
+                                {{ $editingUnitId ? 'Update Unit' : 'Simpan Unit' }}
+                            </button>
+                        </div>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
