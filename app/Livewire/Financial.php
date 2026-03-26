@@ -176,11 +176,14 @@ class Financial extends Component
         // ── FinancialTransaction (RFID / SIMPels) ────────────────────────
         $query = FinancialTransaction::query()->whereBetween('created_at', [$from, $to]);
 
-        $totalRfidPayments = (clone $query)->rfidPayments()->completed()->sum('amount');
+        // Tipe transaksi yang dihitung sebagai pemasukan RFID (rfid_payment + kebutuhan_order)
+        $rfidTypes = [FinancialTransaction::TYPE_RFID_PAYMENT, FinancialTransaction::TYPE_KEBUTUHAN_ORDER];
+
+        $totalRfidPayments = (clone $query)->whereIn('type', $rfidTypes)->completed()->sum('amount');
 
         $withdrawnTransactions = DB::table('financial_transactions')
             ->join('simpels_withdrawals', 'financial_transactions.withdrawal_id', '=', 'simpels_withdrawals.id')
-            ->where('financial_transactions.type', FinancialTransaction::TYPE_RFID_PAYMENT)
+            ->whereIn('financial_transactions.type', $rfidTypes)
             ->where('financial_transactions.status', FinancialTransaction::STATUS_COMPLETED)
             ->whereIn('simpels_withdrawals.simpels_status', ['approved', 'completed'])
             ->whereBetween('financial_transactions.created_at', [$from, $to])
@@ -189,7 +192,7 @@ class Financial extends Component
 
         $pendingOrRejectedTransactions = DB::table('financial_transactions')
             ->join('simpels_withdrawals', 'financial_transactions.withdrawal_id', '=', 'simpels_withdrawals.id')
-            ->where('financial_transactions.type', FinancialTransaction::TYPE_RFID_PAYMENT)
+            ->whereIn('financial_transactions.type', $rfidTypes)
             ->where('financial_transactions.status', FinancialTransaction::STATUS_COMPLETED)
             ->where(function($q) {
                 $q->where('simpels_withdrawals.simpels_status', 'pending')
@@ -200,7 +203,7 @@ class Financial extends Component
             ->whereNull('financial_transactions.deleted_at')
             ->sum('financial_transactions.amount');
 
-        $notInWithdrawal = FinancialTransaction::rfidPayments()
+        $notInWithdrawal = FinancialTransaction::whereIn('type', $rfidTypes)
             ->completed()
             ->whereNull('withdrawal_id')
             ->whereBetween('created_at', [$from, $to])

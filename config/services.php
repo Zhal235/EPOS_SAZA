@@ -36,36 +36,42 @@ return [
     ],
 
     'simpels' => [
-        'api_url' => env('SIMPELS_API_URL', 'http://localhost:8001/api/v1/wallets'),
+        'api_url' => env('SIMPELS_API_URL', 'http://localhost:8001/api'),
+        // SIMPELS_API_URL harus diset ke: http://<host>/api (tanpa suffix /v1/wallets)
         'timeout' => env('SIMPELS_API_TIMEOUT', 30),
         'api_key' => env('SIMPELS_API_KEY'),
         'endpoints' => [
             // Health check
-            'ping' => '/ping', // GET - connection test
-            
+            'ping' => '/v1/wallets/ping',
+
             // RFID lookup
-            'rfid_lookup' => '/rfid/uid', // GET /rfid/uid/{uid}
-            
-            // EPOS transaction
-            'epos_transaction' => '/epos/transaction', // POST with santri_id, amount, items
-            
+            'rfid_lookup' => '/v1/wallets/rfid/uid', // GET /v1/wallets/rfid/uid/{uid}
+
+            // EPOS transaction (deduct wallet)
+            'epos_transaction' => '/v1/wallets/epos/transaction',
+
+            // Pesanan Kebutuhan
+            'kebutuhan_order'        => '/v1/epos/kebutuhan-order',
+            'kebutuhan_order_status' => '/v1/epos/kebutuhan-order/santri',
+
             // Withdrawal
-            'withdrawal_create' => '/epos/withdrawal', // POST
-            'withdrawal_status' => '/epos/withdrawal', // GET /{withdrawalNumber}/status
-            
-            // Legacy endpoints (deprecated - kept for backward compatibility)
-            'santri_all' => '/santri/all',
-            'guru_all' => '/guru/all',
-            'santri_rfid' => '/santri/rfid',
-            'guru_rfid' => '/guru/rfid',
-            'limit_summary' => '/ping', // Redirect to ping
-            'santri_deduct' => '/santri/{id}/deduct',
-            'santri_refund' => '/santri/{id}/refund',
-            'transaction_sync' => '/transaction/sync',
-            'santri_transactions' => '/santri/transactions',
-            'daily_spending' => '/santri/daily-spending',
-            'balance_topup' => '/balance/topup',
+            'withdrawal_create' => '/v1/wallets/epos/withdrawal',
+            'withdrawal_status' => '/v1/wallets/epos/withdrawal',
+
+            // Legacy endpoints
+            'santri_all'         => '/v1/wallets/santri/all',
+            'guru_all'           => '/v1/wallets/guru/all',
+            'santri_rfid'        => '/v1/wallets/santri/rfid',
+            'guru_rfid'          => '/v1/wallets/guru/rfid',
+            'limit_summary'      => '/v1/wallets/ping',
+            'santri_transactions' => '/v1/wallets/santri/transactions',
+            'daily_spending'     => '/v1/wallets/santri/daily-spending',
+            'balance_topup'      => '/v1/wallets/balance/topup',
         ],
+    ],
+
+    'epos_webhook' => [
+        'secret' => env('EPOS_WEBHOOK_SECRET'),
     ],
 
 ];

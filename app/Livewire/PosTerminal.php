@@ -8,6 +8,7 @@ use App\Models\Category;
 use App\Models\Tenant;
 use App\Models\Transaction;
 use App\Models\TransactionItem;
+use App\Models\KebutuhanOrder;
 use App\Models\User;
 use App\Services\SimpelsApiService;
 use Livewire\Component;
@@ -53,6 +54,19 @@ class PosTerminal extends Component
     
     // Development mode tracking
     public $devModeNotified = false;
+
+    // Pesanan Kebutuhan properties
+    public $showKebutuhanModal = false;
+    public $kebutuhanOrders = [];         // orders pending untuk santri aktif
+    public $kebutuhanStatusChecked = false;
+    public $kebutuhanRfidInput = '';      // RFID input di dalam modal kebutuhan
+    public $kebutuhanRfidLoading = false;
+    public $kebutuhanRfidError = '';
+
+    // Pesanan Kebutuhan Dikonfirmasi properties (new)
+    public $showConfirmedKebutuhanModal = false;
+    public $confirmedKebutuhanOrders = [];
+    public $pendingCompleteCount = 0;
     
     // Last RFID scan timestamp for debouncing
     private $lastRfidScan = 0;
@@ -1101,6 +1115,9 @@ class PosTerminal extends Component
             $this->rfidScanning = false;
             
             Log::info('RFID Scan successful', ['santri' => $santriData['nama_santri'], 'rfid' => $rfidNumber]);
+
+            // Cek status pesanan kebutuhan (cache 1 jam)
+            $this->checkKebutuhanStatus();
             
             // Dispatch success notification
             $this->dispatch('showNotification', [
@@ -1612,6 +1629,314 @@ class PosTerminal extends Component
             ->orderBy('name')
             ->paginate(12);
     }
+
+    // -----------------------------------------------------------------------
+    // PESANAN KEBUTUHAN
+    // -----------------------------------------------------------------------
+
+    /**
+     * Buka modal pesanan kebutuhan dan buat order dari cart saat ini
+     */
+    public function openKebutuhanModal(): void
+    {
+        if (empty($this->cart)) {
+            $this->dispatch('showNotification', [
+                'type'    => 'warning',
+                'title'   => 'Keranjang Kosong',
+                'message' => 'Tambahkan produk ke keranjang terlebih dahulu.',
+                'options' => ['duration' => 3000],
+            ]);
+            return;
+        }
+
+        // Santri belum di-scan → akan scan di dalam modal
+        $this->kebutuhanRfidInput = '';
+        $this->kebutuhanRfidError = '';
+        $this->kebutuhanRfidLoading = false;
+        $this->showKebutuhanModal = true;
+    }
+
+    /**
+     * Scan RFID di dalam modal Pesanan Kebutuhan
+     */
+    public function scanRfidForKebutuhan(): void
+    {
+        $uid = trim($this->kebutuhanRfidInput);
+        if (empty($uid)) {
+            $this->kebutuhanRfidError = 'Masukkan nomor RFID.';
+            return;
+        }
+
+        $this->kebutuhanRfidLoading = true;
+        $this->kebutuhanRfidError = '';
+
+        try {
+            $response = $this->getSimpelsApi()->getSantriByRfid($uid);
+
+            if (!($response['success'] ?? false)) {
+                $this->kebutuhanRfidError = $response['message'] ?? 'RFID tidak ditemukan.';
+                return;
+            }
+
+            $this->selectedSantri   = $response['data'];
+            $this->santriBalance    = $response['data']['saldo'] ?? 0;
+            $this->kebutuhanRfidInput = '';
+            $this->kebutuhanRfidError = '';
+            
+            // Check status pesanan kebutuhan yang sudah ada untuk santri ini
+            $this->checkKebutuhanStatus();
+        } catch (\Exception $e) {
+            $this->kebutuhanRfidError = 'Gagal: ' . $e->getMessage();
+        } finally {
+            $this->kebutuhanRfidLoading = false;
+        }
+    }
+
+    public function closeKebutuhanModal(): void
+    {
+        $this->showKebutuhanModal = false;
+        $this->kebutuhanRfidInput = '';
+        $this->kebutuhanRfidError = '';
+        $this->kebutuhanRfidLoading = false;
+    }
+
+    /**
+     * Simpan pesanan kebutuhan dan kirim ke SIMPELS untuk konfirmasi orang tua
+     */
+    public function submitKebutuhanOrder(): void
+    {
+        if (empty($this->cart) || !$this->selectedSantri) {
+            return;
+        }
+
+        $items = [];
+        $total = 0;
+
+        foreach ($this->cart as $item) {
+            $subtotal  = $item['price'] * $item['quantity'];
+            $total    += $subtotal;
+            $items[]   = [
+                'product_id' => $item['id'],
+                'name'       => $item['name'],
+                'qty'        => $item['quantity'],
+                'price'      => $item['price'],
+                'subtotal'   => $subtotal,
+                'unit'       => $item['unit'] ?? 'pcs',
+            ];
+        }
+
+        DB::beginTransaction();
+        try {
+            $order = KebutuhanOrder::create([
+                'santri_id'   => $this->selectedSantri['santri_id'] ?? $this->selectedSantri['id'] ?? null,
+                'santri_name' => $this->selectedSantri['nama_santri'] ?? $this->selectedSantri['name'] ?? 'Unknown',
+                'rfid_uid'    => $this->selectedSantri['rfid_uid'] ?? $this->selectedSantri['rfid_tag'] ?? null,
+                'items'       => $items,
+                'total_amount'=> $total,
+                'cashier_id'  => auth()->id(),
+            ]);
+
+            // Kirim ke SIMPELS
+            $simpelsResult = $this->getSimpelsApi()->createKebutuhanOrder([
+                'order_number' => $order->order_number,
+                'santri_id'    => $order->santri_id,
+                'santri_name'  => $order->santri_name,
+                'rfid_uid'     => $order->rfid_uid,
+                'items'        => $items,
+                'total_amount' => $total,
+                'cashier_name' => auth()->user()->name,
+            ]);
+
+            if ($simpelsResult['success']) {
+                $order->update(['simpels_order_id' => $simpelsResult['simpels_order_id']]);
+            }
+
+            DB::commit();
+
+            // Kosongkan keranjang setelah order dibuat
+            $this->cart = [];
+            $this->showKebutuhanModal = false;
+
+            $this->dispatch('showNotification', [
+                'type'    => 'success',
+                'title'   => '✅ Pesanan Dikirim',
+                'message' => "Pesanan kebutuhan {$order->order_number} telah dikirim. Menunggu konfirmasi orang tua.",
+                'options' => ['duration' => 6000],
+            ]);
+
+            Log::info('KebutuhanOrder created', ['order_number' => $order->order_number]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('KebutuhanOrder failed', ['error' => $e->getMessage()]);
+            $this->dispatch('showNotification', [
+                'type'    => 'error',
+                'title'   => 'Gagal',
+                'message' => 'Pesanan gagal dibuat: ' . $e->getMessage(),
+                'options' => ['duration' => 5000],
+            ]);
+        }
+    }
+
+    /**
+     * Cek status pesanan kebutuhan santri (dipanggil saat scan RFID, di-cache 1 jam)
+     */
+    public function checkKebutuhanStatus(): void
+    {
+        if (!$this->selectedSantri) {
+            return;
+        }
+
+        try {
+            $santriId = $this->selectedSantri['santri_id'] ?? $this->selectedSantri['id'] ?? null;
+            if (!$santriId) return;
+
+            // Sinkronisasi status dari SIMPELS ke DB lokal
+            $statusResult = $this->getSimpelsApi()->checkKebutuhanOrderStatus($santriId);
+
+            if ($statusResult['success'] && !empty($statusResult['orders'])) {
+                foreach ($statusResult['orders'] as $simpelsOrder) {
+                    $localOrder = KebutuhanOrder::where('order_number', $simpelsOrder['epos_order_id'])->first();
+                    if ($localOrder && $localOrder->status === 'pending_confirmation') {
+                        $newStatus = match($simpelsOrder['status']) {
+                            'confirmed' => 'confirmed',
+                            'rejected'  => 'rejected',
+                            'expired'   => 'expired',
+                            default     => null,
+                        };
+                        if ($newStatus) {
+                            $localOrder->update([
+                                'status'           => $newStatus,
+                                'confirmed_at'     => $simpelsOrder['confirmed_at'] ?? null,
+                                'confirmed_by'     => $simpelsOrder['confirmed_by'] ?? null,
+                                'rejection_reason' => $simpelsOrder['rejection_reason'] ?? null,
+                            ]);
+                        }
+                    }
+                }
+            }
+
+            // Ambil pending orders dari DB lokal untuk ditampilkan
+            $this->kebutuhanOrders = KebutuhanOrder::forSantri($santriId)
+                ->whereIn('status', ['pending_confirmation', 'confirmed'])
+                ->latest()
+                ->take(5)
+                ->get()
+                ->toArray();
+
+            $this->kebutuhanStatusChecked = true;
+
+            // Notif jika ada order yang baru dikonfirmasi
+            $confirmedOrders = array_filter(
+                $this->kebutuhanOrders,
+                fn($o) => $o['status'] === 'confirmed'
+            );
+            if (!empty($confirmedOrders)) {
+                $count = count($confirmedOrders);
+                $this->dispatch('showNotification', [
+                    'type'    => 'success',
+                    'title'   => '✅ Pesanan Dikonfirmasi',
+                    'message' => "{$count} pesanan kebutuhan sudah dikonfirmasi orang tua. Berikan barang kepada santri.",
+                    'options' => ['duration' => 8000],
+                ]);
+            }
+
+        } catch (\Exception $e) {
+            Log::error('checkKebutuhanStatus failed', ['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Mark pesanan kebutuhan sebagai selesai (barang sudah diserahkan)
+     */
+    public function completeKebutuhanOrder(int $orderId): void
+    {
+        $order = KebutuhanOrder::find($orderId);
+
+        if (!$order || $order->status !== 'confirmed') {
+            return;
+        }
+
+        $order->update(['status' => 'completed']);
+
+        $this->kebutuhanOrders = array_filter(
+            $this->kebutuhanOrders,
+            fn($o) => $o['id'] !== $orderId
+        );
+
+        $this->dispatch('showNotification', [
+            'type'    => 'success',
+            'title'   => 'Selesai',
+            'message' => "Pesanan {$order->order_number} telah diselesaikan.",
+            'options' => ['duration' => 3000],
+        ]);
+    }
+
+    /**
+     * Buka modal untuk melihat pesanan kebutuhan yang sudah dikonfirmasi
+     */
+    public function openConfirmedKebutuhanModal(): void
+    {
+        $this->confirmedKebutuhanOrders = KebutuhanOrder::whereIn('status', ['confirmed', 'pending_confirmation'])
+            ->latest()
+            ->limit(50)
+            ->get()
+            ->map(function($order) {
+                return [
+                    'id'            => $order->id,
+                    'order_number'  => $order->order_number,
+                    'santri_id'     => $order->santri_id,
+                    'santri_name'   => $order->santri_name,
+                    'status'        => $order->status,
+                    'total_amount'  => $order->total_amount,
+                    'items_count'   => count($order->items),
+                    'confirmed_at'  => $order->confirmed_at?->format('d M Y H:i'),
+                    'confirmed_by'  => $order->confirmed_by,
+                ];
+            })
+            ->toArray();
+
+        $this->pendingCompleteCount = collect($this->confirmedKebutuhanOrders)
+            ->filter(fn($o) => $o['status'] === 'confirmed')
+            ->count();
+
+        $this->showConfirmedKebutuhanModal = true;
+    }
+
+    /**
+     * Tutup modal pesanan kebutuhan yang dikonfirmasi
+     */
+    public function closeConfirmedKebutuhanModal(): void
+    {
+        $this->showConfirmedKebutuhanModal = false;
+        $this->confirmedKebutuhanOrders = [];
+    }
+
+    /**
+     * Mark pesanan sebagai selesai dari modal list (barang sudah diserahkan)
+     */
+    public function completeConfirmedOrder(int $orderId): void
+    {
+        $order = KebutuhanOrder::find($orderId);
+
+        if (!$order || $order->status !== 'confirmed') {
+            return;
+        }
+
+        $order->update(['status' => 'completed']);
+
+        // Refresh list
+        $this->openConfirmedKebutuhanModal();
+
+        $this->dispatch('showNotification', [
+            'type'    => 'success',
+            'title'   => '✅ Pesanan Selesai',
+            'message' => "Pesanan {$order->order_number} untuk {$order->santri_name} telah diserahkan.",
+            'options' => ['duration' => 3000],
+        ]);
+    }
+
+    // -----------------------------------------------------------------------
 
     public function render()
     {

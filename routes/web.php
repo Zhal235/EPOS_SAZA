@@ -7,6 +7,7 @@ use App\Livewire\Dashboard;
 use App\Livewire\TransactionHistory;
 use App\Livewire\SalesReport;
 use App\Livewire\TenantManagement;
+use App\Livewire\KebutuhanOrdersManagement;
 use App\Http\Controllers\SimpelsTestController;
 
 // Root route - redirect based on authentication status
@@ -24,6 +25,7 @@ Route::middleware(['auth'])->group(function () {
     // Dashboard and Core Features
     Route::get('dashboard', Dashboard::class)->name('dashboard');
     Route::get('pos', PosTerminal::class)->name('pos');
+    Route::get('kebutuhan-orders', KebutuhanOrdersManagement::class)->name('kebutuhan.orders');
     Route::get('products', Products::class)->name('products');
     Route::get('categories', \App\Livewire\Categories::class)->name('categories');
     Route::get('transactions', TransactionHistory::class)->name('transactions');

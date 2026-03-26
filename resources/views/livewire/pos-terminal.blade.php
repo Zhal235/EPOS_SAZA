@@ -311,6 +311,15 @@
                                 class="w-full py-3 {{ count($cart) > 0 ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800' : 'bg-gray-300 cursor-not-allowed' }} text-white rounded-lg font-medium transition-all text-sm">
                             <i class="fas fa-credit-card mr-2"></i>Proses Pembayaran
                         </button>
+
+                        {{-- Tombol Pesanan Kebutuhan (terpisah, bypass limit harian) --}}
+                        <button wire:click="openKebutuhanModal"
+                                @if(count($cart) == 0) disabled @endif
+                                class="w-full py-3 {{ count($cart) > 0 ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-300 cursor-not-allowed' }} text-white rounded-lg font-medium transition-all text-sm">
+                            <i class="fas fa-box mr-2"></i>Pesanan Kebutuhan
+                            <span class="ml-1 text-xs opacity-75">(Konfirmasi Ortu)</span>
+                        </button>
+
                         <div class="grid grid-cols-2 gap-2">
                             <button wire:click="holdTransaction" 
                                     @if(count($cart) == 0) disabled @endif
@@ -351,10 +360,134 @@
                                 <i class="fas fa-history mr-1"></i>Transaction History
                             </a>
                         </div>
+
+
                     </div>
                 </div>
             </div>
         </div>
+
+        {{-- Modal Pesanan Kebutuhan --}}
+        @if($showKebutuhanModal)
+        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+                <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-4 rounded-t-2xl">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-lg font-bold"><i class="fas fa-box mr-2"></i>Pesanan Kebutuhan</h2>
+                            <p class="text-blue-100 text-sm mt-0.5">Konfirmasi orang tua diperlukan • Di luar limit harian</p>
+                        </div>
+                        <button wire:click="closeKebutuhanModal" class="text-white hover:text-blue-200 text-xl">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="p-6">
+                    {{-- STEP 1: Scan RFID jika santri belum dipilih --}}
+                    @if(!$selectedSantri)
+                    <div class="mb-5">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold">1</span>
+                            <p class="text-sm font-semibold text-gray-700">Scan Kartu RFID Santri</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <input type="text"
+                                   wire:model="kebutuhanRfidInput"
+                                   wire:keydown.enter="scanRfidForKebutuhan"
+                                   placeholder="Tempelkan / ketik nomor RFID..."
+                                   autofocus
+                                   class="flex-1 px-3 py-2.5 border {{ $kebutuhanRfidError ? 'border-red-400 bg-red-50' : 'border-gray-300' }} rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                            <button wire:click="scanRfidForKebutuhan"
+                                    wire:loading.attr="disabled" wire:target="scanRfidForKebutuhan"
+                                    class="px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                                @if($kebutuhanRfidLoading)
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                @else
+                                    <i class="fas fa-search mr-1"></i>Cari
+                                @endif
+                            </button>
+                        </div>
+                        @if($kebutuhanRfidError)
+                        <p class="mt-2 text-xs text-red-600"><i class="fas fa-exclamation-circle mr-1"></i>{{ $kebutuhanRfidError }}</p>
+                        @endif
+                        <p class="mt-2 text-xs text-gray-400"><i class="fas fa-info-circle mr-1"></i>Tekan Enter atau klik Cari setelah scan kartu RFID</p>
+                    </div>
+                    <div class="border-t border-dashed border-gray-200 pt-4 opacity-40 pointer-events-none select-none">
+                        <p class="text-xs text-center text-gray-500 mb-3">— Langkah berikutnya setelah RFID berhasil —</p>
+                    @else
+                    <div>
+                    @endif
+
+                    {{-- Info Santri --}}
+                    @if($selectedSantri)
+                    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-semibold text-blue-800">
+                                    <i class="fas fa-user-graduate mr-1"></i>{{ $selectedSantri['nama_santri'] ?? $selectedSantri['name'] ?? '-' }}
+                                </p>
+                                <p class="text-xs text-blue-600 mt-0.5">Saldo: Rp {{ number_format($santriBalance, 0, ',', '.') }}</p>
+                            </div>
+                            <span class="flex items-center gap-1 text-xs text-blue-700 font-medium bg-blue-100 px-2 py-1 rounded-full">
+                                <i class="fas fa-check-circle"></i> Teridentifikasi
+                            </span>
+                        </div>
+                    </div>
+                    @endif
+
+                    {{-- Daftar Item --}}
+                    <div class="mb-4">
+                        <p class="text-sm font-semibold text-gray-700 mb-2">Item yang Dipesan:</p>
+                        <div class="space-y-2">
+                            @foreach($cart as $item)
+                            <div class="flex justify-between text-sm py-2 border-b border-gray-100">
+                                <div>
+                                    <span class="font-medium">{{ $item['name'] }}</span>
+                                    <span class="text-gray-500 ml-1">×{{ $item['quantity'] }}</span>
+                                    @if(isset($item['unit_name'])) <span class="text-xs text-gray-400">({{ $item['unit_name'] }})</span> @endif
+                                </div>
+                                <span class="font-medium text-gray-800">Rp {{ number_format($item['price'] * $item['quantity'], 0, ',', '.') }}</span>
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    {{-- Total --}}
+                    <div class="bg-gray-50 rounded-xl p-4 mb-4">
+                        <div class="flex justify-between text-base font-bold">
+                            <span>Total Kebutuhan</span>
+                            <span class="text-blue-700">Rp {{ number_format($this->total, 0, ',', '.') }}</span>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            Pembayaran dipotong dari saldo santri setelah orang tua konfirmasi. Berlaku 1×24 jam.
+                        </p>
+                    </div>
+
+                    {{-- Tombol Aksi --}}
+                    <div class="flex gap-3">
+                        <button wire:click="closeKebutuhanModal"
+                                class="flex-1 py-3 border border-gray-300 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50">
+                            Batal
+                        </button>
+                        <button wire:click="submitKebutuhanOrder" wire:loading.attr="disabled"
+                                @if(!$selectedSantri) disabled @endif
+                                class="flex-1 py-3 {{ $selectedSantri ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-300 cursor-not-allowed' }} text-white rounded-xl text-sm font-bold transition-colors">
+                            <span wire:loading.remove wire:target="submitKebutuhanOrder">
+                                <i class="fas fa-paper-plane mr-1"></i>Kirim ke Orang Tua
+                            </span>
+                            <span wire:loading wire:target="submitKebutuhanOrder">
+                                <i class="fas fa-spinner fa-spin mr-1"></i>Mengirim...
+                            </span>
+                        </button>
+                    </div>
+
+                    </div>{{-- end wrapper div untuk step 2 --}}
+                </div>
+            </div>
+        </div>
+        @endif
 
         <!-- RFID Modal -->
         @if($showRfidModal)
