@@ -15,90 +15,81 @@ return new class extends Migration
     public function up(): void
     {
         // Transaction indexes for faster queries
-        Schema::table('transactions', function (Blueprint $table) {
-            // For date-based filtering (used in dashboard & reports)
-            if (!$this->indexExists('transactions', 'transactions_created_at_index')) {
-                $table->index('created_at');
-            }
-            
-            // For status-based queries with date (dashboard, statistics)
-            if (!$this->indexExists('transactions', 'transactions_status_created_at_index')) {
-                $table->index(['status', 'created_at']);
-            }
-            
-            // For payment method statistics
-            if (!$this->indexExists('transactions', 'transactions_payment_method_status_index')) {
-                $table->index(['payment_method', 'status']);
-            }
-            
-            // For cashier performance queries
-            if (!$this->indexExists('transactions', 'transactions_user_id_index')) {
-                $table->index('user_id');
-            }
-        });
+        try {
+            Schema::table('transactions', function (Blueprint $table) {
+                // For date-based filtering (used in dashboard & reports)
+                $table->index('created_at', 'transactions_created_at_index');
+                // For status-based queries with date (dashboard, statistics)
+                $table->index(['status', 'created_at'], 'transactions_status_created_at_index');
+                // For payment method statistics
+                $table->index(['payment_method', 'status'], 'transactions_payment_method_status_index');
+                // For cashier performance queries
+                $table->index('user_id', 'transactions_user_id_index');
+            });
+        } catch (\Exception $e) {
+            // Index might already exist, skip
+        }
 
         // Transaction items indexes
-        Schema::table('transaction_items', function (Blueprint $table) {
-            // For date-based reporting
-            if (!$this->indexExists('transaction_items', 'transaction_items_created_at_index')) {
-                $table->index('created_at');
-            }
-            
-            // For product sales report
-            if (!$this->indexExists('transaction_items', 'transaction_items_product_id_created_at_index')) {
-                $table->index(['product_id', 'created_at']);
-            }
-        });
+        try {
+            Schema::table('transaction_items', function (Blueprint $table) {
+                // For date-based reporting
+                $table->index('created_at', 'transaction_items_created_at_index');
+                // For product sales report
+                $table->index(['product_id', 'created_at'], 'transaction_items_product_id_created_at_index');
+            });
+        } catch (\Exception $e) {
+            // Index might already exist, skip
+        }
 
         // Products indexes for faster POS loading
-        Schema::table('products', function (Blueprint $table) {
-            // For outlet mode filtering (store/foodcourt)
-            if (!$this->indexExists('products', 'products_outlet_type_is_active_index')) {
-                $table->index(['outlet_type', 'is_active']);
-            }
-            
-            // For stock-aware product loading
-            if (!$this->indexExists('products', 'products_outlet_type_is_active_stock_quantity_index')) {
-                $table->index(['outlet_type', 'is_active', 'stock_quantity']);
-            }
-            
-            // For product search by name
-            if (!$this->indexExists('products', 'products_name_index')) {
-                $table->index('name');
-            }
-        });
+        try {
+            Schema::table('products', function (Blueprint $table) {
+                // For outlet mode filtering (store/foodcourt)
+                $table->index(['outlet_type', 'is_active'], 'products_outlet_type_is_active_index');
+                // For stock-aware product loading
+                $table->index(['outlet_type', 'is_active', 'stock_quantity'], 'products_outlet_is_active_stock_index');
+                // For product search by name
+                $table->index('name', 'products_name_index');
+            });
+        } catch (\Exception $e) {
+            // Index might already exist, skip
+        }
 
         // Categories indexes
-        Schema::table('categories', function (Blueprint $table) {
-            // For sidebar loading with ordering
-            if (!$this->indexExists('categories', 'categories_is_active_display_order_index')) {
-                $table->index(['is_active', 'display_order']);
-            }
-        });
+        try {
+            Schema::table('categories', function (Blueprint $table) {
+                // For sidebar loading with ordering
+                $table->index(['is_active', 'display_order'], 'categories_is_active_display_order_index');
+            });
+        } catch (\Exception $e) {
+            // Index might already exist, skip
+        }
 
         // Tenants indexes (if table exists)
         if (Schema::hasTable('tenants')) {
-            Schema::table('tenants', function (Blueprint $table) {
-                // For foodcourt sidebar loading
-                if (!$this->indexExists('tenants', 'tenants_is_active_display_order_index')) {
-                    $table->index(['is_active', 'display_order']);
-                }
-            });
+            try {
+                Schema::table('tenants', function (Blueprint $table) {
+                    // For foodcourt sidebar loading
+                    $table->index(['is_active', 'display_order'], 'tenants_is_active_display_order_index');
+                });
+            } catch (\Exception $e) {
+                // Index might already exist, skip
+            }
         }
 
         // Financial transactions indexes
         if (Schema::hasTable('financial_transactions')) {
-            Schema::table('financial_transactions', function (Blueprint $table) {
-                // For financial dashboard queries
-                if (!$this->indexExists('financial_transactions', 'financial_transactions_status_created_at_index')) {
-                    $table->index(['status', 'created_at']);
-                }
-                
-                // For type-based filtering
-                if (!$this->indexExists('financial_transactions', 'financial_transactions_type_status_index')) {
-                    $table->index(['type', 'status']);
-                }
-            });
+            try {
+                Schema::table('financial_transactions', function (Blueprint $table) {
+                    // For financial dashboard queries
+                    $table->index(['status', 'created_at'], 'financial_transactions_status_created_at_index');
+                    // For type-based filtering
+                    $table->index(['type', 'status'], 'financial_transactions_type_status_index');
+                });
+            } catch (\Exception $e) {
+                // Index might already exist, skip
+            }
         }
     }
 
@@ -107,55 +98,63 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('transactions', function (Blueprint $table) {
-            $table->dropIndex(['created_at']);
-            $table->dropIndex(['status', 'created_at']);
-            $table->dropIndex(['payment_method', 'status']);
-            $table->dropIndex(['user_id']);
-        });
+        try {
+            Schema::table('transactions', function (Blueprint $table) {
+                $table->dropIndex('transactions_created_at_index');
+                $table->dropIndex('transactions_status_created_at_index');
+                $table->dropIndex('transactions_payment_method_status_index');
+                $table->dropIndex('transactions_user_id_index');
+            });
+        } catch (\Exception $e) {
+            // Index might not exist, skip
+        }
 
-        Schema::table('transaction_items', function (Blueprint $table) {
-            $table->dropIndex(['created_at']);
-            $table->dropIndex(['product_id', 'created_at']);
-        });
+        try {
+            Schema::table('transaction_items', function (Blueprint $table) {
+                $table->dropIndex('transaction_items_created_at_index');
+                $table->dropIndex('transaction_items_product_id_created_at_index');
+            });
+        } catch (\Exception $e) {
+            // Index might not exist, skip
+        }
 
-        Schema::table('products', function (Blueprint $table) {
-            $table->dropIndex(['outlet_type', 'is_active']);
-            $table->dropIndex(['outlet_type', 'is_active', 'stock_quantity']);
-            $table->dropIndex(['name']);
-        });
+        try {
+            Schema::table('products', function (Blueprint $table) {
+                $table->dropIndex('products_outlet_type_is_active_index');
+                $table->dropIndex('products_outlet_is_active_stock_index');
+                $table->dropIndex('products_name_index');
+            });
+        } catch (\Exception $e) {
+            // Index might not exist, skip
+        }
 
-        Schema::table('categories', function (Blueprint $table) {
-            $table->dropIndex(['is_active', 'display_order']);
-        });
+        try {
+            Schema::table('categories', function (Blueprint $table) {
+                $table->dropIndex('categories_is_active_display_order_index');
+            });
+        } catch (\Exception $e) {
+            // Index might not exist, skip
+        }
 
         if (Schema::hasTable('tenants')) {
-            Schema::table('tenants', function (Blueprint $table) {
-                $table->dropIndex(['is_active', 'display_order']);
-            });
+            try {
+                Schema::table('tenants', function (Blueprint $table) {
+                    $table->dropIndex('tenants_is_active_display_order_index');
+                });
+            } catch (\Exception $e) {
+                // Index might not exist, skip
+            }
         }
 
         if (Schema::hasTable('financial_transactions')) {
-            Schema::table('financial_transactions', function (Blueprint $table) {
-                $table->dropIndex(['status', 'created_at']);
-                $table->dropIndex(['type', 'status']);
-            });
+            try {
+                Schema::table('financial_transactions', function (Blueprint $table) {
+                    $table->dropIndex('financial_transactions_status_created_at_index');
+                    $table->dropIndex('financial_transactions_type_status_index');
+                });
+            } catch (\Exception $e) {
+                // Index might not exist, skip
+            }
         }
-    }
-
-    /**
-     * Check if index already exists
-     * 
-     * @param string $table
-     * @param string $index
-     * @return bool
-     */
-    protected function indexExists(string $table, string $index): bool
-    {
-        $connection = Schema::getConnection();
-        $indexes = $connection->getDoctrineSchemaManager()
-            ->listTableIndexes($table);
-        
-        return array_key_exists($index, $indexes);
     }
 };
