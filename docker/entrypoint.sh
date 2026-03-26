@@ -24,6 +24,10 @@ chown -R www-data:www-data storage bootstrap/cache
 chmod -R 775 storage bootstrap/cache
 php artisan storage:link --force 2>/dev/null || true
 
+# Publish Livewire assets
+echo "Publishing Livewire assets..."
+php artisan livewire:publish --force 2>/dev/null || true
+
 # Run Laravel setup
 echo "🚀 Optimizing Laravel application..."
 
