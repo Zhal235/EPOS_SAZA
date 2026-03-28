@@ -115,7 +115,7 @@ class FinancialTransaction extends Model
     // Scopes
     public function scopeRfidPayments($query)
     {
-        return $query->where('type', self::TYPE_RFID_PAYMENT);
+        return $query->whereIn('type', [self::TYPE_RFID_PAYMENT, self::TYPE_KEBUTUHAN_ORDER]);
     }
 
     public function scopeRefunds($query)
