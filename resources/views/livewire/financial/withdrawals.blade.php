@@ -98,6 +98,12 @@
                             <dd class="font-medium text-gray-900">{{ $withdrawal->withdrawn_at->format('d M Y, H:i') }}</dd>
                         </div>
                         @endif
+                        @if($withdrawal->simpels_updated_at)
+                        <div class="flex justify-between text-sm">
+                            <dt class="text-gray-600">Terakhir Sync:</dt>
+                            <dd class="font-medium text-gray-900">{{ $withdrawal->simpels_updated_at->format('d M Y, H:i') }}</dd>
+                        </div>
+                        @endif
                     </dl>
                 </div>
             </div>
@@ -117,32 +123,51 @@
                     <i class="fas fa-info-circle"></i>
                     <span>Approval dilakukan di sistem SIMPels</span>
                 </div>
-                @if($withdrawal->status === 'pending')
-                    <span class="inline-flex items-center px-4 py-2 bg-yellow-100 text-yellow-800 rounded-lg text-sm font-medium">
-                        <i class="fas fa-clock mr-2"></i>
-                        Menunggu Approval SIMPels
-                    </span>
-                @elseif($withdrawal->status === 'approved')
-                    <span class="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-lg text-sm font-medium">
-                        <i class="fas fa-check mr-2"></i>
-                        Disetujui - Menunggu Pembayaran
-                    </span>
-                @elseif($withdrawal->status === 'completed')
-                    <span class="inline-flex items-center px-4 py-2 bg-green-100 text-green-800 rounded-lg text-sm font-medium">
-                        <i class="fas fa-check-circle mr-2"></i>
-                        Selesai
-                    </span>
-                @elseif($withdrawal->status === 'rejected')
-                    <span class="inline-flex items-center px-4 py-2 bg-red-100 text-red-800 rounded-lg text-sm font-medium">
-                        <i class="fas fa-times-circle mr-2"></i>
-                        Ditolak
-                    </span>
-                @else
-                    <span class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-800 rounded-lg text-sm font-medium">
-                        <i class="fas fa-ban mr-2"></i>
-                        {{ $withdrawal->status_label }}
-                    </span>
-                @endif
+                <div class="flex items-center gap-3">
+                    <!-- Status Badge -->
+                    @if($withdrawal->status === 'pending')
+                        <span class="inline-flex items-center px-4 py-2 bg-yellow-100 text-yellow-800 rounded-lg text-sm font-medium">
+                            <i class="fas fa-clock mr-2"></i>
+                            Menunggu Approval SIMPels
+                        </span>
+                    @elseif($withdrawal->status === 'approved')
+                        <span class="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-lg text-sm font-medium">
+                            <i class="fas fa-check mr-2"></i>
+                            Disetujui - Menunggu Pembayaran
+                        </span>
+                    @elseif($withdrawal->status === 'completed')
+                        <span class="inline-flex items-center px-4 py-2 bg-green-100 text-green-800 rounded-lg text-sm font-medium">
+                            <i class="fas fa-check-circle mr-2"></i>
+                            Selesai
+                        </span>
+                    @elseif($withdrawal->status === 'rejected')
+                        <span class="inline-flex items-center px-4 py-2 bg-red-100 text-red-800 rounded-lg text-sm font-medium">
+                            <i class="fas fa-times-circle mr-2"></i>
+                            Ditolak
+                        </span>
+                    @else
+                        <span class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-800 rounded-lg text-sm font-medium">
+                            <i class="fas fa-ban mr-2"></i>
+                            {{ $withdrawal->status_label }}
+                        </span>
+                    @endif
+                    
+                    <!-- Refresh Button for non-completed withdrawals -->
+                    @if(!in_array($withdrawal->simpels_status, ['completed', 'rejected']))
+                        <button wire:click="refreshWithdrawalStatus({{ $withdrawal->id }})"
+                                wire:loading.attr="disabled"
+                                wire:target="refreshWithdrawalStatus({{ $withdrawal->id }})"
+                                class="inline-flex items-center px-3 py-2 bg-indigo-100 text-indigo-700 rounded-lg text-sm hover:bg-indigo-200 transition-colors disabled:opacity-50"
+                                title="Refresh status dari SIMPELS">
+                            <span wire:loading.remove wire:target="refreshWithdrawalStatus({{ $withdrawal->id }})">
+                                <i class="fas fa-sync-alt mr-1"></i>Refresh
+                            </span>
+                            <span wire:loading wire:target="refreshWithdrawalStatus({{ $withdrawal->id }})">
+                                <i class="fas fa-spinner fa-spin mr-1"></i>Sync...
+                            </span>
+                        </button>
+                    @endif
+                </div>
             </div>
         </div>
     </div>

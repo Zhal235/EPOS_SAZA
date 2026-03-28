@@ -231,21 +231,33 @@ class FinancialService
         $query = FinancialTransaction::rfidPayments()
             ->completed()
             ->where(function($q) {
-                // Transaksi yang belum masuk withdrawal manapun
+                // Transactions with no withdrawal linked
                 $q->whereNull('withdrawal_id')
-                  // ATAU transaksi dalam withdrawal yang pending/rejected (bisa ditarik lagi)
+                  // OR transactions in CANCELLED withdrawals → available again
                   ->orWhereHas('withdrawal', function($subQ) {
-                      $subQ->whereIn('simpels_status', ['pending', 'rejected'])
-                           ->orWhereNull('simpels_status');
+                      $subQ->where('status', 'cancelled');
+                  })
+                  // OR transactions in REJECTED (non-cancelled) withdrawals → available again
+                  ->orWhereHas('withdrawal', function($subQ) {
+                      $subQ->where('simpels_status', 'rejected')
+                           ->where('status', '!=', 'cancelled');
                   });
             });
 
         if ($startDate && $endDate) {
             $query->whereBetween('created_at', [$startDate->startOfDay(), $endDate->endOfDay()]);
         }
-        // Jika startDate & endDate null, ambil semua transaksi yang available
 
-        return $query->orderBy('created_at')->get();
+        $results = $query->orderBy('created_at')->get();
+
+        \Log::info('getAvailableForWithdrawal results', [
+            'startDate' => $startDate ? $startDate->format('Y-m-d') : null,
+            'endDate' => $endDate ? $endDate->format('Y-m-d') : null,
+            'total_transactions' => $results->count(),
+            'total_amount' => $results->sum('amount'),
+        ]);
+
+        return $results;
     }
 
     /**
@@ -414,6 +426,9 @@ class FinancialService
                     throw new \Exception('Gagal mengirim request ke SIMPels: ' . ($simpelsResponse['message'] ?? 'Unknown error'));
                 }
 
+                // Set simpels_status to 'pending' after successfully sent to SIMPELS
+                $withdrawal->update(['simpels_status' => 'pending']);
+
                 Log::info('Withdrawal request sent to SIMPels', [
                     'withdrawal_number' => $withdrawal->withdrawal_number,
                     'simpels_response' => $simpelsResponse
@@ -425,6 +440,7 @@ class FinancialService
                     'withdrawal_number' => $withdrawal->withdrawal_number
                 ]);
                 // Continue despite API error - local record already created
+                // simpels_status remains NULL until manually synced
             }
 
             DB::commit();

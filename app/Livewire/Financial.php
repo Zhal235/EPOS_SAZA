@@ -12,6 +12,7 @@ use App\Models\Transaction;
 use App\Models\TransactionItem;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class Financial extends Component
 {
@@ -181,35 +182,31 @@ class Financial extends Component
 
         $totalRfidPayments = (clone $query)->whereIn('type', $rfidTypes)->completed()->sum('amount');
 
-        $withdrawnTransactions = DB::table('financial_transactions')
-            ->join('simpels_withdrawals', 'financial_transactions.withdrawal_id', '=', 'simpels_withdrawals.id')
-            ->whereIn('financial_transactions.type', $rfidTypes)
-            ->where('financial_transactions.status', FinancialTransaction::STATUS_COMPLETED)
-            ->whereIn('simpels_withdrawals.simpels_status', ['approved', 'completed'])
-            ->whereBetween('financial_transactions.created_at', [$from, $to])
-            ->whereNull('financial_transactions.deleted_at')
-            ->sum('financial_transactions.amount');
+        // Total RFID income in date range
+        $totalRfidInRange = (clone $query)->whereIn('type', $rfidTypes)->completed()->sum('amount');
 
-        $pendingOrRejectedTransactions = DB::table('financial_transactions')
-            ->join('simpels_withdrawals', 'financial_transactions.withdrawal_id', '=', 'simpels_withdrawals.id')
-            ->whereIn('financial_transactions.type', $rfidTypes)
-            ->where('financial_transactions.status', FinancialTransaction::STATUS_COMPLETED)
-            ->where(function($q) {
-                $q->where('simpels_withdrawals.simpels_status', 'pending')
-                  ->orWhere('simpels_withdrawals.simpels_status', 'rejected')
-                  ->orWhereNull('simpels_withdrawals.simpels_status');
-            })
-            ->whereBetween('financial_transactions.created_at', [$from, $to])
-            ->whereNull('financial_transactions.deleted_at')
-            ->sum('financial_transactions.amount');
-
-        $notInWithdrawal = FinancialTransaction::whereIn('type', $rfidTypes)
+        // Find all withdrawal IDs linked to transactions in this date range
+        $linkedWithdrawalIds = FinancialTransaction::whereIn('type', $rfidTypes)
             ->completed()
-            ->whereNull('withdrawal_id')
             ->whereBetween('created_at', [$from, $to])
-            ->sum('amount');
+            ->whereNotNull('withdrawal_id')
+            ->pluck('withdrawal_id');
 
-        $availableForWithdrawal = $notInWithdrawal + $pendingOrRejectedTransactions;
+        // Amount already withdrawn (approved/completed) - uses withdrawal total_amount not transaction amount
+        $withdrawnTransactions = SimpelsWithdrawal::whereIn('id', $linkedWithdrawalIds)
+            ->whereIn('simpels_status', ['approved', 'completed'])
+            ->where('status', '!=', 'cancelled')
+            ->sum('total_amount');
+
+        // Amount in pending withdrawals (being processed) - also reduces available
+        $pendingWithdrawals = SimpelsWithdrawal::whereIn('id', $linkedWithdrawalIds)
+            ->where(function($q) {
+                $q->where('simpels_status', 'pending')->orWhereNull('simpels_status');
+            })
+            ->where('status', '!=', 'cancelled')
+            ->sum('total_amount');
+
+        $availableForWithdrawal = max(0, $totalRfidInRange - $withdrawnTransactions - $pendingWithdrawals);
 
         return [
             // POS sales breakdown
@@ -328,9 +325,21 @@ class Financial extends Component
                     $this->dispatch('showNotification', [
                         'type' => 'success',
                         'title' => 'Status Diperbarui',
-                        'message' => "Status withdrawal {$withdrawal->withdrawal_number} diperbarui: {$simpelsStatus}"
+                        'message' => "Status withdrawal {$withdrawal->withdrawal_number} diperbarui dari SIMPELS: {$simpelsStatus}"
                     ]);
+                } else {
+                    $this->dispatch('showNotification', [
+                        'type' => 'info',
+                        'title' => 'Status Sudah Terbaru',
+                        'message' => "Status withdrawal {$withdrawal->withdrawal_number} sudah up-to-date"
+                    ]);    
                 }
+            } else {
+                $this->dispatch('showNotification', [
+                    'type' => 'warning',
+                    'title' => 'Tidak Bisa Sync',
+                    'message' => 'Gagal mendapatkan status terbaru dari SIMPELS'
+                ]);
             }
         } catch (\Exception $e) {
             Log::error('Failed to refresh withdrawal status', [
@@ -340,8 +349,59 @@ class Financial extends Component
             
             $this->dispatch('showNotification', [
                 'type' => 'error',
-                'title' => 'Gagal',
+                'title' => 'Error',
                 'message' => 'Gagal memperbarui status: ' . $e->getMessage()
+            ]);
+        }
+    }
+    
+    public function refreshAllWithdrawalStatus()
+    {
+        try {
+            $pendingWithdrawals = SimpelsWithdrawal::where(function($query) {
+                $query->whereNull('simpels_status')
+                      ->orWhereNotIn('simpels_status', ['completed', 'rejected']);
+            })->get();
+            
+            $updated = 0;
+            $simpelsApi = app(\App\Services\SimpelsApiService::class);
+            
+            foreach ($pendingWithdrawals as $withdrawal) {
+                try {
+                    $response = $simpelsApi->getWithdrawalStatus($withdrawal->withdrawal_number);
+                    
+                    if ($response && isset($response['success']) && $response['success']) {
+                        $simpelsStatus = $response['data']['simpels_status'] ?? $response['data']['status'] ?? null;
+                        
+                        if ($simpelsStatus && $simpelsStatus !== $withdrawal->simpels_status) {
+                            $withdrawal->update([
+                                'simpels_status' => $simpelsStatus,
+                                'simpels_updated_at' => now(),
+                                'simpels_notes' => $response['data']['notes'] ?? null
+                            ]);
+                            $updated++;
+                        }
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Failed to sync withdrawal: ' . $withdrawal->withdrawal_number, [
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+            
+            $this->forceRefresh();
+            
+            $this->dispatch('showNotification', [
+                'type' => 'success', 
+                'title' => 'Sync Selesai',
+                'message' => "Berhasil sync $updated dari {$pendingWithdrawals->count()} withdrawal dengan SIMPELS"
+            ]);
+            
+        } catch (\Exception $e) {
+            $this->dispatch('showNotification', [
+                'type' => 'error',
+                'title' => 'Error',
+                'message' => 'Gagal sync withdrawal: ' . $e->getMessage()
             ]);
         }
     }
@@ -379,6 +439,13 @@ class Financial extends Component
 
     public function openWithdrawalModal()
     {
+        // Reset form data when opening
+        $this->reset(['withdrawalAmount', 'withdrawalMethod', 'bankName', 'accountNumber', 'accountName', 'withdrawalNotes']);
+        $this->withdrawalMethod = 'cash'; // Set default
+        
+        // Clear any validation errors
+        $this->resetValidation();
+        
         $this->showWithdrawalModal = true;
     }
 
@@ -386,6 +453,28 @@ class Financial extends Component
     {
         $this->showWithdrawalModal = false;
         $this->reset(['withdrawalAmount', 'withdrawalMethod', 'bankName', 'accountNumber', 'accountName', 'withdrawalNotes']);
+        $this->resetValidation();
+    }
+    
+    public function updatedWithdrawalAmount()
+    {
+        if ($this->withdrawalAmount) {
+            // Simple real-time validation
+            try {
+                $availableBalance = $this->getDashboardSummary()['pending_withdrawal'];
+                
+                $this->validateOnly('withdrawalAmount', [
+                    'withdrawalAmount' => 'required|numeric|min:1000|max:' . $availableBalance,
+                ], [
+                    'withdrawalAmount.required' => 'Nominal penarikan harus diisi',
+                    'withdrawalAmount.numeric' => 'Jumlah harus berupa angka',
+                    'withdrawalAmount.min' => 'Jumlah minimal Rp 1.000',
+                    'withdrawalAmount.max' => 'Jumlah melebihi saldo tersedia (Rp ' . number_format($availableBalance, 0, ',', '.') . ')',
+                ]);
+            } catch (\Exception $e) {
+                // Silent fail for real-time validation
+            }
+        }
     }
 
     public function createWithdrawal()
@@ -415,7 +504,7 @@ class Financial extends Component
             return;
         }
 
-        // Get available balance
+        // Get available balance (keep original calculation)
         try {
             $availableBalance = $this->getDashboardSummary()['pending_withdrawal'];
         } catch (\Exception $e) {
@@ -428,14 +517,15 @@ class Financial extends Component
         }
         
         $this->validate([
-            'withdrawalAmount' => 'required|numeric|min:1|max:' . $availableBalance,
+            'withdrawalAmount' => 'required|numeric|min:1000|max:' . $availableBalance,
             'withdrawalMethod' => 'required|in:bank_transfer,cash',
             'bankName' => 'required_if:withdrawalMethod,bank_transfer',
             'accountNumber' => 'required_if:withdrawalMethod,bank_transfer',
             'accountName' => 'required_if:withdrawalMethod,bank_transfer',
         ], [
+            'withdrawalAmount.required' => 'Nominal penarikan harus diisi',
             'withdrawalAmount.numeric' => 'Jumlah harus berupa angka',
-            'withdrawalAmount.min' => 'Jumlah minimal Rp 1',
+            'withdrawalAmount.min' => 'Jumlah minimal Rp 1.000',
             'withdrawalAmount.max' => 'Jumlah melebihi saldo tersedia (Rp ' . number_format($availableBalance, 0, ',', '.') . ')',
             'withdrawalMethod.required' => 'Metode penarikan harus dipilih',
             'bankName.required_if' => 'Nama bank harus diisi',
@@ -470,6 +560,10 @@ class Financial extends Component
             ]);
 
             $this->closeWithdrawalModal();
+            
+            // Refresh the page data to show updated balance
+            $this->forceRefresh();
+            
             $this->dispatch('showNotification', [
                 'type' => 'success',
                 'title' => 'Berhasil',

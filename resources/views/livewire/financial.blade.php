@@ -144,8 +144,8 @@
             </div>
 
             @if($activeTab === 'withdrawals')
-            @if($this->hasPendingWithdrawals)
-                <div class="flex items-center gap-3">
+            <div class="flex items-center gap-3">
+                @if($this->hasPendingWithdrawals)
                     <button disabled
                             class="px-4 py-2 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed opacity-60">
                         <i class="fas fa-lock mr-2"></i>Tarik Saldo RFID
@@ -154,13 +154,26 @@
                         <i class="fas fa-exclamation-triangle mr-2"></i>
                         <span>Ada {{ $this->pendingWithdrawalsCount }} penarikan menunggu approval SIMPELS</span>
                     </div>
-                </div>
-            @else
-                <button wire:click="openWithdrawalModal" 
-                        class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-                    <i class="fas fa-plus mr-2"></i>Tarik Saldo RFID
+                @else
+                    <button wire:click="openWithdrawalModal" 
+                            class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                        <i class="fas fa-plus mr-2"></i>Tarik Saldo RFID
+                    </button>
+                @endif
+                
+                <!-- Sync Status Button -->
+                <button wire:click="refreshAllWithdrawalStatus" 
+                        wire:loading.attr="disabled"
+                        wire:target="refreshAllWithdrawalStatus"
+                        class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50">
+                    <span wire:loading.remove wire:target="refreshAllWithdrawalStatus">
+                        <i class="fas fa-sync-alt mr-2"></i>Sync Status SIMPELS
+                    </span>
+                    <span wire:loading wire:target="refreshAllWithdrawalStatus">
+                        <i class="fas fa-spinner fa-spin mr-2"></i>Syncing...
+                    </span>
                 </button>
-            @endif
+            </div>
             @endif
         </div>
 
@@ -200,6 +213,17 @@
                 <button wire:click="resetFilters" 
                         class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
                     <i class="fas fa-undo mr-2"></i>Reset
+                </button>
+                <button wire:click="forceRefresh" 
+                        wire:loading.attr="disabled"
+                        wire:target="forceRefresh"
+                        class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50">
+                    <span wire:loading.remove wire:target="forceRefresh">
+                        <i class="fas fa-sync-alt mr-2"></i>Refresh
+                    </span>
+                    <span wire:loading wire:target="forceRefresh">
+                        <i class="fas fa-spinner fa-spin mr-2"></i>Refresh...
+                    </span>
                 </button>
             </div>
         </div>
@@ -840,14 +864,28 @@
                                         <span class="text-gray-500 sm:text-lg">Rp</span>
                                     </div>
                                     <input type="number" 
-                                        wire:model="withdrawalAmount"
-                                        min="1"
+                                        wire:model.live="withdrawalAmount"
+                                        wire:blur="$refresh"
+                                        min="1000"
                                         max="{{ $summary['pending_withdrawal'] }}"
-                                        class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 pr-12 sm:text-lg border-gray-300 rounded-md py-2"
-                                        placeholder="0">
+                                        step="1000"
+                                        class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 pr-12 sm:text-lg border-gray-300 rounded-md py-2 @error('withdrawalAmount') border-red-300 @enderror"
+                                        placeholder="1000">
                                 </div>
-                                <p class="text-xs text-blue-600 mt-1">Masukkan nominal sesuai kebutuhan. Maksimal {{ $summary['pending_withdrawal_formatted'] }}</p>
-                                @error('withdrawalAmount') <span class="text-red-500 text-xs mt-1 block">{{ $message }}</span> @enderror
+                                <p class="text-xs text-blue-600 mt-1">Masukkan nominal sesuai kebutuhan. Minimal Rp 1.000, Maksimal {{ $summary['pending_withdrawal_formatted'] }}</p>
+                                @error('withdrawalAmount') 
+                                    <div class="mt-1 text-xs text-red-600 flex items-center">
+                                        <i class="fas fa-exclamation-triangle mr-1"></i>
+                                        <span>{{ $message }}</span>
+                                    </div>
+                                @enderror
+                                
+                                @if($withdrawalAmount && $withdrawalAmount > ($summary['pending_withdrawal'] ?? 0))
+                                    <div class="mt-1 text-xs text-red-600 flex items-center">
+                                        <i class="fas fa-exclamation-triangle mr-1"></i>
+                                        <span>Jumlah melebihi saldo tersedia</span>
+                                    </div>
+                                @endif
                              </div>
                         </div>
                     </div>
@@ -907,7 +945,8 @@
                             wire:click="createWithdrawal"
                             wire:loading.attr="disabled"
                             wire:target="createWithdrawal"
-                            class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                            @if($errors->has('withdrawalAmount') || empty($withdrawalAmount)) disabled @endif
+                            class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400">
                         <span wire:loading.remove wire:target="createWithdrawal">
                             <i class="fas fa-hand-holding-usd mr-2"></i>Buat Penarikan
                         </span>
