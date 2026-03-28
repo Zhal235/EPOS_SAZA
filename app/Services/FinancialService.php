@@ -237,7 +237,12 @@ class FinancialService
                   ->orWhereHas('withdrawal', function($subQ) {
                       $subQ->where('status', 'cancelled');
                   })
-                  // OR transactions in REJECTED (non-cancelled) withdrawals → available again
+                  // OR transactions in withdrawals where SIMPELS hasn't received it (NULL = failed to send)
+                  ->orWhereHas('withdrawal', function($subQ) {
+                      $subQ->whereNull('simpels_status')
+                           ->where('status', '!=', 'cancelled');
+                  })
+                  // OR transactions in REJECTED withdrawals → available again
                   ->orWhereHas('withdrawal', function($subQ) {
                       $subQ->where('simpels_status', 'rejected')
                            ->where('status', '!=', 'cancelled');

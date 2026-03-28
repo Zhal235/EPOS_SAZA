@@ -85,10 +85,7 @@ class Financial extends Component
     public function getPendingWithdrawalsCountProperty()
     {
         try {
-            return SimpelsWithdrawal::where(function($query) {
-                    $query->whereNull('simpels_status')
-                          ->orWhere('simpels_status', 'pending');
-                })
+            return SimpelsWithdrawal::where('simpels_status', 'pending')
                 ->where('status', '!=', 'cancelled')
                 ->count();
         } catch (\Exception $e) {
@@ -207,21 +204,24 @@ class Financial extends Component
             ->whereNotNull('withdrawal_id')
             ->pluck('withdrawal_id');
 
-        // Amount already withdrawn (approved/completed) - uses withdrawal total_amount not transaction amount
-        $withdrawnTransactions = SimpelsWithdrawal::whereIn('id', $linkedWithdrawalIds)
-            ->whereIn('simpels_status', ['approved', 'completed'])
-            ->where('status', '!=', 'cancelled')
-            ->sum('total_amount');
+        if ($linkedWithdrawalIds->isEmpty()) {
+            $withdrawnTransactions = 0;
+            $pendingWithdrawalAmount = 0;
+        } else {
+            // Amount already withdrawn (approved/completed)
+            $withdrawnTransactions = SimpelsWithdrawal::whereIn('id', $linkedWithdrawalIds)
+                ->whereIn('simpels_status', ['approved', 'completed'])
+                ->where('status', '!=', 'cancelled')
+                ->sum('total_amount');
 
-        // Amount in pending withdrawals (being processed) - also reduces available
-        $pendingWithdrawals = SimpelsWithdrawal::whereIn('id', $linkedWithdrawalIds)
-            ->where(function($q) {
-                $q->where('simpels_status', 'pending')->orWhereNull('simpels_status');
-            })
-            ->where('status', '!=', 'cancelled')
-            ->sum('total_amount');
+            // Amount in pending (sent to SIMPELS, waiting approval)
+            $pendingWithdrawalAmount = SimpelsWithdrawal::whereIn('id', $linkedWithdrawalIds)
+                ->where('simpels_status', 'pending')
+                ->where('status', '!=', 'cancelled')
+                ->sum('total_amount');
+        }
 
-        $availableForWithdrawal = max(0, $totalRfidInRange - $withdrawnTransactions - $pendingWithdrawals);
+        $availableForWithdrawal = max(0, $totalRfidInRange - $withdrawnTransactions - $pendingWithdrawalAmount);
 
         return [
             // POS sales breakdown
@@ -546,11 +546,9 @@ class Financial extends Component
             'accountName' => $this->accountName,
         ]);
 
-        // Check if there are pending withdrawals (belum diproses di SIMPELS)
-        $pendingWithdrawals = SimpelsWithdrawal::where(function($query) {
-                $query->whereNull('simpels_status')
-                      ->orWhere('simpels_status', 'pending');
-            })
+        // Hanya blokir jika ada withdrawal ACTIVE yang benar-benar masih pending di SIMPELS
+        // (bukan yang cancelled atau failed/tidak terkirim ke SIMPELS)
+        $pendingWithdrawals = SimpelsWithdrawal::where('simpels_status', 'pending')
             ->where('status', '!=', 'cancelled')
             ->count();
 
@@ -558,7 +556,7 @@ class Financial extends Component
             $this->dispatch('showNotification', [
                 'type' => 'warning',
                 'title' => 'Tidak Dapat Membuat Penarikan',
-                'message' => 'Masih ada ' . $pendingWithdrawals . ' penarikan yang belum diproses di SIMPELS. Tunggu admin menyetujui penarikan sebelumnya.'
+                'message' => 'Masih ada ' . $pendingWithdrawals . ' penarikan yang sedang menunggu persetujuan SIMPELS.'
             ]);
             return;
         }
