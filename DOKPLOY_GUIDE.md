@@ -219,6 +219,46 @@ Setelah deployment berhasil:
 
 ## 🐛 TROUBLESHOOTING
 
+### Issue: Container Name Conflict
+
+**Error Message:**
+```
+Error response from daemon: Conflict. The container name "/saza-epos-app" is already in use
+```
+
+**Root Cause:** Container lama masih ada di server dan mencegah deploy baru.
+
+**✅ Solution (Sudah Diperbaiki):**
+Sejak update terbaru, `docker-compose.yml` tidak lagi menggunakan hardcoded container names. Docker akan auto-generate nama unik sehingga tidak ada konflik.
+
+**Jika masih terjadi error:**
+1. **Via Dokploy Console** (jika tersedia):
+   - Buka project > Terminal/Console
+   - Jalankan:
+     ```bash
+     docker rm -f saza-epos-app saza-epos-db saza-epos-redis
+     ```
+   - Redeploy aplikasi
+
+2. **Via SSH** (jika ada akses):
+   - SSH ke server
+   - Jalankan cleanup script:
+     ```bash
+     cd /path/to/project
+     bash docker-cleanup.sh
+     ```
+   - Atau manual:
+     ```bash
+     docker stop saza-epos-app saza-epos-db saza-epos-redis
+     docker rm -f saza-epos-app saza-epos-db saza-epos-redis
+     ```
+   - Redeploy dari Dokploy dashboard
+
+3. **Tanpa akses Terminal:**
+   - Update ke versi terbaru dengan `git pull`
+   - File `docker-compose.yml` yang baru sudah fix masalah ini
+   - Redeploy akan otomatis menggunakan nama dinamis
+
 ### Issue: Deployment Stuck/Failed
 
 **Solution:**
@@ -227,6 +267,7 @@ Setelah deployment berhasil:
    - **Composer install error**: Check `composer.json` syntax
    - **NPM build error**: Check `package.json` dan Vite config
    - **Docker build error**: Check `Dockerfile` syntax
+   - **Container conflict**: Lihat section "Container Name Conflict" di atas
 3. Fix error di local, commit, push lagi
 4. Atau klik **Redeploy** untuk retry
 

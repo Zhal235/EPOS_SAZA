@@ -77,6 +77,20 @@ Karena kita sudah menyertakan label Traefik di `docker-compose.yml`, instance Tr
 
 ## Pemecahan Masalah (Troubleshooting)
 
+*   **Container Name Conflict** (Error: "container name is already in use"):
+    *   **Root Cause**: Container lama masih ada dan mencegah deployment baru.
+    *   **Fix**: Update ke versi terbaru dari repository yang sudah tidak menggunakan hardcoded container names.
+    *   **Manual cleanup** (via SSH atau Dokploy Console):
+        ```bash
+        # Hapus container lama
+        docker rm -f saza-epos-app saza-epos-db saza-epos-redis
+        
+        # Atau gunakan cleanup script
+        bash docker-cleanup.sh
+        ```
+    *   Setelah cleanup, **Redeploy** dari Dokploy dashboard.
+    *   **Catatan**: Versi terbaru `docker-compose.yml` sudah otomatis menghindari konflik ini.
+
 *   **Database Gagal Connect**:
     *   Pastikan `DB_HOST=epos-db` di environment variables.
     *   Periksa log dari container `epos-db`.
