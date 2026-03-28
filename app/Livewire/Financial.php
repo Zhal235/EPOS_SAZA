@@ -72,17 +72,31 @@ class Financial extends Component
     // Computed property untuk check pending withdrawals (cached per request)
     public function getHasPendingWithdrawalsProperty()
     {
-        return $this->getPendingWithdrawalsCountProperty() > 0;
+        try {
+            return $this->getPendingWithdrawalsCountProperty() > 0;
+        } catch (\Exception $e) {
+            Log::error('Error checking pending withdrawals', [
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
     }
 
     public function getPendingWithdrawalsCountProperty()
     {
-        return SimpelsWithdrawal::where(function($query) {
-                $query->whereNull('simpels_status')
-                      ->orWhere('simpels_status', 'pending');
-            })
-            ->where('status', '!=', 'cancelled')
-            ->count();
+        try {
+            return SimpelsWithdrawal::where(function($query) {
+                    $query->whereNull('simpels_status')
+                          ->orWhere('simpels_status', 'pending');
+                })
+                ->where('status', '!=', 'cancelled')
+                ->count();
+        } catch (\Exception $e) {
+            Log::error('Error counting pending withdrawals', [
+                'error' => $e->getMessage()
+            ]);
+            return 0;
+        }
     }
 
     public function setTab($tab)
@@ -138,8 +152,9 @@ class Financial extends Component
 
     public function getDashboardSummary()
     {
-        $from = Carbon::parse($this->dateFrom)->startOfDay();
-        $to   = Carbon::parse($this->dateTo)->endOfDay();
+        try {
+            $from = Carbon::parse($this->dateFrom)->startOfDay();
+            $to   = Carbon::parse($this->dateTo)->endOfDay();
 
         // ── POS Transactions (tabel transactions) ────────────────────────
         $posBase = Transaction::whereBetween('created_at', [$from, $to])
@@ -231,6 +246,34 @@ class Financial extends Component
             'pending_withdrawal_formatted' => 'Rp ' . number_format($availableForWithdrawal, 0, ',', '.'),
             'withdrawn_amount'         => $withdrawnTransactions,
         ];
+        } catch (\Exception $e) {
+            Log::error('Error in getDashboardSummary', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            // Return safe default values
+            return [
+                'pos_total_sales' => 0,
+                'pos_store_sales' => 0,
+                'pos_foodcourt_sales' => 0,
+                'pos_total_count' => 0,
+                'pos_store_count' => 0,
+                'pos_foodcourt_count' => 0,
+                'pos_store_profit' => 0,
+                'pos_foodcourt_profit' => 0,
+                'pos_total_profit' => 0,
+                'total_income' => 0,
+                'total_expense' => 0,
+                'total_rfid_payments' => 0,
+                'total_refunds' => 0,
+                'total_transactions' => 0,
+                'pending_sync' => 0,
+                'pending_withdrawal' => 0,
+                'pending_withdrawal_formatted' => 'Rp 0',
+                'withdrawn_amount' => 0,
+            ];
+        }
     }
 
     public function getPosTransactionsProperty()
@@ -831,25 +874,115 @@ class Financial extends Component
     public function render()
     {
         try {
+            // Safely load all data with individual try-catch for each section
+            $summary = null;
+            $transactions = null;
+            $posTransactions = null;
+            $withdrawals = null;
+            $expenses = null;
+            $chartData = null;
+            $tenantSettlement = null;
+
+            try {
+                $summary = $this->getDashboardSummary();
+            } catch (\Exception $e) {
+                Log::error('Error loading dashboard summary', ['error' => $e->getMessage()]);
+                $summary = $this->getEmptyDashboardSummary();
+            }
+
+            try {
+                $transactions = $this->transactions;
+            } catch (\Exception $e) {
+                Log::error('Error loading transactions', ['error' => $e->getMessage()]);
+                $transactions = collect([]);
+            }
+
+            try {
+                $posTransactions = $this->posTransactions;
+            } catch (\Exception $e) {
+                Log::error('Error loading POS transactions', ['error' => $e->getMessage()]);
+                $posTransactions = collect([]);
+            }
+
+            try {
+                $withdrawals = $this->withdrawals;
+            } catch (\Exception $e) {
+                Log::error('Error loading withdrawals', ['error' => $e->getMessage()]);
+                $withdrawals = new \Illuminate\Pagination\LengthAwarePaginator(
+                    collect([]),
+                    0,
+                    10,
+                    1,
+                    ['path' => request()->url(), 'query' => request()->query()]
+                );
+            }
+
+            try {
+                $expenses = $this->getExpensesProperty();
+            } catch (\Exception $e) {
+                Log::error('Error loading expenses', ['error' => $e->getMessage()]);
+                $expenses = collect([]);
+            }
+
+            try {
+                $chartData = $this->getChartData();
+            } catch (\Exception $e) {
+                Log::error('Error loading chart data', ['error' => $e->getMessage()]);
+                $chartData = [];
+            }
+
+            try {
+                $tenantSettlement = $this->getTenantSettlement();
+            } catch (\Exception $e) {
+                Log::error('Error loading tenant settlement', ['error' => $e->getMessage()]);
+                $tenantSettlement = collect([]);
+            }
+
             return view('livewire.financial', [
-                'summary'          => $this->getDashboardSummary(),
-                'transactions'     => $this->transactions,
-                'posTransactions'  => $this->posTransactions,
-                'withdrawals'      => $this->withdrawals,
-                'expenses'         => $this->getExpensesProperty(),
-                'chartData'        => $this->getChartData(),
-                'tenantSettlement' => $this->getTenantSettlement(),
+                'summary'          => $summary,
+                'transactions'     => $transactions,
+                'posTransactions'  => $posTransactions,
+                'withdrawals'      => $withdrawals,
+                'expenses'         => $expenses,
+                'chartData'        => $chartData,
+                'tenantSettlement' => $tenantSettlement,
             ])->layout('layouts.epos', [
                 'header' => 'Manajemen Keuangan'
             ]);
         } catch (\Exception $e) {
-            Log::error('Error rendering Financial component', [
+            Log::error('Fatal error rendering Financial component', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
                 'activeTab' => $this->activeTab
             ]);
-            throw $e; // Re-throw sehingga Laravel bisa handle error page
+            
+            // Return error view or re-throw
+            throw $e;
         }
+    }
+
+    private function getEmptyDashboardSummary()
+    {
+        return [
+            'pos_total_sales' => 0,
+            'pos_store_sales' => 0,
+            'pos_foodcourt_sales' => 0,
+            'pos_total_count' => 0,
+            'pos_store_count' => 0,
+            'pos_foodcourt_count' => 0,
+            'pos_store_profit' => 0,
+            'pos_foodcourt_profit' => 0,
+            'pos_total_profit' => 0,
+            'total_income' => 0,
+            'total_expense' => 0,
+            'total_rfid_payments' => 0,
+            'total_refunds' => 0,
+            'total_transactions' => 0,
+            'pending_sync' => 0,
+            'pending_withdrawal' => 0,
+            'pending_withdrawal_formatted' => 'Rp 0',
+            'withdrawn_amount' => 0,
+        ];
     }
 
     /**
@@ -858,32 +991,40 @@ class Financial extends Component
      */
     public function getTenantSettlement(): \Illuminate\Support\Collection
     {
-        return DB::table('transaction_items')
-            ->join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
-            ->join('tenants', 'transaction_items.tenant_id', '=', 'tenants.id')
-            ->where('transactions.status', 'completed')
-            ->whereNotNull('transaction_items.tenant_id')
-            ->whereBetween('transactions.created_at', [
-                Carbon::parse($this->dateFrom)->startOfDay(),
-                Carbon::parse($this->dateTo)->endOfDay(),
-            ])
-            ->groupBy('transaction_items.tenant_id', 'tenants.name', 'tenants.booth_number')
-            ->select(
-                'transaction_items.tenant_id',
-                'tenants.name as tenant_name',
-                'tenants.booth_number',
-                DB::raw('SUM(transaction_items.total_price) as total_sales'),
-                DB::raw('SUM(transaction_items.commission_amount) as total_commission'),
-                DB::raw('SUM(transaction_items.tenant_amount) as tenant_payout'),
-                DB::raw('COUNT(DISTINCT transaction_items.transaction_id) as transaction_count')
-            )
-            ->orderBy('tenants.booth_number')
-            ->get()
-            ->map(function ($row) {
-                $row->total_sales_formatted    = 'Rp ' . number_format($row->total_sales, 0, ',', '.');
-                $row->total_commission_formatted = 'Rp ' . number_format($row->total_commission, 0, ',', '.');
-                $row->tenant_payout_formatted  = 'Rp ' . number_format($row->tenant_payout, 0, ',', '.');
-                return $row;
-            });
+        try {
+            return DB::table('transaction_items')
+                ->join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
+                ->join('tenants', 'transaction_items.tenant_id', '=', 'tenants.id')
+                ->where('transactions.status', 'completed')
+                ->whereNotNull('transaction_items.tenant_id')
+                ->whereBetween('transactions.created_at', [
+                    Carbon::parse($this->dateFrom)->startOfDay(),
+                    Carbon::parse($this->dateTo)->endOfDay(),
+                ])
+                ->groupBy('transaction_items.tenant_id', 'tenants.name', 'tenants.booth_number')
+                ->select(
+                    'transaction_items.tenant_id',
+                    'tenants.name as tenant_name',
+                    'tenants.booth_number',
+                    DB::raw('SUM(transaction_items.total_price) as total_sales'),
+                    DB::raw('SUM(transaction_items.commission_amount) as total_commission'),
+                    DB::raw('SUM(transaction_items.tenant_amount) as tenant_payout'),
+                    DB::raw('COUNT(DISTINCT transaction_items.transaction_id) as transaction_count')
+                )
+                ->orderBy('tenants.booth_number')
+                ->get()
+                ->map(function ($row) {
+                    $row->total_sales_formatted    = 'Rp ' . number_format($row->total_sales, 0, ',', '.');
+                    $row->total_commission_formatted = 'Rp ' . number_format($row->total_commission, 0, ',', '.');
+                    $row->tenant_payout_formatted  = 'Rp ' . number_format($row->tenant_payout, 0, ',', '.');
+                    return $row;
+                });
+        } catch (\Exception $e) {
+            Log::error('Error in getTenantSettlement', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return collect([]);
+        }
     }
 }
