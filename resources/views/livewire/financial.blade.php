@@ -581,8 +581,22 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                                 <div class="flex justify-center space-x-2">
-                                    @if(in_array($withdrawal->simpels_status, ['approved', 'completed']))
-                                        {{-- Jika sudah approved/completed di SIMPELS, tidak bisa dibatalkan --}}
+                                    @if($withdrawal->simpels_status === 'approved' && $withdrawal->status !== 'completed')
+                                        {{-- Tombol konfirmasi bahwa uang sudah dibayarkan --}}
+                                        <button wire:click="confirmWithdrawalPaid({{ $withdrawal->id }})"
+                                                wire:loading.attr="disabled"
+                                                wire:target="confirmWithdrawalPaid({{ $withdrawal->id }})"
+                                                onclick="return confirm('Konfirmasi bahwa Rp {{ number_format($withdrawal->total_amount, 0, ",", ".") }} sudah dibayarkan/diterima?')"
+                                                class="px-3 py-1 text-xs bg-green-600 text-white hover:bg-green-700 rounded transition disabled:opacity-50"
+                                                title="Konfirmasi sudah dibayar">
+                                            <span wire:loading.remove wire:target="confirmWithdrawalPaid({{ $withdrawal->id }})">
+                                                <i class="fas fa-check mr-1"></i>Konfirmasi Dibayar
+                                            </span>
+                                            <span wire:loading wire:target="confirmWithdrawalPaid({{ $withdrawal->id }})">
+                                                <i class="fas fa-spinner fa-spin mr-1"></i>...
+                                            </span>
+                                        </button>
+                                    @elseif($withdrawal->simpels_status === 'completed')
                                         <span class="text-xs text-gray-400">-</span>
                                     @elseif($withdrawal->status === 'cancelled')
                                         {{-- Jika sudah dibatalkan --}}
