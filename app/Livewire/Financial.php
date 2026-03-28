@@ -198,11 +198,16 @@ class Financial extends Component
         $totalRfidInRange = (clone $query)->whereIn('type', $rfidTypes)->completed()->sum('amount');
 
         // Find all withdrawal IDs linked to transactions in this date range
-        $linkedWithdrawalIds = FinancialTransaction::whereIn('type', $rfidTypes)
+        // Pakai pivot table (bukan withdrawal_id column) agar semua riwayat penarikan terhitung,
+        // karena withdrawal_id column ditimpa setiap penarikan baru dibuat.
+        $transactionIds = FinancialTransaction::whereIn('type', $rfidTypes)
             ->completed()
             ->whereBetween('created_at', [$from, $to])
-            ->whereNotNull('withdrawal_id')
-            ->pluck('withdrawal_id');
+            ->pluck('id');
+        $linkedWithdrawalIds = \Illuminate\Support\Facades\DB::table('financial_transaction_withdrawal')
+            ->whereIn('financial_transaction_id', $transactionIds)
+            ->pluck('simpels_withdrawal_id')
+            ->unique();
 
         if ($linkedWithdrawalIds->isEmpty()) {
             $withdrawnTransactions = 0;
