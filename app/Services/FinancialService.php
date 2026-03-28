@@ -246,6 +246,11 @@ class FinancialService
                   ->orWhereHas('withdrawal', function($subQ) {
                       $subQ->where('simpels_status', 'rejected')
                            ->where('status', '!=', 'cancelled');
+                  })
+                  // OR transactions in COMPLETED withdrawals → sisa saldo bisa ditarik lagi
+                  // (getDashboardSummary sudah deduct jumlah yang dibayar via sum total_amount)
+                  ->orWhereHas('withdrawal', function($subQ) {
+                      $subQ->where('status', 'completed');
                   });
             });
 
