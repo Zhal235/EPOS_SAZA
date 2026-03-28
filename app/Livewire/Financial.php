@@ -298,9 +298,25 @@ class Financial extends Component
 
     public function getWithdrawalsProperty()
     {
-        return SimpelsWithdrawal::with(['requestedBy', 'approvedBy'])
-            ->latest()
-            ->paginate(10);
+        try {
+            return SimpelsWithdrawal::with(['requestedBy', 'approvedBy'])
+                ->latest()
+                ->paginate(10);
+        } catch (\Exception $e) {
+            Log::error('Error loading withdrawals', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            // Return empty paginator to prevent crash
+            return new \Illuminate\Pagination\LengthAwarePaginator(
+                collect([]),
+                0,
+                10,
+                1,
+                ['path' => request()->url(), 'query' => request()->query()]
+            );
+        }
     }
 
     public function refreshWithdrawalStatus($withdrawalId)
@@ -814,17 +830,26 @@ class Financial extends Component
 
     public function render()
     {
-        return view('livewire.financial', [
-            'summary'          => $this->getDashboardSummary(),
-            'transactions'     => $this->transactions,
-            'posTransactions'  => $this->posTransactions,
-            'withdrawals'      => $this->withdrawals,
-            'expenses'         => $this->getExpensesProperty(),
-            'chartData'        => $this->getChartData(),
-            'tenantSettlement' => $this->getTenantSettlement(),
-        ])->layout('layouts.epos', [
-            'header' => 'Manajemen Keuangan'
-        ]);
+        try {
+            return view('livewire.financial', [
+                'summary'          => $this->getDashboardSummary(),
+                'transactions'     => $this->transactions,
+                'posTransactions'  => $this->posTransactions,
+                'withdrawals'      => $this->withdrawals,
+                'expenses'         => $this->getExpensesProperty(),
+                'chartData'        => $this->getChartData(),
+                'tenantSettlement' => $this->getTenantSettlement(),
+            ])->layout('layouts.epos', [
+                'header' => 'Manajemen Keuangan'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error rendering Financial component', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'activeTab' => $this->activeTab
+            ]);
+            throw $e; // Re-throw sehingga Laravel bisa handle error page
+        }
     }
 
     /**

@@ -69,12 +69,18 @@ class SimpelsWithdrawal extends Model
     // Relationships
     public function requestedBy(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'requested_by');
+        return $this->belongsTo(User::class, 'requested_by')->withDefault([
+            'name' => 'System/Unknown',
+            'email' => 'system@epos.local',
+        ]);
     }
 
     public function approvedBy(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'approved_by');
+        return $this->belongsTo(User::class, 'approved_by')->withDefault([
+            'name' => '-',
+            'email' => '-',
+        ]);
     }
 
     public function transactions(): BelongsToMany
