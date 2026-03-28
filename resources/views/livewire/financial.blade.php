@@ -552,7 +552,11 @@
                                 @endif
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-center">
-                                @if($withdrawal->simpels_status === 'pending')
+                                @if($withdrawal->status === 'cancelled')
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                        <i class="fas fa-times-circle mr-1"></i>Dibatalkan
+                                    </span>
+                                @elseif($withdrawal->simpels_status === 'pending')
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
                                         {{ $withdrawal->simpels_status_label }}
                                     </span>
