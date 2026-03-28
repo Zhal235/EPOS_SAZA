@@ -130,11 +130,23 @@
                             <i class="fas fa-clock mr-2"></i>
                             Menunggu Approval SIMPels
                         </span>
-                    @elseif($withdrawal->status === 'approved')
+                    @elseif($withdrawal->status === 'approved' || ($withdrawal->simpels_status === 'approved' && $withdrawal->status !== 'completed'))
                         <span class="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-lg text-sm font-medium">
                             <i class="fas fa-check mr-2"></i>
                             Disetujui - Menunggu Pembayaran
                         </span>
+                        <button wire:click="confirmWithdrawalPaid({{ $withdrawal->id }})"
+                                wire:loading.attr="disabled"
+                                wire:target="confirmWithdrawalPaid({{ $withdrawal->id }})"
+                                onclick="return confirm('Konfirmasi bahwa uang Rp {{ number_format($withdrawal->total_amount, 0, ",", ".") }} sudah dibayarkan/diterima?')"
+                                class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50">
+                            <span wire:loading.remove wire:target="confirmWithdrawalPaid({{ $withdrawal->id }})">
+                                <i class="fas fa-money-bill-wave mr-2"></i>Konfirmasi Dibayar
+                            </span>
+                            <span wire:loading wire:target="confirmWithdrawalPaid({{ $withdrawal->id }})">
+                                <i class="fas fa-spinner fa-spin mr-2"></i>Memproses...
+                            </span>
+                        </button>
                     @elseif($withdrawal->status === 'completed')
                         <span class="inline-flex items-center px-4 py-2 bg-green-100 text-green-800 rounded-lg text-sm font-medium">
                             <i class="fas fa-check-circle mr-2"></i>

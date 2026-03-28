@@ -514,6 +514,50 @@ class Financial extends Component
         $this->reset(['withdrawalAmount', 'withdrawalMethod', 'bankName', 'accountNumber', 'accountName', 'withdrawalNotes']);
         $this->resetValidation();
     }
+
+    /**
+     * Konfirmasi bahwa uang sudah dibayarkan (dari approved → completed)
+     */
+    public function confirmWithdrawalPaid($withdrawalId)
+    {
+        try {
+            $withdrawal = \App\Models\SimpelsWithdrawal::findOrFail($withdrawalId);
+
+            if (!in_array($withdrawal->simpels_status, ['approved'])) {
+                $this->dispatch('showNotification', [
+                    'type' => 'warning',
+                    'title' => 'Tidak Bisa Dikonfirmasi',
+                    'message' => 'Hanya withdrawal dengan status Disetujui yang bisa dikonfirmasi.',
+                ]);
+                return;
+            }
+
+            $withdrawal->update([
+                'status'          => 'completed',
+                'simpels_status'  => 'completed',
+                'withdrawn_at'    => now(),
+            ]);
+
+            Log::info('Withdrawal marked as paid by user', [
+                'withdrawal_id'     => $withdrawalId,
+                'withdrawal_number' => $withdrawal->withdrawal_number,
+            ]);
+
+            $this->dispatch('showNotification', [
+                'type'    => 'success',
+                'title'   => 'Penarikan Selesai',
+                'message' => 'Withdrawal ' . $withdrawal->withdrawal_number . ' berhasil ditandai sebagai sudah dibayar.',
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to confirm withdrawal paid', ['error' => $e->getMessage()]);
+            $this->dispatch('showNotification', [
+                'type'    => 'error',
+                'title'   => 'Gagal',
+                'message' => 'Gagal mengkonfirmasi pembayaran: ' . $e->getMessage(),
+            ]);
+        }
+    }
     
     public function updatedWithdrawalAmount()
     {
