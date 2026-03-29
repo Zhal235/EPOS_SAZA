@@ -436,6 +436,12 @@ class Products extends Component
                 $this->productForm['sku'] = Product::generateSku();
             }
 
+            // Convert empty strings to null for nullable unique/numeric fields
+            // to avoid SQLSTATE 23000 duplicate empty-string constraint violations
+            $this->productForm['barcode']          = $this->productForm['barcode']          !== '' ? $this->productForm['barcode']          : null;
+            $this->productForm['wholesale_price']   = $this->productForm['wholesale_price']   !== '' ? $this->productForm['wholesale_price']   : null;
+            $this->productForm['wholesale_min_qty'] = $this->productForm['wholesale_min_qty'] !== '' ? $this->productForm['wholesale_min_qty'] : null;
+
             Product::create($this->productForm);
 
             session()->flash('message', 'Produk berhasil dibuat!');
