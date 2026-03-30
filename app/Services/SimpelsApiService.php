@@ -196,8 +196,45 @@ class SimpelsApiService
     {
         Cache::forget('simpels_santri_all');
         Cache::forget('simpels_guru_all');
+        Cache::forget('simpels_wallet_settings');
         
         Log::info('SIMPels API cache cleared');
+    }
+
+    /**
+     * Get wallet settings from SIMPELS (global minimum balance, etc)
+     */
+    public function getWalletSettings($useCache = true)
+    {
+        $cacheKey = 'simpels_wallet_settings';
+        $cacheDuration = 600; // 10 minutes
+
+        if ($useCache && Cache::has($cacheKey)) {
+            return Cache::get($cacheKey);
+        }
+
+        try {
+            $response = $this->makeRequest('GET', $this->endpoints['wallet_settings']);
+            
+            if ($useCache && isset($response['success']) && $response['success']) {
+                Cache::put($cacheKey, $response, $cacheDuration);
+            }
+
+            return $response;
+        } catch (\Exception $e) {
+            Log::warning('Failed to get wallet settings from SIMPELS, using defaults', [
+                'error' => $e->getMessage()
+            ]);
+            
+            // Return default values if API fails
+            return [
+                'success' => true,
+                'data' => [
+                    'global_minimum_balance' => 10000,
+                    'min_balance_jajan' => 0,
+                ]
+            ];
+        }
     }
 
     /**

@@ -50,6 +50,9 @@ return [
             // EPOS transaction (deduct wallet)
             'epos_transaction' => '/v1/wallets/epos/transaction',
 
+            // Wallet Settings (global minimum balance)
+            'wallet_settings' => '/v1/epos/wallet-settings',
+
             // Pesanan Kebutuhan
             'kebutuhan_order'        => '/v1/epos/kebutuhan-order',
             'kebutuhan_order_status' => '/v1/epos/kebutuhan-order/santri',

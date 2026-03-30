@@ -1077,6 +1077,20 @@ class PosTerminal extends Component
             
             $santriData = $apiResponse['data'];
             
+            // Get global minimum balance from SIMPELS
+            $settingsResponse = $this->getSimpelsApi()->getWalletSettings();
+            $globalMinBalance = $settingsResponse['data']['global_minimum_balance'] ?? 10000;
+            
+            // Check if balance after transaction would be below minimum
+            $balanceAfterTransaction = $santriData['saldo'] - $this->total;
+            if ($balanceAfterTransaction < $globalMinBalance) {
+                throw new \Exception(
+                    "Transaksi ditolak! Saldo setelah transaksi (Rp " . number_format($balanceAfterTransaction, 0, ',', '.') . 
+                    ") tidak boleh di bawah minimum (Rp " . number_format($globalMinBalance, 0, ',', '.') . "). " .
+                    "Saldo saat ini: Rp " . number_format($santriData['saldo'], 0, ',', '.')
+                );
+            }
+            
             // Check if santri can afford the total
             if ($santriData['saldo'] < $this->total) {
                 throw new \Exception(
@@ -1723,6 +1737,31 @@ class PosTerminal extends Component
                 'subtotal'   => $subtotal,
                 'unit'       => $item['unit'] ?? 'pcs',
             ];
+        }
+
+        // Get global minimum balance from SIMPELS
+        try {
+            $settingsResponse = $this->getSimpelsApi()->getWalletSettings();
+            $globalMinBalance = $settingsResponse['data']['global_minimum_balance'] ?? 10000;
+            
+            // Check if balance after order confirmation would be below minimum
+            $currentBalance = $this->selectedSantri['saldo'] ?? $this->santriBalance ?? 0;
+            $balanceAfterOrder = $currentBalance - $total;
+            
+            if ($balanceAfterOrder < $globalMinBalance) {
+                $this->dispatch('showNotification', [
+                    'type'    => 'error',
+                    'title'   => '❌ Saldo Tidak Mencukupi',
+                    'message' => "Pesanan ditolak! Saldo setelah konfirmasi (Rp " . number_format($balanceAfterOrder, 0, ',', '.') . 
+                                 ") tidak boleh di bawah minimum (Rp " . number_format($globalMinBalance, 0, ',', '.') . "). " .
+                                 "Saldo saat ini: Rp " . number_format($currentBalance, 0, ',', '.'),
+                    'options' => ['duration' => 8000],
+                ]);
+                return;
+            }
+        } catch (\Exception $e) {
+            Log::warning('Failed to check minimum balance for kebutuhan order', ['error' => $e->getMessage()]);
+            // Continue with order creation if balance check fails
         }
 
         DB::beginTransaction();
