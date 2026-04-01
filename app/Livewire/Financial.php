@@ -53,8 +53,9 @@ class Financial extends Component
 
     public function mount()
     {
-        $this->dateFrom = now()->startOfMonth()->format('Y-m-d');
-        $this->dateTo = now()->format('Y-m-d');
+        // Default to null for all-time data display
+        $this->dateFrom = null;
+        $this->dateTo = null;
         $this->withdrawalPeriodStart = now()->startOfMonth()->format('Y-m-d');
         $this->withdrawalPeriodEnd = now()->format('Y-m-d');
     }
@@ -139,8 +140,9 @@ class Financial extends Component
 
     public function resetFilters()
     {
-        $this->dateFrom = now()->startOfMonth()->format('Y-m-d');
-        $this->dateTo = now()->format('Y-m-d');
+        // Reset to null for all-time data display
+        $this->dateFrom = null;
+        $this->dateTo = null;
         $this->filterType = 'all';
         $this->filterStatus = 'all';
         $this->searchQuery = '';
@@ -150,12 +152,18 @@ class Financial extends Component
     public function getDashboardSummary()
     {
         try {
-            $from = Carbon::parse($this->dateFrom)->startOfDay();
-            $to   = Carbon::parse($this->dateTo)->endOfDay();
+            // Only apply date filter if both dates are set
+            if ($this->dateFrom && $this->dateTo) {
+                $from = Carbon::parse($this->dateFrom)->startOfDay();
+                $to   = Carbon::parse($this->dateTo)->endOfDay();
+                $posBase = Transaction::whereBetween('created_at', [$from, $to])
+                    ->where('status', 'completed');
+            } else {
+                // All-time data
+                $posBase = Transaction::where('status', 'completed');
+            }
 
         // ── POS Transactions (tabel transactions) ────────────────────────
-        $posBase = Transaction::whereBetween('created_at', [$from, $to])
-            ->where('status', 'completed');
 
         $posStore      = (clone $posBase)->where('outlet_mode', 'store');
         $posFoodcourt  = (clone $posBase)->where('outlet_mode', 'foodcourt');
@@ -187,46 +195,53 @@ class Financial extends Component
         $posTotalProfit = $posStoreProfit + $posFoodcourtProfit;
 
         // ── FinancialTransaction (RFID / SIMPels) ────────────────────────
-        $query = FinancialTransaction::query()->whereBetween('created_at', [$from, $to]);
+        $query = FinancialTransaction::query();
+        if ($this->dateFrom && $this->dateTo) {
+            $from = Carbon::parse($this->dateFrom)->startOfDay();
+            $to   = Carbon::parse($this->dateTo)->endOfDay();
+            $query->whereBetween('created_at', [$from, $to]);
+        }
 
         // Tipe transaksi yang dihitung sebagai pemasukan RFID (rfid_payment + kebutuhan_order)
         $rfidTypes = [FinancialTransaction::TYPE_RFID_PAYMENT, FinancialTransaction::TYPE_KEBUTUHAN_ORDER];
 
         $totalRfidPayments = (clone $query)->whereIn('type', $rfidTypes)->completed()->sum('amount');
 
-        // Total RFID income in date range
-        $totalRfidInRange = (clone $query)->whereIn('type', $rfidTypes)->completed()->sum('amount');
-
-        // Find all withdrawal IDs linked to transactions in this date range
-        // Pakai pivot table (bukan withdrawal_id column) agar semua riwayat penarikan terhitung,
-        // karena withdrawal_id column ditimpa setiap penarikan baru dibuat.
-        $transactionIds = FinancialTransaction::whereIn('type', $rfidTypes)
+        // ── SALDO RFID TERSEDIA (ALL-TIME, tidak kena filter tanggal) ──────────────
+        // Total RFID income ALL-TIME (tidak kena filter)
+        $totalRfidAllTime = FinancialTransaction::whereIn('type', $rfidTypes)
             ->completed()
-            ->whereBetween('created_at', [$from, $to])
+            ->sum('amount');
+
+        // Get ALL transaction IDs (all-time, tidak kena filter)
+        $allRfidTransactionIds = FinancialTransaction::whereIn('type', $rfidTypes)
+            ->completed()
             ->pluck('id');
-        $linkedWithdrawalIds = \Illuminate\Support\Facades\DB::table('financial_transaction_withdrawal')
-            ->whereIn('financial_transaction_id', $transactionIds)
+        
+        $allLinkedWithdrawalIds = \Illuminate\Support\Facades\DB::table('financial_transaction_withdrawal')
+            ->whereIn('financial_transaction_id', $allRfidTransactionIds)
             ->pluck('simpels_withdrawal_id')
             ->unique();
 
-        if ($linkedWithdrawalIds->isEmpty()) {
-            $withdrawnTransactions = 0;
-            $pendingWithdrawalAmount = 0;
+        if ($allLinkedWithdrawalIds->isEmpty()) {
+            $withdrawnTransactionsAllTime = 0;
+            $pendingWithdrawalAmountAllTime = 0;
         } else {
-            // Amount already withdrawn (approved/completed)
-            $withdrawnTransactions = SimpelsWithdrawal::whereIn('id', $linkedWithdrawalIds)
+            // Amount already withdrawn (approved/completed) - ALL TIME
+            $withdrawnTransactionsAllTime = SimpelsWithdrawal::whereIn('id', $allLinkedWithdrawalIds)
                 ->whereIn('simpels_status', ['approved', 'completed'])
                 ->where('status', '!=', 'cancelled')
                 ->sum('total_amount');
 
-            // Amount in pending (sent to SIMPELS, waiting approval)
-            $pendingWithdrawalAmount = SimpelsWithdrawal::whereIn('id', $linkedWithdrawalIds)
+            // Amount in pending (sent to SIMPELS, waiting approval) - ALL TIME
+            $pendingWithdrawalAmountAllTime = SimpelsWithdrawal::whereIn('id', $allLinkedWithdrawalIds)
                 ->where('simpels_status', 'pending')
                 ->where('status', '!=', 'cancelled')
                 ->sum('total_amount');
         }
 
-        $availableForWithdrawal = max(0, $totalRfidInRange - $withdrawnTransactions - $pendingWithdrawalAmount);
+        // Available balance = Total RFID All Time - Withdrawn All Time - Pending All Time
+        $availableForWithdrawal = max(0, $totalRfidAllTime - $withdrawnTransactionsAllTime - $pendingWithdrawalAmountAllTime);
 
         return [
             // POS sales breakdown
@@ -249,7 +264,7 @@ class Financial extends Component
             'pending_sync'             => FinancialTransaction::notSynced()->where('type', FinancialTransaction::TYPE_RFID_PAYMENT)->count(),
             'pending_withdrawal'       => $availableForWithdrawal,
             'pending_withdrawal_formatted' => 'Rp ' . number_format($availableForWithdrawal, 0, ',', '.'),
-            'withdrawn_amount'         => $withdrawnTransactions,
+            'withdrawn_amount'         => $withdrawnTransactionsAllTime,
         ];
         } catch (\Exception $e) {
             Log::error('Error in getDashboardSummary', [
@@ -284,11 +299,15 @@ class Financial extends Component
     public function getPosTransactionsProperty()
     {
         $query = Transaction::with('user')
-            ->whereBetween('created_at', [
+            ->where('status', 'completed');
+
+        // Only apply date filter if both dates are set
+        if ($this->dateFrom && $this->dateTo) {
+            $query->whereBetween('created_at', [
                 Carbon::parse($this->dateFrom)->startOfDay(),
                 Carbon::parse($this->dateTo)->endOfDay(),
-            ])
-            ->where('status', 'completed');
+            ]);
+        }
 
         if ($this->outletModeFilter !== '') {
             $query->where('outlet_mode', $this->outletModeFilter);
@@ -306,11 +325,15 @@ class Financial extends Component
 
     public function getTransactionsProperty()
     {
-        $query = FinancialTransaction::with(['user', 'transaction', 'withdrawnBy'])
-            ->whereBetween('created_at', [
+        $query = FinancialTransaction::with(['user', 'transaction', 'withdrawnBy']);
+
+        // Only apply date filter if both dates are set
+        if ($this->dateFrom && $this->dateTo) {
+            $query->whereBetween('created_at', [
                 Carbon::parse($this->dateFrom)->startOfDay(),
                 Carbon::parse($this->dateTo)->endOfDay()
             ]);
+        }
 
         // Tab RFID hanya menampilkan transaksi kartu RFID saja
         $query->where('type', FinancialTransaction::TYPE_RFID_PAYMENT);
@@ -334,14 +357,18 @@ class Financial extends Component
     #[Computed]
     public function getExpensesProperty()
     {
-        return FinancialTransaction::with(['user'])
-            ->where('category', FinancialTransaction::CATEGORY_EXPENSE)
-            ->whereBetween('created_at', [
+        $query = FinancialTransaction::with(['user'])
+            ->where('category', FinancialTransaction::CATEGORY_EXPENSE);
+
+        // Only apply date filter if both dates are set
+        if ($this->dateFrom && $this->dateTo) {
+            $query->whereBetween('created_at', [
                 Carbon::parse($this->dateFrom)->startOfDay(),
                 Carbon::parse($this->dateTo)->endOfDay()
-            ])
-            ->latest()
-            ->paginate(20);
+            ]);
+        }
+
+        return $query->latest()->paginate(20);
     }
 
     public function getWithdrawalsProperty()
@@ -472,8 +499,14 @@ class Financial extends Component
 
     public function getChartData()
     {
-        $startDate = Carbon::parse($this->dateFrom);
-        $endDate = Carbon::parse($this->dateTo);
+        // If no date filter, show last 30 days
+        if (!$this->dateFrom || !$this->dateTo) {
+            $startDate = now()->subDays(30);
+            $endDate = now();
+        } else {
+            $startDate = Carbon::parse($this->dateFrom);
+            $endDate = Carbon::parse($this->dateTo);
+        }
         $days = $endDate->diffInDays($startDate) + 1;
 
         $data = [];
@@ -884,12 +917,17 @@ class Financial extends Component
 
     public function exportTransactions()
     {
-        $transactions = FinancialTransaction::with(['user', 'transaction'])
-            ->whereBetween('created_at', [
+        $query = FinancialTransaction::with(['user', 'transaction']);
+
+        // Only apply date filter if both dates are set
+        if ($this->dateFrom && $this->dateTo) {
+            $query->whereBetween('created_at', [
                 Carbon::parse($this->dateFrom)->startOfDay(),
                 Carbon::parse($this->dateTo)->endOfDay()
-            ])
-            ->get();
+            ]);
+        }
+
+        $transactions = $query->get();
 
         $callback = function() use ($transactions) {
             $file = fopen('php://output', 'w');
@@ -1039,16 +1077,21 @@ class Financial extends Component
     public function getTenantSettlement(): \Illuminate\Support\Collection
     {
         try {
-            return DB::table('transaction_items')
+            $query = DB::table('transaction_items')
                 ->join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
                 ->join('tenants', 'transaction_items.tenant_id', '=', 'tenants.id')
                 ->where('transactions.status', 'completed')
-                ->whereNotNull('transaction_items.tenant_id')
-                ->whereBetween('transactions.created_at', [
+                ->whereNotNull('transaction_items.tenant_id');
+
+            // Only apply date filter if both dates are set
+            if ($this->dateFrom && $this->dateTo) {
+                $query->whereBetween('transactions.created_at', [
                     Carbon::parse($this->dateFrom)->startOfDay(),
                     Carbon::parse($this->dateTo)->endOfDay(),
-                ])
-                ->groupBy('transaction_items.tenant_id', 'tenants.name', 'tenants.booth_number')
+                ]);
+            }
+
+            return $query->groupBy('transaction_items.tenant_id', 'tenants.name', 'tenants.booth_number')
                 ->select(
                     'transaction_items.tenant_id',
                     'tenants.name as tenant_name',
