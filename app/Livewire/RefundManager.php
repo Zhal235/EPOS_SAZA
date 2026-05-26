@@ -170,7 +170,24 @@ class RefundManager extends Component
                 if ($refundItem['selected']) {
                     $transactionItem = TransactionItem::find($itemId);
                     if ($transactionItem && $transactionItem->product) {
-                        $transactionItem->product->updateStock($refundItem['quantity'], 'add');
+                        $product = $transactionItem->product;
+                        
+                        // Extract unit name from product_name if available (e.g., "Mie (Box)" -> "Box")
+                        $conversionRate = 1;
+                        if (preg_match('/\(([^)]+)\)$/', $transactionItem->product_name, $matches)) {
+                            $unitName = $matches[1];
+                            // Find the product unit with this name
+                            $productUnit = $product->productUnits()
+                                ->where('unit_name', $unitName)
+                                ->first();
+                            if ($productUnit) {
+                                $conversionRate = $productUnit->conversion_rate;
+                            }
+                        }
+                        
+                        // Calculate base quantity and return stock
+                        $baseQuantity = $refundItem['quantity'] * $conversionRate;
+                        $product->updateStock($baseQuantity, 'add');
                     }
                 }
             }

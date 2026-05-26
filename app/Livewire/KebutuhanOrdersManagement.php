@@ -98,7 +98,10 @@ class KebutuhanOrdersManagement extends Component
                 if (!empty($item['product_id'])) {
                     $product = Product::find($item['product_id']);
                     if ($product && $product->track_stock) {
-                        $product->updateStock($item['qty'], 'subtract');
+                        // Use conversion rate if available, otherwise assume base unit
+                        $conversionRate = $item['conversion_rate'] ?? 1;
+                        $baseQuantity = $item['qty'] * $conversionRate;
+                        $product->updateStock($baseQuantity, 'subtract');
                     }
                 }
             }

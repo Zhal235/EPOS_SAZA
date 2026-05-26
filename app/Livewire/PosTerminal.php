@@ -1261,12 +1261,14 @@ class PosTerminal extends Component
             $itemsList = [];
             foreach ($this->cart as $item) {
                 $product = Product::find($item['id']);
+                $conversionRate = $item['conversion_rate'] ?? 1;
+                $baseQuantity = $item['quantity'] * $conversionRate;
                 
                 $transactionItem = TransactionItem::create([
                     'transaction_id'   => $transaction->id,
                     'product_id'       => $product->id,
                     'product_sku'      => $product->sku,
-                    'product_name'     => $product->name,
+                    'product_name'     => $product->name . ($item['unit_name'] && $item['unit_name'] != $product->unit ? ' (' . $item['unit_name'] . ')' : ''),
                     'unit_price'       => $item['price'],
                     'cost_price'       => $product->cost_price, // snapshot
                     'quantity'         => $item['quantity'],
@@ -1280,7 +1282,7 @@ class PosTerminal extends Component
                     'item_notes'       => $item['item_notes'] ?? null,
                 ]);
 
-                $product->updateStock($item['quantity'], 'subtract');
+                $product->updateStock($baseQuantity, 'subtract');
                 
                 // Process Tenant Credit
                 $this->processTenantCredit($transactionItem, $item);
@@ -1567,12 +1569,14 @@ class PosTerminal extends Component
             // Create transaction items and update stock
             foreach ($this->cart as $item) {
                 $product = Product::find($item['id']);
+                $conversionRate = $item['conversion_rate'] ?? 1;
+                $baseQuantity = $item['quantity'] * $conversionRate;
                 
                 $transactionItem = TransactionItem::create([
                     'transaction_id'   => $transaction->id,
                     'product_id'       => $product->id,
                     'product_sku'      => $product->sku,
-                    'product_name'     => $product->name,
+                    'product_name'     => $product->name . ($item['unit_name'] && $item['unit_name'] != $product->unit ? ' (' . $item['unit_name'] . ')' : ''),
                     'unit_price'       => $item['price'],
                     'quantity'         => $item['quantity'],
                     'total_price'      => $item['total'],
@@ -1585,7 +1589,7 @@ class PosTerminal extends Component
                     'item_notes'       => $item['item_notes'] ?? null,
                 ]);
 
-                $product->updateStock($item['quantity'], 'subtract');
+                $product->updateStock($baseQuantity, 'subtract');
                 
                 // Process Tenant Credit
                 $this->processTenantCredit($transactionItem, $item);
